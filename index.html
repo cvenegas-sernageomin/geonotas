@@ -2039,7 +2039,8 @@ const MODELO = {
           "Pegmatítica",
           "Fanerítica de grano medio",
           "Fanerítica de grano fino",
-          "Fanerítica de grano grueso"
+          "Fanerítica de grano grueso",
+          "Rapakivi"
         ],
         "Volcánica": [
           "Porfírica",
@@ -2124,7 +2125,6 @@ const MODELO = {
           "Estratificación lenticular",
           "Grietas de sineresis",
           "Base erosiva / scour",
-          "Bioclastos / conchillas",
           "Bioturbación general",
           "Calcos de carga (load)",
           "Calcos de flujo (flute)",
@@ -2189,29 +2189,48 @@ const MODELO = {
           "Tubos fumarolas"
         ],
         "Intrusiva": [
-          "Foliación magmática",
+          "Diaclasas columnares paralelas",
+          "Diaclasas columnares radiales",
+          "Diaclasas columnares irregulares",
+          "Diaclasas en lajas",
+          "Diaclasas perpendiculares o normales",
+          "Diaclasas esferoidales",
+          "Foliación mineral magmática",
+          "Lineación mineral magmática",
+          "Foliación definida por schlieren",
+          "Lineación definida por schlieren",
+          "Schlieren indiferenciada",
+          "Foliación definida por enclaves aplastados",
+          "Lineación definida por enclaves elongados",
+          "Enclaves aplastados y/o elongados",
+          "Bandeamiento (estratificación o laminación) magmático",
+          "Bandeamiento (estratificación o laminación) magmático rítmico",
+          "Estratificación cruzada magmática",
+          "Pliegue magmático",
+          "Empaquetamiento pobre",
+          "Empaquetamiento denso",
+          "Imbricación",
+          "Gradación",
+          "Estructura de roca híbrida indiferenciada",
+          "Macizo (sin estructura)",
+          "Indeterminado",
           "Xenolitos",
           "Cavidades miarolíticas",
-          "Schlieren",
+          "Enclaves microgranulares (máficos)",
           "Brecha intrusiva",
           "Zonación del plutón",
-          "Autolitos",
+          "Estructura orbicular",
           "Diques sinplutónicos",
-          "Bandeamiento magmático (layering)",
-          "Contacto interno entre pulsos",
-          "Cumulado (bandeado de densidades)",
           "Dique de aplita",
           "Dique/bolsón de pegmatita",
-          "Enclaves microgranulares (máficos)",
-          "Estructura orbicular",
-          "Lineación magmática",
+          "Cumulado (bandeado de densidades)",
+          "Contacto interno entre pulsos",
           "Stoping (bloques de techo)",
-          "Textura rapakivi"
+          "Autolitos"
         ],
         "Metamórfica": [
           "Clivaje de crenulación",
           "Sombras de presión",
-          "Porfidoblastos",
           "Boudinage",
           "Lineación de estiramiento",
           "Lineación mineral",
@@ -2240,14 +2259,12 @@ const MODELO = {
           "Grietas de desecación",
           "Canal",
           "Paleosuelo",
-          "Matriz-soportado",
-          "Clasto-soportado",
           "Bloques erráticos",
           "Estructura masiva (sin estructura)",
           "Superficie de erosión interna"
         ]
       },
-      "fuente": "Norma CDC 2016 Vol IV, campo 'ESTRUCTURA INTERNA DEL DEPÓSITO EN AFLORAMIENTO' (rocas lávicas + depósitos piroclásticos), verbatim y verificado contra la sección de definiciones que sigue a la tabla — no solo contra la tabla, que trae erratas propias de la norma ('puzle'/'puzzle', 'columnares paralela'/'paralelas', 'en lajas'/'en laja', 'almohabillas'). Orden por uso real en el corpus RAG 'prosa_geologica' (122.537 chunks tipo=carta): Macizo 465, Brechosa 331, Bandeamiento de flujo 238, Almohadillas 204, Peperíticas 126, Hialoclásticas 119, PJB 96, Cuerdas 32, Puzzle 31 (todas vía 'jigsaw'), Colada en bloques 18… y en piroclásticas Fábrica de soldamiento 2.245, Estratificación cruzada 846, Laminación plana 664. Los términos oficiales con 0 apariciones se CONSERVAN: la norma manda sobre la frecuencia. Reemplaza (2026-09-07) una lista previa de 44 valores tomada de 'Lista de Dominios.xlsx' que mezclaba estructuras con texturas (Fenocristales, Amigdaloide, Spinifex), componentes (Pómez, Escoria), alteraciones (Silicificación, Desvitrificación, Oxidación de hierro), un nombre de roca (Espilita) y términos sin respaldo ('Fractales', 'Piel pegajosa', 'Estructura panal'). Medido en el corpus: 'fenocristal' aparece 4.243 veces y solo el 0,3 % cerca de la palabra 'estructura' (100 % en contexto de textura/cristales); pómez 1,5 %; escoria 1,2 % — frente a 21,7 % de 'lavas almohadilladas' y 10,5 % de 'disyunción columnar'. El acotamiento Lava/Piroclástica vive en ESTRUCTURA_VOLCANICA/filtrarEstructuraVolcanica() en index.html; esta lista es la unión, el fallback sin elegir TIPO_VOLCANICA.",
+      "fuente": "Rama Volcánica: norma CDC 2016 Vol IV, 'ESTRUCTURA INTERNA DEL DEPÓSITO EN AFLORAMIENTO' (ver corregir_estructura_volcanica.py). Rama Intrusiva: norma CDC 2016 Vol IV, 'ESTRUCTURA INTERNA DEL CUERPO INTRUSIVO' — los términos oficiales van primero, EN EL ORDEN DE LA NORMA (el conteo bruto del corpus no sirve para ordenar esta rama: 'gradación' 808, 'imbricación' 302 y 'cumulado' 563 son casi todo uso sedimentario), y detrás los ya curados que la norma no trae, por uso real inequívoco (xenolito 227, miarolítica 55, enclaves microgranulares 14, brecha intrusiva 13, orbicular 9, diques sinplutónicos 7, stoping 2, autolito 1). Antes NO tenía ningún término de diaclasas, omisión grave para un granito ('disyunción columnar' sale 86 veces en el corpus). Ramas Sedimentaria, Metamórfica y Depósito: curaduría propia CONSERVADA a propósito. El campo oficial sedimentario (Vol III, Tabla 2) tiene más de 130 términos en 7 clases y volcarlo entero sería inusable en terreno; para metamórficas la norma no tiene un campo único equivalente (lo reparte en TIPO FOLIACIÓN + ESPACIAMIENTO DE FOLIACIÓN + Vol V de rocas tectónicas). De las tres solo se sacó lo que no era estructura. Depuración 2026-09-07 (usuario: 'fenocristales no es una estructura'): se sacaron 'Bioclastos / conchillas' (componente → TEXTURA='Bioclástica' y CONTENIDO_FOSIL), 'Porfidoblastos' (textura → TEXTURA='Porfidoblástica'), 'Matriz-soportado'/'Clasto-soportado' (fábrica, estaba duplicado en FABRICA_CLASTOS Y en TEXTURA.Depósito) y 'Textura rapakivi' (textura, movida a TEXTURA.Intrusiva).",
       "confirmar": true
     },
     "TIPO_MEDIDA_ESTRUCTURAL": {
@@ -3363,7 +3380,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v115';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v116';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
