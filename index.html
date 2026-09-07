@@ -287,7 +287,7 @@ const MODELO = {
           "nombre": "ESTRUCTURA_TIPO_ROCA",
           "obligatorio": false,
           "dominio": "ESTRUCTURA_TIPO_ROCA",
-          "nota": "la lista depende del campo TIPO_ROCA"
+          "nota": "Estructuras internas primarias del depósito, a escala de afloramiento. La norma CDC 2016 separa rocas lávicas de depósitos piroclásticos: al elegir TIPO_VOLCANICA la lista se acota sola. NO van aquí las texturas (Porfídica, Amigdaloidal, Escoriácea → TEXTURA), los componentes (pómez y escoria → TIPO_FRAGMENTO_VITREO / POMEZ_PCT; fenocristales → FENOCRISTALES_ESPECIE) ni las alteraciones (Silicificación, Oxidación → TIPO_ALTERACION_LITO). Cualquier estructura fuera de la lista se anota en DESCRIPCION_LITOLOGIA."
         },
         {
           "nombre": "DESCRIPCION_LITOLOGIA",
@@ -2150,50 +2150,43 @@ const MODELO = {
           "Tepees (carbonático)"
         ],
         "Volcánica": [
-          "Fenocristales",
-          "Pomez",
-          "Silicificacion",
-          "Escoria",
-          "Desvitrificacion",
-          "Amigdaloide",
-          "Superficie ondulada",
-          "Acrecion alrededor de nucleus",
-          "Brechas de contacto",
-          "Cavidades vacias",
-          "Chimeneas volcanicas fosilizadas",
-          "Corrugaciones de flujo",
-          "Corteza enfriada",
-          "Dish-and-pillar",
-          "Escalonamientos",
-          "Espilita",
-          "Esponjoso",
-          "Estriacion de flujo",
-          "Estructura panal",
-          "Estructuras de impacto",
-          "Estructuras de llama",
-          "Estructuras fistulosas",
-          "Fractales",
-          "Fracturas de traccion",
-          "Fumarolas fosilizadas",
-          "Jointing concentrico",
-          "Jointing en abanico",
-          "Jointing radial",
-          "Lineacion paralela",
-          "Orientacion de fragmentos",
-          "Oxidacion de hierro",
-          "Piel pegajosa",
-          "Pillow lava",
-          "Pliegues de flujo",
-          "Pliegues por hundimiento",
-          "Salpicadura spatter",
-          "Slump",
-          "Soldadura welding",
-          "Spinifex texture",
-          "Superficie ropey",
-          "Trama feno-criptocristalina",
-          "Vesiculas alineadas",
-          "Vesiculas coalescentes",
-          "Vesiculas simples"
+          "Macizo (sin estructura)",
+          "Brechosa",
+          "Bandeamiento de flujo",
+          "Almohadillas simétricas",
+          "Estructuras peperíticas",
+          "Estructuras hialoclásticas",
+          "Diaclasas prismáticas en bloques (PJB)",
+          "Cuerdas (lava cordada)",
+          "Diaclasas de puzzle",
+          "Colada en bloques",
+          "Corteza rugosa",
+          "Brechosa con textura 'rompecabezas'",
+          "Pináculos",
+          "Tubo de lava",
+          "Diaclasas columnares radiales",
+          "Corteza cáscara de pan",
+          "Diaclasas columnares irregulares",
+          "Diaclasas columnares paralelas",
+          "Diaclasas en laja",
+          "Diaclasas perpendiculares o normales",
+          "Diaclasas prismáticas en bomba",
+          "Diaclasas extensionales en almohadilla",
+          "Lóbulos de almohadillas",
+          "Corteza tortuga",
+          "Corteza lisa",
+          "Vesículas en pipas",
+          "Indeterminado",
+          "Fábrica de soldamiento",
+          "Estratificación cruzada",
+          "Laminación plana",
+          "Estratificación plana",
+          "Laminación cruzada",
+          "Diaclasas columnares",
+          "Zona acumulación pómez",
+          "Zona acumulación lítica",
+          "Tubos de lapilli",
+          "Tubos fumarolas"
         ],
         "Intrusiva": [
           "Foliación magmática",
@@ -2254,7 +2247,7 @@ const MODELO = {
           "Superficie de erosión interna"
         ]
       },
-      "fuente": "Lista de Dominios.xlsx (Sed/Volc) + propuestas estándar (Intr/Met/Dep)",
+      "fuente": "Norma CDC 2016 Vol IV, campo 'ESTRUCTURA INTERNA DEL DEPÓSITO EN AFLORAMIENTO' (rocas lávicas + depósitos piroclásticos), verbatim y verificado contra la sección de definiciones que sigue a la tabla — no solo contra la tabla, que trae erratas propias de la norma ('puzle'/'puzzle', 'columnares paralela'/'paralelas', 'en lajas'/'en laja', 'almohabillas'). Orden por uso real en el corpus RAG 'prosa_geologica' (122.537 chunks tipo=carta): Macizo 465, Brechosa 331, Bandeamiento de flujo 238, Almohadillas 204, Peperíticas 126, Hialoclásticas 119, PJB 96, Cuerdas 32, Puzzle 31 (todas vía 'jigsaw'), Colada en bloques 18… y en piroclásticas Fábrica de soldamiento 2.245, Estratificación cruzada 846, Laminación plana 664. Los términos oficiales con 0 apariciones se CONSERVAN: la norma manda sobre la frecuencia. Reemplaza (2026-09-07) una lista previa de 44 valores tomada de 'Lista de Dominios.xlsx' que mezclaba estructuras con texturas (Fenocristales, Amigdaloide, Spinifex), componentes (Pómez, Escoria), alteraciones (Silicificación, Desvitrificación, Oxidación de hierro), un nombre de roca (Espilita) y términos sin respaldo ('Fractales', 'Piel pegajosa', 'Estructura panal'). Medido en el corpus: 'fenocristal' aparece 4.243 veces y solo el 0,3 % cerca de la palabra 'estructura' (100 % en contexto de textura/cristales); pómez 1,5 %; escoria 1,2 % — frente a 21,7 % de 'lavas almohadilladas' y 10,5 % de 'disyunción columnar'. El acotamiento Lava/Piroclástica vive en ESTRUCTURA_VOLCANICA/filtrarEstructuraVolcanica() en index.html; esta lista es la unión, el fallback sin elegir TIPO_VOLCANICA.",
       "confirmar": true
     },
     "TIPO_MEDIDA_ESTRUCTURAL": {
@@ -3370,7 +3363,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v114';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v115';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4187,6 +4180,34 @@ const TEXTURA_VOLCANICA = {
     'Escoriácea', 'Clasto-soportada', 'Obliterada por alteración',
     'Reomórfica', 'Microbrechosa', 'Reticulada', 'Indeterminada'],
 };
+
+// Estructura interna por origen volcanico -- mismo mecanismo que TEXTURA_VOLCANICA/
+// filtrarTexturaVolcanica(), ahora para ESTRUCTURA_TIPO_ROCA. Fuente: norma CDC 2016 Vol IV,
+// campo "ESTRUCTURA INTERNA DEL DEPOSITO EN AFLORAMIENTO", que trae DOS listas separadas
+// ("para rocas lavicas" / "para depositos piroclasticos"): una lava y una ignimbrita no
+// comparten estructuras. Verbatim de la seccion de DEFINICIONES de la norma, no de su tabla:
+// las dos no coinciden y la tabla trae erratas ('puzle', 'columnares paralela', 'en lajas').
+// Orden por uso real en el corpus de Cartas (RAG 'prosa_geologica', 122.537 chunks tipo=carta);
+// los terminos oficiales con 0 apariciones se conservan igual -- la norma manda sobre la
+// frecuencia -- y 'Indeterminado' va siempre al final, que es la respuesta "no se".
+// Reemplaza (2026-09-07) una lista de 44 valores que mezclaba estructuras con texturas
+// (Fenocristales, Amigdaloide, Spinifex), componentes (Pomez, Escoria) y alteraciones
+// (Silicificacion, Oxidacion de hierro). Ver modelo/corregir_estructura_volcanica.py.
+const ESTRUCTURA_VOLCANICA = {
+  'Lava': ['Macizo (sin estructura)', 'Brechosa', 'Bandeamiento de flujo',
+    'Almohadillas simétricas', 'Estructuras peperíticas', 'Estructuras hialoclásticas',
+    'Diaclasas prismáticas en bloques (PJB)', 'Cuerdas (lava cordada)', 'Diaclasas de puzzle',
+    'Colada en bloques', 'Corteza rugosa', "Brechosa con textura 'rompecabezas'", 'Pináculos',
+    'Tubo de lava', 'Diaclasas columnares radiales', 'Corteza cáscara de pan',
+    'Diaclasas columnares irregulares', 'Diaclasas columnares paralelas', 'Diaclasas en laja',
+    'Diaclasas perpendiculares o normales', 'Diaclasas prismáticas en bomba',
+    'Diaclasas extensionales en almohadilla', 'Lóbulos de almohadillas', 'Corteza tortuga',
+    'Corteza lisa', 'Vesículas en pipas', 'Indeterminado'],
+  'Rocas piroclásticas': ['Fábrica de soldamiento', 'Estratificación cruzada',
+    'Laminación plana', 'Estratificación plana', 'Laminación cruzada', 'Diaclasas columnares',
+    'Zona acumulación pómez', 'Zona acumulación lítica', 'Tubos de lapilli', 'Tubos fumarolas',
+    'Macizo (sin estructura)', 'Indeterminado'],
+};
 // Matriz/masa intersticial (MATRIZ_COMPOSICION) — Rocas piroclásticas Y Tefra (2026-08-25):
 // Lava usa el campo propio CRISTALINIDAD, verbatim de la norma. Ya no hay dict de narrowing
 // por TIPO_VOLCANICA aquí (existió hasta v83 como MATRIZ_VOLCANICA/filtrarMatrizVolcanica()):
@@ -4746,9 +4767,26 @@ function formulario(store, reg, ctx){
     else if(esBuild){ preservarValor(iTX, actual); iTX.value=actual; }
     else iTX.value='';
   }
+  // Igual que filtrarTexturaVolcanica(), para ESTRUCTURA_TIPO_ROCA. Este campo SI es hijo de
+  // cascada (cuelga de TIPO_ROCA), asi que lo que hay en el <select> al llegar aca es ya la
+  // rama Volcanica completa -- la union de las dos listas. Esto solo la ESTRECHA segun
+  // TIPO_VOLCANICA, sin tocar el motor generico de cascadas (ver campoPadreDe/repoblarHijosDe).
+  function filtrarEstructuraVolcanica(esBuild){
+    const iTV=inputs['TIPO_VOLCANICA'], iES=inputs['ESTRUCTURA_TIPO_ROCA'];
+    if(!iTV||!iES)return;
+    const subset = iTV.value ? ESTRUCTURA_VOLCANICA[iTV.value] : null;
+    if(!subset)return;
+    const actual=iES.value;
+    iES.innerHTML='';iES.append(el('option',{value:''},'— seleccionar —'));
+    subset.forEach(v=>iES.append(el('option',{value:v},v)));
+    if(subset.includes(actual)) iES.value=actual;
+    else if(esBuild){ preservarValor(iES, actual); iES.value=actual; }
+    else iES.value='';
+  }
   aplicarCondicionales();
   filtrarNombreRocaVolcanica(true);
   filtrarTexturaVolcanica(true);
+  filtrarEstructuraVolcanica(true);
   aplicarCondicionales();
   actualizarRevelado();
 
@@ -4763,6 +4801,7 @@ function formulario(store, reg, ctx){
     // Rocas piroclásticas/Tefra comparten el mismo dominio completo, sin nada que angostar.
     if(changed==='TIPO_ROCA'||changed==='TIPO_VOLCANICA'){
       filtrarNombreRocaVolcanica(false); filtrarTexturaVolcanica(false);
+      filtrarEstructuraVolcanica(false);
       aplicarCondicionales();
     }
     // dominio abierto "agregar nuevo"
