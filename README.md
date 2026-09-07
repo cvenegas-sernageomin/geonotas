@@ -3,7 +3,7 @@
 PWA offline para captura de datos de **geología básica en terreno** (modelo CDC SERNAGEOMIN).
 Instalable en celular; funciona sin conexión tras la primera carga.
 
-**En línea:** https://cvenegas-sernageomin.github.io/geoterreno-cdc/
+**En línea:** https://cvenegas-sernageomin.github.io/geonotas/
 
 ## Funcionalidad
 - Multi-proyecto, modelo relacional (proyecto → punto de control → afloramiento, litología,
