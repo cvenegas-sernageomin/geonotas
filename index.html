@@ -455,7 +455,7 @@ const MODELO = {
           "obligatorio": false,
           "dominio": "MINERAL_FENOCRISTAL",
           "multiple": true,
-          "nota": "Solo rocas volcanicas de tipo Lava (textura porfidica: cristales mas grandes que la masa fundamental). Seleccion multiple; cada mineral marcado admite su PORCENTAJE y su TAMANO en mm, guardados junto a la especie -- 'Plagioclasa (15%, 6 mm); Hornblenda (3%)'. Los dos numeros son por especie, no del conjunto: asi lo define la norma CDC 2016 Vol IV (campos MINERAL DE FENOCRISTAL / PORCENTAJE FENOCRISTAL / TAMANO FENOCRISTAL (mm)) y asi lo escribe el corpus de Cartas SGB. Lista acotada a los minerales mas frecuentes como fenocristal en el corpus (Plagioclasa, Piroxeno, Biotita, Hornblenda, Cuarzo, +Olivino); cualquier otro va en FENOCRISTALES_DETALLE.",
+          "nota": "Solo rocas volcánicas de tipo Lava (textura porfídica: cristales más grandes que la masa fundamental). Selección múltiple; cada mineral marcado admite su PORCENTAJE y su TAMAÑO en mm, guardados junto a la especie -- 'Plagioclasa (15%, 6 mm); Hornblenda (3%)'. Los dos números son por especie, no del conjunto: así lo define la norma CDC 2016 Vol IV (campos MINERAL DE FENOCRISTAL / PORCENTAJE FENOCRISTAL / TAMAÑO FENOCRISTAL (mm)) y así lo escribe el corpus de Cartas SGB. Lista acotada a los minerales más frecuentes como fenocristal en el corpus (Plagioclasa, Piroxeno, Biotita, Hornblenda, Cuarzo, +Olivino) -- no distingue orto- de clinopiroxeno: en terreno, a ojo/lupa, no se puede diferenciar; cualquier otro mineral, o la distinción orto-/clino- si se determinó por otro medio, va en FENOCRISTALES_DETALLE.",
           "numeros": [
             {
               "suf": "%",
@@ -3165,14 +3165,13 @@ const MODELO = {
       "tipo": "simple",
       "valores": [
         "Plagioclasa",
-        "Piroxeno (clinopiroxeno)",
-        "Piroxeno (ortopiroxeno)",
+        "Piroxeno",
         "Biotita",
         "Hornblenda",
         "Cuarzo",
         "Olivino"
       ],
-      "fuente": "RAG ChromaDB 'prosa_geologica' (coleccion Generador de Cartas Geologicas, tipo=carta, 20.456 chunks): los 7 minerales con mas co-ocurrencia junto a 'fenocristal*' en el corpus real de Cartas SGB chilenas (Plagioclasa 647, Piroxeno-cpx 364, Piroxeno-opx 311, Biotita 283, Hornblenda 231, Cuarzo 198, Olivino 120 -- este ultimo agregado a pedido del usuario 2026-08-25 pese a quedar bajo el umbral de los 6 automaticos, es fenocristal tipico de basaltos). Subconjunto de MINERAL (25 especies), acotado SOLO para FENOCRISTALES_ESPECIE (lavas); un mineral fuera de esta lista se anota en FENOCRISTALES_DETALLE (texto libre)."
+      "fuente": "RAG ChromaDB 'prosa_geologica' (colección Generador de Cartas Geológicas, tipo=carta, 20.456 chunks): los minerales con más co-ocurrencia junto a 'fenocristal*' en el corpus real de Cartas SGB chilenas (Plagioclasa 647, Piroxeno 675 [cpx 364 + opx 311, fusionados 2026-09-07 a pedido del usuario: en terreno con lupa no se distingue orto- de clinopiroxeno, eso requiere sección delgada], Biotita 283, Hornblenda 231, Cuarzo 198, Olivino 120 -- este último agregado a pedido del usuario 2026-08-25 pese a quedar bajo el umbral automático, es fenocristal típico de basaltos). Subconjunto de MINERAL (25 especies), acotado SOLO para FENOCRISTALES_ESPECIE (lavas); un mineral fuera de esta lista se anota en FENOCRISTALES_DETALLE (texto libre). COMPOSICION_MINERAL_INTRUSIVA y CRISTALES_ESPECIE siguen distinguiendo orto-/clinopiroxeno: describen composición general, no fenocristales observados a ojo en terreno."
     },
     "ESFERICIDAD": {
       "tipo": "simple",
@@ -3371,7 +3370,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v113';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v114';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
