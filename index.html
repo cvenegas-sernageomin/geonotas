@@ -3461,7 +3461,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v119';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v120';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -6329,21 +6329,45 @@ function bloqueHijo(h,reg,i,litos){
 }
 
 // -------- Foto --------
+// DOS entradas de archivo a proposito, no una.
+// El usuario reporto (2026-09-08) que al tomar una foto "no abre la camara directo, solo esta
+// la opcion de cargar una foto externa": un <input type=file accept="image/*"> SIN el atributo
+// capture deja que Android decida, y en varios telefonos el selector que muestra no ofrece la
+// camara. Con capture="environment" se abre la camara trasera directo, que es lo que el geologo
+// quiere casi siempre en terreno.
+// Pero capture NO puede ir en el unico input: con el puesto se PIERDE la opcion de elegir una
+// foto ya tomada, y el boton prometia las dos cosas ("Tomar / elegir foto"). De ahi los dos
+// botones. En escritorio capture se ignora y ambos se comportan igual, sin dano.
+// El value='' tras leer el archivo permite volver a elegir la MISMA foto: sin eso el evento
+// change no vuelve a dispararse y parece que el boton dejo de funcionar.
+function entradasFoto(onFile, clasePrincipal){
+  const mk=cap=>{
+    const i=el('input',{type:'file',accept:'image/*',style:'display:none'});
+    if(cap) i.setAttribute('capture','environment');
+    i.addEventListener('change',async e=>{
+      const f=e.target.files[0]; e.target.value='';
+      if(f) await onFile(f);
+    });
+    return i;
+  };
+  const camara=mk(true), galeria=mk(false);
+  const mini=/mini/.test(clasePrincipal)?' mini':'';
+  return el('div',{class:'btnbar'},
+    el('button',{class:'btn '+clasePrincipal,onclick:()=>camara.click()},'📷 Tomar foto'),
+    el('button',{class:'btn sec'+mini,onclick:()=>galeria.click()},'🖼️ Elegir'),
+    camara, galeria);
+}
 function bloqueFoto(reg,litos){
   const wrap=el('div');
   const f=formulario('foto',reg,{litologias:litos});
   wrap.append(f.node);
   const thumbs=el('div',{class:'thumbs'});
   if(reg._img)thumbs.append(el('img',{src:reg._img}));
-  const inp=el('input',{type:'file',accept:'image/*',style:'display:none'});
-  inp.addEventListener('change',async e=>{
-    const file=e.target.files[0];if(!file)return;
+  wrap.append(entradasFoto(async file=>{
     const img=await comprimir(file,1280,.72);reg._img=img;
     Object.assign(reg,f.getData());await put('foto',reg);
     thumbs.innerHTML='';thumbs.append(el('img',{src:img}));toast('Foto agregada');
-  });
-  wrap.append(el('div',{class:'btnbar'},
-    el('button',{class:'btn blue mini',onclick:()=>inp.click()},'📷 Tomar / elegir foto'),inp),thumbs);
+  },'blue mini'),thumbs);
   f.node.addEventListener('change',async()=>{Object.assign(reg,f.getData());await put('foto',reg);});
   return wrap;
 }
@@ -6422,10 +6446,10 @@ async function editorFotomapa(node){
   card.append(el('div',{class:'fld'},el('label',{},'Título'),t));
 
   if(!node._base){
-    const inp=el('input',{type:'file',accept:'image/*',style:'display:none'});
-    inp.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;
-      const im=await cargarImagen(f,1600,.82);node._base=im.dataUrl;node._w=im.w;node._h=im.h;await put('fotomapa',node);editorFotomapa(node);});
-    card.append(el('div',{class:'btnbar'},el('button',{class:'btn blue',onclick:()=>inp.click()},'📷 Cargar foto de este nivel'),inp));
+    card.append(entradasFoto(async f=>{
+      const im=await cargarImagen(f,1600,.82);node._base=im.dataUrl;node._w=im.w;node._h=im.h;
+      await put('fotomapa',node);editorFotomapa(node);
+    },'blue'));
     card.append(el('div',{class:'muted'},'Foto amplia para el 1er nivel (afloramiento). Luego tocas sobre ella para agregar detalles.'));
   } else {
     card.append(el('div',{class:'muted'},'Toca la foto para colocar un detalle · toca un pin para entrar (más escala).'));
@@ -6450,7 +6474,11 @@ async function initFotomapaMap(node){
   for(const hijo of await fotomapaHijos(node.id)) addFotoPin(node,hijo);
   fmap.on('click',async e=>{
     const x=e.latlng.lng, y=e.latlng.lat; if(x<0||y<0||x>w||y>h)return;
+    // Este se dispara al TOCAR un punto del mapa, no desde un boton, asi que no hay donde
+    // poner el par camara/galeria. Se deja capture: el detalle se fotografia en el momento,
+    // parado frente al afloramiento. Para usar una foto ya tomada esta el nivel base.
     const inp=el('input',{type:'file',accept:'image/*'});
+    inp.setAttribute('capture','environment');
     inp.onchange=async ev=>{const f=ev.target.files[0];if(!f)return;
       const im=await cargarImagen(f,1500,.82), th=await cargarImagen(f,110,.7);
       const hijo={id:uid(),_parent:node.id,_punto:node._punto,_base:im.dataUrl,_w:im.w,_h:im.h,_thumb:th.dataUrl,x,y,TITULO:''};
@@ -6942,13 +6970,10 @@ function formNota(nota,onSave,onDelete){
   // foto opcional: campo runtime nota._img (dataURL con prefijo data:), mismo patrón que bloqueFoto()
   const thumbs=el('div',{class:'thumbs'});
   if(nota._img)thumbs.append(el('img',{src:nota._img}));
-  const inp=el('input',{type:'file',accept:'image/*',style:'display:none'});
-  inp.addEventListener('change',async e=>{
-    const file=e.target.files[0]; if(!file)return;
+  box.append(entradasFoto(async file=>{
     nota._img=await comprimir(file,1280,.72);
     thumbs.innerHTML=''; thumbs.append(el('img',{src:nota._img})); toast('Foto agregada');
-  });
-  box.append(el('div',{class:'btnbar'},el('button',{class:'btn orange mini',onclick:()=>inp.click()},'📷 Foto (opcional)'),inp),thumbs);
+  },'orange mini'),thumbs);
   const bar2=el('div',{class:'btnbar'});
   bar2.append(el('button',{class:'btn',onclick:()=>{Object.assign(nota,f.getData());ov.remove();onSave();}},'Guardar'));
   if(onDelete)bar2.append(el('button',{class:'btn del',onclick:()=>{if(confirm('¿Eliminar esta nota?')){ov.remove();onDelete();}}},'Eliminar'));

@@ -468,6 +468,43 @@ async function correr(){
       return 'los 4 tipos con "roca" · depósito en plural sin duplicar · masa fundamental fundida';
     });
 
+    await prueba('La ficha Foto ofrece camara directa y galeria, y ambas guardan', async () => {
+      // El usuario reporto que "no abre la camara directo, solo esta la opcion de cargar una
+      // foto externa": faltaba capture="environment". Se pone en UN input y se deja otro sin
+      // el, porque capture en el unico input hace perder la galeria.
+      const wrap = w.bloqueFoto({id: P+'foto-cam', _parent: P+'pt'}, []);
+      w.document.getElementById('app').append(wrap);
+      try {
+        const ins = [...wrap.querySelectorAll('input[type=file]')];
+        eq(ins.length, 2, 'deberian ser dos entradas de archivo (camara y galeria)');
+        eq(ins.filter(i => i.getAttribute('capture') === 'environment').length, 1,
+           'ninguna entrada abre la camara directo: falta capture="environment"');
+        eq(ins.filter(i => !i.getAttribute('capture')).length, 1,
+           'se perdio la entrada sin capture: ya no se puede elegir una foto de la galeria');
+        ok(ins.every(i => i.getAttribute('accept') === 'image/*'), 'alguna entrada perdio accept=image/*');
+        // los dos botones existen y cada uno dispara SU input
+        const btns = [...wrap.querySelectorAll('button')].filter(b => /Tomar foto|Elegir/.test(b.textContent));
+        eq(btns.length, 2, 'faltan los botones de camara y galeria');
+        const tocados = [];
+        ins.forEach((i, k) => { i.click = () => tocados.push(k); });
+        btns[0].click(); btns[1].click();
+        eq(tocados.join(','), '0,1', 'los botones no disparan cada uno su propia entrada');
+        // y el camino de guardado sigue vivo tras sacar el input inline al helper
+        const cv = w.document.createElement('canvas'); cv.width = cv.height = 24;
+        cv.getContext('2d').fillRect(0, 0, 24, 24);
+        const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+        const dt = new w.DataTransfer(); dt.items.add(new w.File([blob], 'p.png', {type: 'image/png'}));
+        ins[0].click = () => {};
+        ins[0].files = dt.files;
+        ins[0].dispatchEvent(new w.Event('change', {bubbles: true}));
+        await new Promise(r => setTimeout(r, 1500));
+        const reg = await w.get('foto', P+'foto-cam');
+        ok(reg && reg._img && reg._img.startsWith('data:image'), 'la foto tomada no se guardo');
+        eq(ins[0].value, '', 'el input no se limpia: no se podria volver a elegir la misma foto');
+        return '2 entradas (1 con capture) · cada boton su input · la foto se guarda';
+      } finally { wrap.remove(); }
+    });
+
     await prueba('Un valor fuera del dominio no se borra al reabrir (regresión v37-#4)', async () => {
       const li = await w.get('litologia', P+'li-T');
       ok(li && li.UNIDAD_GEOLOGICA === 'Fm. Abanico', 'no se sembró el valor de dominio abierto');
