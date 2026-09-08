@@ -433,6 +433,41 @@ async function correr(){
       return 'ocultos sin fractura y en falla · visibles en fractura · prosa separada con ";"';
     });
 
+    await prueba('Sin NOMBRE_ROCA la prosa no usa el adjetivo de tipo como sujeto', async () => {
+      // Reportado por el usuario tras un ensayo en terreno: salia "La volcanica...". TIPO_ROCA
+      // guarda ADJETIVOS, no sustantivos. El corpus escribe "roca volcanica" 2.903 veces y "la
+      // volcanica" 1. El barrido de los 5 tipos destapo ademas "El depositos deposito".
+      const pt = {id:'smoke-pr', ID_PUNTO_CONTROL:'smoke-pr'};
+      pt[w.inLat] = -35.6; pt[w.inLon] = -71.0;
+      const base = {aflora:[], geomorf:[], cont:[], estr:[], mues:[]};
+      const caso = l => w.prosaPunto(pt, Object.assign({}, base, {litos:[Object.assign({id:'l'}, l)]}), null, null, 900);
+      for (const t of ['Volcánica','Sedimentaria','Intrusiva','Metamórfica']) {
+        const p = caso({TIPO_ROCA:t, COLOR_FRESCO:'Gris'});
+        ok(new RegExp('la roca ' + t.toLowerCase(), 'i').test(p),
+           t + ' sin NOMBRE_ROCA no dice "la roca ' + t.toLowerCase() + '": ' + p);
+      }
+      const dep = caso({TIPO_ROCA:'Depósito', COLOR_FRESCO:'Gris'});
+      ok(!/depósitos depósito/i.test(dep), 'un depósito sin nombre duplica la palabra: ' + dep);
+      ok(/los depósitos son/i.test(dep), 'un depósito sin nombre no concuerda en plural: ' + dep);
+      // con NOMBRE_ROCA no debe cambiar nada
+      ok(/la andesita es/i.test(caso({TIPO_ROCA:'Volcánica', NOMBRE_ROCA:'Andesita', COLOR_FRESCO:'Gris'})),
+         'se rompió el caso normal, con NOMBRE_ROCA');
+      // fenocristales y masa fundamental: UNA cláusula, no dos 'con' seguidos
+      const pf = caso({TIPO_ROCA:'Volcánica', NOMBRE_ROCA:'Andesita', TEXTURA:'Porfídica',
+                       FENOCRISTALES_ESPECIE:'Plagioclasa; Piroxeno', MASA_FUNDAMENTAL:'Pilotaxítica'});
+      ok(/inmersos en una masa fundamental pilotaxítica/.test(pf), 'la masa fundamental no se fundió con los fenocristales: ' + pf);
+      ok(!/con masa fundamental/.test(pf), 'quedó el "con masa fundamental" suelto además del fundido');
+      // Sin fenocristales conserva su propia cláusula. Se afirma el CONTENIDO y no el conector:
+      // cuando la masa fundamental es el único fragmento de la oración, la prosa la introduce
+      // con "presenta" en vez de "con" -- exigir "con" hacía fallar una prosa correcta.
+      ok(/masa fundamental pilotaxítica/.test(caso({TIPO_ROCA:'Volcánica', NOMBRE_ROCA:'Andesita', MASA_FUNDAMENTAL:'Pilotaxítica'})),
+         'sin fenocristales se perdió la masa fundamental');
+      ok(/con masa fundamental pilotaxítica/.test(caso({TIPO_ROCA:'Volcánica', NOMBRE_ROCA:'Andesita',
+         TEXTURA:'Porfídica', MASA_FUNDAMENTAL:'Pilotaxítica'})),
+         'con otro fragmento delante debería enlazarse con "con"');
+      return 'los 4 tipos con "roca" · depósito en plural sin duplicar · masa fundamental fundida';
+    });
+
     await prueba('Un valor fuera del dominio no se borra al reabrir (regresión v37-#4)', async () => {
       const li = await w.get('litologia', P+'li-T');
       ok(li && li.UNIDAD_GEOLOGICA === 'Fm. Abanico', 'no se sembró el valor de dominio abierto');

@@ -3461,7 +3461,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v118';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v119';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7135,7 +7135,7 @@ async function exportKMZ(proyectoId){
       let satImg='';
       if(p._satelital){const fn='sat_'+p.id+'.jpg';files.push({name:fn,data:b64ToBytes(p._satelital)});
         satImg='<br><img src="'+fn+'" style="max-width:340px"/>';}
-      const desc='<![CDATA['+'<b>'+esc(p.ID_PUNTO_CONTROL||'')+'</b><br>'+litos.map(l=>'• '+esc(l.NOMBRE_ROCA||l.TIPO_ROCA||'')).join('<br>')+satImg+']]>';
+      const desc='<![CDATA['+'<b>'+esc(p.ID_PUNTO_CONTROL||'')+'</b><br>'+litos.map(l=>'• '+esc(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA)||'')).join('<br>')+satImg+']]>';
       s+='<Placemark><name>'+esc(p.ID_PUNTO_CONTROL||p.id)+'</name><description>'+desc+'</description>'
         +'<ExtendedData>'+ed+'</ExtendedData>'
         +'<Point><coordinates>'+lon+','+lat+',0</coordinates></Point></Placemark>\n';
@@ -7745,8 +7745,25 @@ const GENERO_ROCA_DEPOSITO=new Set(['Aluviales','Coluviales','Glaciares','Litora
 // Con el núcleo: terminado en 'a' es femenino (arenisca, sienita, andesita, toba, caliza,
 // migmatita...); el resto masculino (granito, gabro, gneis, mármol, granitoide...). Los 5
 // nombres de depósito son adjetivos plurales que califican "depósitos": caso aparte.
+// TIPO_ROCA guarda ADJETIVOS ("Volcánica", "Sedimentaria", "Intrusiva", "Metamórfica"), no
+// sustantivos, así que usarlos de sujeto rompía la oración. Reportado por el usuario tras un
+// ensayo en terreno: "La volcánica...". El barrido de los 5 tipos destapó además un caso peor,
+// "El depósitos depósito es de color gris", cuando TIPO_ROCA='Depósito' y no hay NOMBRE_ROCA:
+// sujetoLitologia() prefijaba "Depósitos" a un nombre que ya era "Depósito".
+// El corpus de Cartas escribe "roca volcánica" 2.903 veces y "la volcánica" 1 (ídem
+// sedimentaria 1.481/1, intrusiva 1.112/0, metamórfica 667/0), así que el respaldo es el
+// sustantivo "roca" + el adjetivo. Devuelve el nombre YA utilizable como sujeto.
+function nombreLitologia(nombreRoca, tipoRoca){
+  if(nombreRoca) return nombreRoca;
+  if(!tipoRoca) return '';
+  // Depósito no lleva "roca": son depósitos, y su plural ya lo maneja generoRoca/mpl.
+  if(tipoRoca==='Depósito') return 'Depósitos';
+  return 'roca '+tipoRoca.toLowerCase();
+}
 function generoRoca(nombreRoca){
   if(GENERO_ROCA_DEPOSITO.has(nombreRoca)) return 'mpl';
+  // respaldo de nombreLitologia() para un depósito sin NOMBRE_ROCA: también es plural
+  if(nombreRoca==='Depósitos') return 'mpl';
   const nucleo=String(nombreRoca||'').trim().split(/\s+/)[0].replace(/[(),]/g,'');
   // sin nombre, sujetoLitologia() cae al respaldo "la roca", que es femenino
   if(!nucleo) return 'f';
@@ -7788,7 +7805,7 @@ function empiezaConPalabra(g,nombre){
   return sig==='' || !/[a-záéíóúñ]/.test(sig);
 }
 function sujetoLitologia(nombreRoca,tipoRoca,granulometria){
-  const nombre=nombreRoca||tipoRoca||'la roca';
+  const nombre=nombreLitologia(nombreRoca,tipoRoca)||'la roca';
   const g=sinRango(granulometria);
   // Depósito primero, ANTES del atajo "sin granulometría": NOMBRE_ROCA en Depósito es un
   // adjetivo plural ("Aluviales", "Coluviales"...), nunca un sustantivo que pueda abrir la
@@ -7800,7 +7817,10 @@ function sujetoLitologia(nombreRoca,tipoRoca,granulometria){
   // "Tefra indiferenciada" -- verbatim norma CDC), no un modificador a fusionar. Prefijar
   // "Depósitos" duplicaría la palabra ("Depósitos tefra, depósito volcánico").
   if(nombre==='Tefra, depósito volcánico') return g ? g.charAt(0).toUpperCase()+g.slice(1) : 'Tefra';
-  if(tipoRoca==='Depósito') return 'Depósitos '+nombre.toLowerCase()+(g?' de '+g:'');
+  // Sin NOMBRE_ROCA, nombre ya vale "Depósitos": volver a prefijarlo daba "Depósitos depósito".
+  if(tipoRoca==='Depósito') return nombreRoca
+    ? 'Depósitos '+nombreRoca.toLowerCase()+(g?' de '+g:'')
+    : 'Depósitos'+(g?' de '+g:'');
   if(!g) return nombre;
   // Los términos "conglomerado/brecha de X" vienen de la escala Udden-Wentworth, que las 9
   // rocas sedimentarias clásticas comparten completa (no solo Conglomerado y Brecha): se
@@ -7978,14 +7998,25 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     if(l.TEXTURA && l.TEXTURA_DUNHAM) frag.push('de textura '+minuscula(l.TEXTURA)+' ('+minuscula(l.TEXTURA_DUNHAM)+')');
     else if(l.TEXTURA_DUNHAM) frag.push('de textura '+minuscula(l.TEXTURA_DUNHAM));
     else if(l.TEXTURA) frag.push('de textura '+minuscula(l.TEXTURA)+fabrica);
-    if(l.MASA_FUNDAMENTAL) frag.push('con masa fundamental '+minuscula(l.MASA_FUNDAMENTAL));
     if(l.CRISTALINIDAD) frag.push(minuscula(l.CRISTALINIDAD));
     const matriz=multi(l.MATRIZ_COMPOSICION);
     if(matriz.length) frag.push('con matriz '+lista(matriz.map(minuscula))+parentesis(l.MATRIZ_DETALLE));
+    // Fenocristales y masa fundamental van en UNA sola cláusula, no en dos con 'con'. Es como
+    // lo escribe el corpus ("fenocristales ... inmersos en una masa fundamental ...", 225 casos;
+    // "en una masa fundamental" 1.104 frente a "con masa fundamental" 180) y de paso corta la
+    // cadena que reportó el usuario: "de textura porfídica, con masa fundamental X, con
+    // fenocristales de Y, con Z, con W" -- cuatro 'con' seguidos. "Inmersos" concuerda siempre:
+    // el sujeto de esa cláusula son los fenocristales, masculino plural.
     const fenos=multi(l.FENOCRISTALES_ESPECIE);
+    const masa=l.MASA_FUNDAMENTAL?minuscula(l.MASA_FUNDAMENTAL):'';
     if(fenos.length){
       const enumF=lista(fenos.map(mineralNum));
-      frag.push('con fenocristales de '+enumF+anexoDetalle(l.FENOCRISTALES_DETALLE,enumF));
+      frag.push('con fenocristales de '+enumF+anexoDetalle(l.FENOCRISTALES_DETALLE,enumF)
+        +(masa?', inmersos en una masa fundamental '+masa:''));
+    } else if(masa){
+      // Sin fenocristales no hay a qué colgarla: se queda con su propia cláusula, que el
+      // corpus también usa (180 casos).
+      frag.push('con masa fundamental '+masa);
     }
     // cristaloclastos (piroclásticas/tefra): distinto de fenocristales, ver CONDICIONALES.
     const cristales=multi(l.CRISTALES_ESPECIE);
@@ -8002,7 +8033,7 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       // "5% de líticos", no "5% líticos": es la forma del corpus ("compuesta de 1-3% de
       // cristales…", "incluyen de 2-5% de clastos redondeados…") y la del español corriente.
       .filter(([c])=>l[c]).map(([c,n])=>l[c]+'% de '+n);
-    let fraseComp=comp.length?COMPUESTO[generoRoca(l.NOMBRE_ROCA)]+' de '+lista(comp):'';
+    let fraseComp=comp.length?COMPUESTO[generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA))]+' de '+lista(comp):'';
     if(l.MATRIZ_PCT){
       const m='una matriz que constituye el '+l.MATRIZ_PCT+'% de la roca';
       fraseComp=fraseComp?fraseComp+', con '+m:'con '+m;
@@ -8064,7 +8095,7 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // son mutuamente excluyentes por TIPO_ROCA desde v86 -- misma cláusula, distinto origen.
     const compMin=multi(l.COMPOSICION_MINERAL_PRINCIPAL||l.COMPOSICION_MINERAL_INTRUSIVA);
     const compMinDetalle=l.COMPOSICION_MINERAL_PRINCIPAL?l.COMPOSICION_MINERAL_DETALLE:l.COMPOSICION_MINERAL_INTRUSIVA_DETALLE;
-    if(compMin.length) frag.push(CONFORMAR[generoRoca(l.NOMBRE_ROCA)]+' por '+lista(compMin.map(minuscula))
+    if(compMin.length) frag.push(CONFORMAR[generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA))]+' por '+lista(compMin.map(minuscula))
       +parentesis(compMinDetalle));
     if(l.TIPO_ALTERACION_LITO){
       // los valores del dominio TIPO_ALTERACION ya son sustantivos ("Silicificación",
@@ -8077,17 +8108,17 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // Confianza al final de la oración, que es donde el corpus pone la salvedad ("… y la asignó
     // tentativamente al Devónico-Carbonífero"), no delante del nombre de la roca.
     if(l.UNIDAD_GEOLOGICA && !unidadEnResumen)
-      frag.push((generoRoca(l.NOMBRE_ROCA||l.TIPO_ROCA)==='mpl'?'asignables':'asignable')
+      frag.push((generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA))==='mpl'?'asignables':'asignable')
         +' a la unidad '+l.UNIDAD_GEOLOGICA);
     const conf=CONFIANZA_LITO_FRASE[l.GRADO_CONFIANZA_LITO]; if(conf) frag.push(conf);
     // La granulometría ya va fundida en "sujeto" (no es un fragmento más): si es el ÚNICO
     // dato extra, sujeto ya difiere del nombre desnudo y hay que decirlo igual (antes se
     // perdía en silencio: "Se reconoce brecha sedimentaria." sin más, sin la granulometría).
-    const nombre=l.NOMBRE_ROCA||l.TIPO_ROCA||'la roca';
+    const nombre=nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA)||'la roca';
     // el sujeto abre la oración: el respaldo "la roca" (registro sin NOMBRE_ROCA) venía en
     // minúscula y YA trae artículo, así que en ese caso no se le antepone otro.
-    const gen=generoRoca(l.NOMBRE_ROCA||l.TIPO_ROCA);
-    const art=(l.NOMBRE_ROCA||l.TIPO_ROCA) ? ARTICULO_ROCA[gen] : '';
+    const gen=generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA));
+    const art=(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA)) ? ARTICULO_ROCA[gen] : '';
     const Sujeto=art ? art+minuscula(sujeto) : sujeto.charAt(0).toUpperCase()+sujeto.slice(1);
     if(!frag.length) return sujeto===nombre ? '' : Sujeto+'.';
     // Verbo explícito. Con el artículo delante, la lista de complementos sin verbo ("La arenisca
@@ -8178,7 +8209,7 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
   // que ya usa sujetoLitologia() para el sujeto de la oración de detalle -- si no, esta oración
   // resumen queda con un adjetivo suelto como sujeto ("Se reconoce aluviales...", sin sentido).
   const nombreResumen=l=>{
-    const n=l.NOMBRE_ROCA||l.TIPO_ROCA; if(!n) return '';
+    const n=nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA); if(!n) return '';
     // "Tefra, depósito volcánico" ya contiene la palabra "depósito" -- mismo caso especial
     // que sujetoLitologia() (2026-08-25), evita "depósitos tefra, depósito volcánico".
     if(n==='Tefra, depósito volcánico') return 'tefra';
@@ -8197,7 +8228,7 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // sinRango() saca el paréntesis del propio término del dominio ("andesita (intermedia/
     // silícea)" -> "andesita"): dentro de una enumeración que ya usa paréntesis para el tipo de
     // falla y la confianza, un tercero anidado vuelve la oración ilegible.
-    return (ARTICULO_ROCA[generoRoca(l.NOMBRE_ROCA||l.TIPO_ROCA)]||'la ').toLowerCase()+sinRango(n);
+    return (ARTICULO_ROCA[generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA))]||'la ').toLowerCase()+sinRango(n);
   };
   const nombres=[...new Set(litos.map(nombreResumen).filter(Boolean))];
   const unidades=[...new Set(litos.map(l=>l.UNIDAD_GEOLOGICA).filter(Boolean))];
@@ -8212,7 +8243,7 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // "unos depósitos aluviales" no es como se escribe. Mismo criterio de género que el resto.
     const conArt=litos.map(l=>{
       const n=nombreResumen(l); if(!n) return '';
-      const g=generoRoca(l.NOMBRE_ROCA||l.TIPO_ROCA);
+      const g=generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA));
       return g==='mpl'||esPlural(n) ? n : (g==='m'?'un ':'una ')+n;
     }).filter(Boolean);
     const unicos=[...new Set(conArt)];
