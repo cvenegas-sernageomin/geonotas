@@ -643,6 +643,82 @@ async function correr(){
       return patrones.length + ' patrones propios; ninguna de las ' + AJENAS.length + ' ajenas capturada';
     });
 
+    // ---- Lienzo de esquema (v121 / light-20) ----
+    // No habia NINGUNA prueba que tocara el esquema. Se afirma el COMPORTAMIENTO (que el trazo
+    // se vea en el lienzo y que Deshacer lo quite de verdad, leyendo pixeles), no la estructura
+    // interna: SK_COLORES y compania son `const` y no se ven desde este realm.
+    await prueba('Deshacer quita el ultimo trazo y no revienta con el lienzo vacio', async () => {
+      const reg = {id:P+'esq-u', _parent:P+'pt-T', _w:200, _h:100,
+                   _trazos:[{c:'#000',w:2,p:[0,0,10,10]}, {c:'#f00',w:2,p:[20,20,30,30]}]};
+      eq(w.esquemaDeshacer(reg), true, 'deshacer con trazos deberia devolver true');
+      eq(reg._trazos.length, 1, 'no quito exactamente un trazo');
+      eq(reg._trazos[0].c, '#000', 'quito el trazo equivocado (deberia sacar el ULTIMO)');
+      eq(w.esquemaDeshacer(reg), true, 'deshacer el ultimo trazo deberia devolver true');
+      eq(w.esquemaDeshacer(reg), false, 'deshacer con el lienzo vacio deberia devolver false');
+      eq(reg._trazos.length, 0, 'el lienzo vacio no quedo vacio');
+      return 'pila de trazos: 2 → 1 → 0 → sin efecto';
+    });
+
+    await prueba('Un esquema anterior a v121 (solo _img) se conserva como foto de fondo', async () => {
+      const viejo = {id:P+'esq-v', _parent:P+'pt-T', _img:'data:image/png;base64,IMG'};
+      w.esquemaNormalizar(viejo);
+      eq(viejo._fondo, 'data:image/png;base64,IMG', 'el dibujo viejo no paso a ser el fondo');
+      eq(viejo._trazos, [], 'no quedo una pila de trazos vacia');
+      // Idempotente y no pisa un fondo que ya existe.
+      const conFondo = {id:P+'esq-f', _img:'IMG-NUEVA', _fondo:'FONDO', _trazos:[{c:'#000',w:2,p:[0,0,1,1]}]};
+      w.esquemaNormalizar(conFondo);
+      eq(conFondo._fondo, 'FONDO', 'piso el fondo existente con _img');
+      eq(conFondo._trazos.length, 1, 'borro los trazos de un registro ya normalizado');
+      return 'el dibujo antiguo no se pierde: pasa a fondo y se dibuja encima';
+    });
+
+    await prueba('El lienzo pinta el trazo y Deshacer lo borra de la imagen (no solo del dato)', async () => {
+      const reg = {id:P+'esq-p', _parent:P+'pt-T', _w:200, _h:100,
+                   _trazos:[{c:'#ff0000', w:40, p:[20,50,180,50]}]};   // franja roja horizontal
+      await w.put('esquema', reg);
+      const ov = await w.abrirEsquema(reg);
+      try {
+        const cv = ov.querySelector('.sk-cv');
+        ok(cv, 'el lienzo no se creo');
+        eq([cv.width, cv.height], [200,100], 'el lienzo no tomo el tamano logico del registro');
+        const px = (x,y) => Array.from(cv.getContext('2d').getImageData(x,y,1,1).data).slice(0,3);
+        const rojo = px(100,50), esquina = px(3,3);
+        ok(rojo[0] > 200 && rojo[1] < 80, 'el trazo no se pinto: el centro dio rgb ' + rojo);
+        eq(esquina, [255,255,255], 'el fondo del lienzo no quedo blanco');
+
+        const btn = Array.from(ov.querySelectorAll('button')).find(b => /Deshacer/.test(b.textContent));
+        ok(btn, 'no hay boton Deshacer en la barra de herramientas');
+        btn.click();
+        for (let i=0; i<40 && reg._trazos.length; i++) await new Promise(r=>setTimeout(r,25));
+        eq(reg._trazos.length, 0, 'Deshacer no quito el trazo del dato');
+        eq(px(100,50), [255,255,255], 'Deshacer no repinto el lienzo: el trazo sigue visible');
+        const guardado = await w.get('esquema', reg.id);
+        ok(guardado && /^data:image\//.test(guardado._img || ''),
+           'no se regenero _img, que es lo que leen los exports, el PDF y el respaldo');
+        eq(guardado._trazos.length, 0, 'los trazos no se persistieron tras Deshacer');
+        return 'trazo visible → Deshacer → lienzo blanco, _trazos e _img al dia en IndexedDB';
+      } finally { ov.remove(); }
+    });
+
+    await prueba('La ficha muestra miniatura + boton, no un lienzo embebido', async () => {
+      const reg = {id:P+'esq-b', _parent:P+'pt-T'};
+      await w.put('esquema', reg);
+      const wrap = w.bloqueEsquema(reg);
+      eq(wrap.querySelector('canvas'), null, 'la ficha volvio a traer un canvas embebido');
+      ok(wrap.querySelector('.sk-mini'), 'falta la miniatura del esquema');
+      ok(Array.from(wrap.querySelectorAll('button')).some(b => /Dibujar/.test(b.textContent)),
+         'falta el boton que abre el lienzo a pantalla completa');
+      return 'miniatura + "Dibujar"; el lienzo vive en el overlay';
+    });
+
+    await prueba('Los campos internos del lienzo NO entran a los exports', async () => {
+      const cs = w.campos('esquema').map(c => c.nombre);
+      eq(cs, ['ID_PUNTO_CONTROL','ID_ESQUEMA','ID_FOTOGRAFIA_ASOCIADA','OBSERVACION'],
+         'cambiaron los campos exportables de TBL_ESQUEMA_DIBUJO');
+      ok(!cs.some(n => /^_/.test(n)), '_trazos/_fondo/_img se colaron a los campos del modelo');
+      return 'los 4 campos del modelo intactos; _trazos, _fondo y _w/_h quedan fuera';
+    });
+
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.

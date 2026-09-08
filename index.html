@@ -137,7 +137,27 @@
   .toast.on{opacity:.97}
   .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .thumbs img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)}
-  canvas.sketch{border:1px solid var(--bd);border-radius:10px;touch-action:none;background:#fff;width:100%;max-width:100%}
+  /* Esquema: miniatura en la ficha + lienzo a pantalla completa. El canvas embebido de 600x340
+     que habia antes se retiro (era inservible en telefono); .sketch ya no lo usa nadie. */
+  .sk-mini{margin-top:8px}
+  .sk-mini img{max-width:100%;display:block;border:1px solid var(--bd);border-radius:10px;background:#fff;cursor:pointer}
+  .sk-vacio{border:1px dashed var(--bd);border-radius:10px;padding:20px 12px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer}
+  .sk-ov{position:fixed;inset:0;z-index:4000;background:#10151a;display:flex;flex-direction:column;
+    padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left))}
+  .sk-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#eef4ee;font-size:13px;padding:0 2px 6px}
+  .sk-top .btn{padding:8px 14px}
+  .sk-vp{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .sk-cv{max-width:100%;max-height:100%;background:#fff;border-radius:8px;touch-action:none;box-shadow:0 6px 24px -10px rgba(0,0,0,.7)}
+  .sk-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;padding-top:7px}
+  .sk-tools .btnbar{margin-top:0;gap:6px;flex-wrap:nowrap}
+  .sk-tools .btn{min-height:42px;padding:8px 12px;font-size:13px}  /* 42 px: se toca con guantes */
+  .sk-sw,.sk-gr{width:36px;height:42px;padding:0;flex:0 0 auto;cursor:pointer;
+    display:flex;align-items:center;justify-content:center}
+  .sk-sw{border-radius:50%;height:36px;border:2px solid #57626d}
+  .sk-sw.on{border-color:#fff;box-shadow:0 0 0 2px #10151a,0 0 0 4px #fff}
+  .sk-gr{border-radius:9px;border:1px solid #57626d;background:#1c242c;color:#eef4ee}
+  .sk-gr.on{background:var(--verde);border-color:var(--verde2);color:#fff}
+  .sk-gr i{display:block;width:20px;background:currentColor;border-radius:99px}
   .muted{color:var(--muted);font-size:12px}
   .creditos{font-size:12px;color:var(--muted);text-align:center;line-height:1.75}
   .creditos b{color:var(--txt);font-weight:650}
@@ -3461,7 +3481,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v120';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v121';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -6340,7 +6360,8 @@ function bloqueHijo(h,reg,i,litos){
 // botones. En escritorio capture se ignora y ambos se comportan igual, sin dano.
 // El value='' tras leer el archivo permite volver a elegir la MISMA foto: sin eso el evento
 // change no vuelve a dispararse y parece que el boton dejo de funcionar.
-function entradasFoto(onFile, clasePrincipal){
+function entradasFoto(onFile, clasePrincipal, etiquetas){
+  const et = etiquetas || ['📷 Tomar foto','🖼️ Elegir'];
   const mk=cap=>{
     const i=el('input',{type:'file',accept:'image/*',style:'display:none'});
     if(cap) i.setAttribute('capture','environment');
@@ -6353,8 +6374,8 @@ function entradasFoto(onFile, clasePrincipal){
   const camara=mk(true), galeria=mk(false);
   const mini=/mini/.test(clasePrincipal)?' mini':'';
   return el('div',{class:'btnbar'},
-    el('button',{class:'btn '+clasePrincipal,onclick:()=>camara.click()},'📷 Tomar foto'),
-    el('button',{class:'btn sec'+mini,onclick:()=>galeria.click()},'🖼️ Elegir'),
+    el('button',{class:'btn '+clasePrincipal,onclick:()=>camara.click()},et[0]),
+    el('button',{class:'btn sec'+mini,onclick:()=>galeria.click()},et[1]),
     camara, galeria);
 }
 function bloqueFoto(reg,litos){
@@ -6373,22 +6394,205 @@ function bloqueFoto(reg,litos){
 }
 const comprimir=(file,max,q)=>cargarImagen(file,max,q).then(r=>r.dataUrl);   // alias de cargarImagen (sin duplicar lógica canvas)
 
-// -------- Esquema (canvas) --------
+// -------- Esquema (lienzo a pantalla completa) --------
+// El esquema guarda TRAZOS VECTORIALES (_trazos), no solo el PNG aplanado que guardaba antes.
+// Es lo que hace posible "Deshacer": sobre un raster no hay forma de quitar la ultima linea.
+// _img se sigue generando en cada guardado porque es el contrato con los exports (columna
+// IMAGEN del CSV), el PDF de libreta y el respaldo -- ninguno de los tres sabe de _trazos.
+//   _trazos : [{c:color, w:grosor, p:[x0,y0,x1,y1,...]}] en coordenadas LOGICAS del lienzo
+//   _fondo  : dataURL de la foto de fondo (opcional)
+//   _w/_h   : tamano logico del lienzo, fijo desde que se crea
+// Las coordenadas son logicas y no de pantalla para que el mismo esquema se vea igual en
+// cualquier telefono y en cualquier orientacion: el editor ESCALA el lienzo al viewport en vez
+// de redefinirlo. Ninguno de estos campos entra a los exports: campos() lee solo los campos
+// declarados en el modelo, y los internos van con guion bajo.
+const SK_COLORES = ['#153f2b','#c0463a','#2b6fa8','#bd7a2c','#ffffff'];
+const SK_GROSORES = [2,5,11];
+const SK_LADO_MAX = 1400;   // lado mayor del lienzo en blanco, en px logicos
+
+// Un registro anterior a esta version solo tiene _img (PNG aplanado, sin trazos). Se promueve a
+// FONDO: el dibujo antiguo se conserva entero y se puede seguir dibujando encima; lo unico que
+// no se puede es deshacer trazo por trazo lo que se dibujo antes, que nunca quedo registrado.
+// NO escribe en la base: solo normaliza el objeto en memoria, y se persiste si el geologo dibuja.
+function esquemaNormalizar(reg){
+  if(!Array.isArray(reg._trazos)){
+    reg._trazos=[];
+    if(reg._img && !reg._fondo) reg._fondo=reg._img;
+  }
+  return reg;
+}
+function esquemaDeshacer(reg){
+  esquemaNormalizar(reg);
+  if(!reg._trazos.length) return false;
+  reg._trazos.pop();
+  return true;
+}
+// Tamano logico por defecto: la proporcion del AREA DE DIBUJO ya montada (no la de la ventana),
+// con el lado mayor a SK_LADO_MAX. Medirla contra la ventana dejaba el lienzo con la proporcion
+// de la pantalla completa y, como las barras se comen alto, sobraban 120 px de ancho sin usar.
+function esquemaTamPantalla(vp){
+  const vw=Math.max(1,(vp&&vp.clientWidth)||window.innerWidth||800),
+        vh=Math.max(1,(vp&&vp.clientHeight)||window.innerHeight||600);
+  const s=SK_LADO_MAX/Math.max(vw,vh);
+  return [Math.round(vw*s),Math.round(vh*s)];
+}
+// Pinta un trazo. Un toque suelto (dos coordenadas) es un PUNTO y se dibuja como disco: una
+// subruta de largo cero con lineCap round no se pinta de forma fiable en todos los navegadores.
+function esquemaTrazo(ctx,t){
+  const p=t&&t.p; if(!p||p.length<2) return;
+  if(p.length===2){ ctx.beginPath();ctx.arc(p[0],p[1],Math.max(1,t.w/2),0,Math.PI*2);ctx.fillStyle=t.c;ctx.fill();return; }
+  ctx.strokeStyle=t.c;ctx.lineWidth=t.w;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(p[0],p[1]);
+  for(let i=2;i<p.length;i+=2) ctx.lineTo(p[i],p[i+1]);
+  ctx.stroke();
+}
+// Redibuja el lienzo entero desde los datos. La foto va en modo "contain": asi cargar una foto
+// sobre un esquema que YA tiene trazos no los mueve ni los deforma. Cuando el lienzo nacio de la
+// propia foto, contain coincide exactamente con el lienzo y no sobra fondo blanco.
+function esquemaPintar(ctx,reg,fondoImg,w,h){
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  if(fondoImg && fondoImg.naturalWidth){
+    const s=Math.min(w/fondoImg.naturalWidth,h/fondoImg.naturalHeight);
+    const dw=fondoImg.naturalWidth*s, dh=fondoImg.naturalHeight*s;
+    ctx.drawImage(fondoImg,(w-dw)/2,(h-dh)/2,dw,dh);
+  }
+  (reg._trazos||[]).forEach(t=>esquemaTrazo(ctx,t));
+}
+function esquemaCargarFondo(reg){return new Promise(res=>{
+  if(!reg._fondo) return res(null);
+  const im=new Image();
+  im.onload=()=>{ if(!reg._w||!reg._h){reg._w=im.naturalWidth;reg._h=im.naturalHeight;} res(im); };
+  im.onerror=()=>res(null);
+  im.src=reg._fondo;});}
+
+// Lienzo a pantalla completa. Overlay fijo (mismo patron que el visor de leyenda de Cartas SG) y
+// no un canvas dentro de la ficha: embebido quedaba en 600x340 y en un telefono era inservible.
+// La barra de herramientas usa SOLO <button>, nunca input/select: asi queda fuera del barrido de
+// updateFormReadonly() y no hace falta sumarla a READONLY_EXENTOS (la trampa que ya mordio tres
+// veces). El bloqueo de Gabinete se aplica aparte, abriendo el lienzo en modo lectura -- antes el
+// canvas no era input, asi que se podia dibujar sobre un Gabinete bloqueado.
+async function abrirEsquema(reg, alCerrar){
+  esquemaNormalizar(reg);
+  const soloLectura = bloqueoGabineteActivo(false);
+  let fondo = await esquemaCargarFondo(reg);
+
+  let color=SK_COLORES[0], grosor=SK_GROSORES[0], trazo=null, sucio=false;
+  const cv=el('canvas',{class:'sk-cv'});
+  const ctx=cv.getContext('2d');
+  const repintar=()=>esquemaPintar(ctx,reg,fondo,reg._w,reg._h);
+
+  const ov=el('div',{class:'sk-ov'});
+  const cerrar=async()=>{ await guardar(); document.removeEventListener('keydown',onKey); ov.remove(); if(alCerrar) alCerrar(); };
+  const onKey=e=>{ if(e.key==='Escape') cerrar(); };
+  const guardar=async()=>{
+    if(!sucio||soloLectura) return;
+    // JPEG cuando hay foto de fondo (un PNG de una fotografia pesa varias veces mas, y el
+    // respaldo lleva ademas la propia _fondo); PNG cuando es dibujo de linea sobre blanco.
+    reg._img=cv.toDataURL(reg._fondo?'image/jpeg':'image/png',.82);
+    await put('esquema',reg);
+    sucio=false;
+  };
+  document.addEventListener('keydown',onKey);
+  ov.append(el('div',{class:'sk-top'},
+    el('b',{},soloLectura?'Esquema — Gabinete bloqueado (solo lectura)':'Esquema'),
+    el('button',{class:'btn',onclick:cerrar},'✓ Listo')));
+  const vp=el('div',{class:'sk-vp'},cv);
+  ov.append(vp);
+
+  if(!soloLectura){
+    // Fila 1: colores y grosores, compactos, todos en un renglon a 375 px.
+    const tools=el('div',{class:'sk-tools'});
+    SK_COLORES.forEach(c=>tools.append(el('button',{class:'sk-sw'+(c===color?' on':''),style:'background:'+c,title:'Color '+c,
+      onclick:e=>{ color=c; tools.querySelectorAll('.sk-sw').forEach(b=>b.classList.remove('on')); e.currentTarget.classList.add('on'); }})));
+    SK_GROSORES.forEach(g=>tools.append(el('button',{class:'sk-gr'+(g===grosor?' on':''),title:'Grosor '+g+' px',
+      onclick:e=>{ grosor=g; tools.querySelectorAll('.sk-gr').forEach(b=>b.classList.remove('on')); e.currentTarget.classList.add('on'); }},
+      el('i',{style:'height:'+g+'px'}))));
+
+    // Fila 2: acciones. "Quitar foto" solo existe si hay foto, asi que la fila se repinta cuando
+    // esa condicion cambia -- no en cada trazo. Deshacer va primero y con etiqueta completa: es
+    // la accion que el usuario pidio y la que mas se toca.
+    const fila2=el('div',{class:'sk-tools'});
+    const pintarFila2=()=>{ fila2.innerHTML='';
+      fila2.append(el('button',{class:'btn sec',onclick:async()=>{
+        if(!esquemaDeshacer(reg)){ toast('No queda nada que deshacer'); return; }
+        repintar(); sucio=true; await guardar();
+      }},'↩ Deshacer'));
+      fila2.append(entradasFoto(ponerFondo,'blue',['📷 Foto','🖼️']));
+      if(reg._fondo) fila2.append(el('button',{class:'btn sec',title:'Quitar la foto de fondo',onclick:async()=>{
+        reg._fondo=null; fondo=null; repintar(); sucio=true; await guardar(); pintarFila2(); toast('Foto de fondo quitada');
+      }},'🚫'));
+      fila2.append(el('button',{class:'btn del',title:'Borrar todos los trazos',onclick:async()=>{
+        if(!reg._trazos.length){ toast('El lienzo ya esta sin trazos'); return; }
+        if(!confirm('¿Borrar todos los trazos de este esquema? La foto de fondo se conserva.')) return;
+        reg._trazos=[]; repintar(); sucio=true; await guardar();
+      }},'🗑️'));
+    };
+    async function ponerFondo(file){
+      const img=await cargarImagen(file,1280,.72);
+      reg._fondo=img.dataUrl;
+      // Si aun no hay trazos, el lienzo ADOPTA la proporcion de la foto (se aprovecha entera).
+      // Si ya los hay, el lienzo no se toca y la foto entra en contain, para no mover el dibujo.
+      if(!reg._trazos.length){ reg._w=img.w; reg._h=img.h; cv.width=reg._w; cv.height=reg._h; }
+      fondo=await esquemaCargarFondo(reg);
+      repintar(); sucio=true; await guardar(); pintarFila2(); toast('Foto de fondo agregada');
+    }
+    pintarFila2();
+    ov.append(tools, fila2);
+
+    const pos=e=>{ const r=cv.getBoundingClientRect();
+      return [(e.clientX-r.left)*reg._w/r.width,(e.clientY-r.top)*reg._h/r.height]; };
+    // El grosor se elige en px DE PANTALLA y se guarda convertido a px LOGICOS. El lienzo logico
+    // es ~2x el area visible, asi que guardar el valor crudo hacia que el trazo fino de 2 px
+    // saliera dibujado a 1 px: casi invisible, y peor todavia sobre una foto.
+    const escala=()=>{ const r=cv.getBoundingClientRect(); return r.width?reg._w/r.width:1; };
+    cv.addEventListener('pointerdown',e=>{
+      const p=pos(e);
+      trazo={c:color,w:grosor*escala(),p:[p[0],p[1]]};
+      reg._trazos.push(trazo);
+      try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+      e.preventDefault();
+    });
+    cv.addEventListener('pointermove',e=>{
+      if(!trazo) return;
+      const p=pos(e), q=trazo.p, n=q.length;
+      // Segmento incremental: no se repinta el lienzo entero en cada movimiento. Con una foto de
+      // fondo, redibujar todo por evento arrastra visiblemente en un telefono.
+      ctx.strokeStyle=trazo.c;ctx.lineWidth=trazo.w;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(q[n-2],q[n-1]);ctx.lineTo(p[0],p[1]);ctx.stroke();
+      q.push(p[0],p[1]);
+      e.preventDefault();
+    });
+    const soltar=async()=>{
+      if(!trazo) return;
+      if(trazo.p.length===2) esquemaTrazo(ctx,trazo);   // toque suelto: pintar el punto
+      trazo=null; sucio=true; await guardar();
+    };
+    cv.addEventListener('pointerup',soltar);
+    cv.addEventListener('pointercancel',soltar);
+  }
+
+  // El lienzo se dimensiona DESPUES de montar el overlay: solo entonces .sk-vp tiene su tamano
+  // real, ya descontadas las barras. Un esquema con _w/_h guardados conserva los suyos, para que
+  // los trazos no se muevan al reabrirlo en otro telefono o en otra orientacion.
+  document.body.appendChild(ov);
+  if(!reg._w||!reg._h){ const t=esquemaTamPantalla(vp); reg._w=t[0]; reg._h=t[1]; }
+  cv.width=reg._w; cv.height=reg._h;
+  repintar();
+  return ov;
+}
+
 function bloqueEsquema(reg){
   const wrap=el('div');
   const f=formulario('esquema',reg);wrap.append(f.node);
-  const cv=el('canvas',{class:'sketch',width:600,height:340});
-  const ctx=cv.getContext('2d');ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#153';
-  if(reg._img){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,cv.width,cv.height);im.src=reg._img;}
-  let draw=false,lx,ly;
-  const pos=e=>{const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return[(t.clientX-r.left)*cv.width/r.width,(t.clientY-r.top)*cv.height/r.height];};
-  const start=e=>{draw=true;[lx,ly]=pos(e);e.preventDefault();};
-  const move=e=>{if(!draw)return;const[x,y]=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];e.preventDefault();};
-  const end=async()=>{if(!draw)return;draw=false;reg._img=cv.toDataURL('image/png');Object.assign(reg,f.getData());await put('esquema',reg);};
-  cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
-  cv.addEventListener('touchstart',start);cv.addEventListener('touchmove',move);cv.addEventListener('touchend',end);
-  wrap.append(cv);
-  wrap.append(el('div',{class:'btnbar'},el('button',{class:'btn sec mini',onclick:async()=>{ctx.clearRect(0,0,cv.width,cv.height);reg._img=null;await put('esquema',reg);}},'Limpiar')));
+  const mini=el('div',{class:'sk-mini'});
+  const abrir=async()=>{ Object.assign(reg,f.getData()); await put('esquema',reg); await abrirEsquema(reg,pintarMini); };
+  const pintarMini=()=>{ mini.innerHTML='';
+    mini.append(reg._img ? el('img',{src:reg._img,alt:'esquema',onclick:abrir})
+                         : el('div',{class:'sk-vacio',onclick:abrir},'Sin dibujo todavia — toca para abrir el lienzo'));
+  };
+  pintarMini();
+  wrap.append(el('div',{class:'btnbar'},el('button',{class:'btn blue mini',onclick:abrir},'✏️ Dibujar')),mini);
   f.node.addEventListener('change',async()=>{Object.assign(reg,f.getData());await put('esquema',reg);});
   return wrap;
 }
