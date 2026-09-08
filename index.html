@@ -876,6 +876,30 @@ const MODELO = {
           "nota": "lista depende de campo TIPO_ESTRUCTURA"
         },
         {
+          "nombre": "ESPACIAMIENTO_FRACTURA",
+          "obligatorio": false,
+          "dominio": "ESPACIAMIENTO_FRACTURA",
+          "nota": "Espaciamiento promedio entre las fracturas del juego (escala ISRM). En una disyunción columnar equivale al diámetro de las columnas. Solo para TIPO_ESTRUCTURA='Estructura fractura'."
+        },
+        {
+          "nombre": "PERSISTENCIA_FRACTURA",
+          "obligatorio": false,
+          "dominio": "PERSISTENCIA_FRACTURA",
+          "nota": "Continuidad del juego de fracturas en su rumbo. Los 5 primeros términos son de escala regional y los 5 últimos de escala de afloramiento; se puede quedar en 'Afloramiento, <100 m' sin bajar al detalle. Solo para TIPO_ESTRUCTURA='Estructura fractura'."
+        },
+        {
+          "nombre": "ABERTURA_FRACTURA",
+          "obligatorio": false,
+          "dominio": "ABERTURA_FRACTURA",
+          "nota": "Grado de abertura característico del juego (escala ISRM). Solo para TIPO_ESTRUCTURA='Estructura fractura'."
+        },
+        {
+          "nombre": "TEXTURA_SUPERFICIE_FRACTURA",
+          "obligatorio": false,
+          "dominio": "TEXTURA_SUPERFICIE_FRACTURA",
+          "nota": "Textura de la superficie de las fracturas del juego. Una superficie estriada indica cizalle: si el desplazamiento es apreciable, se describe como falla y no como fractura. Solo para TIPO_ESTRUCTURA='Estructura fractura'."
+        },
+        {
           "nombre": "GRADO_CONFIANZA_ESTRUCTURA",
           "obligatorio": true,
           "dominio": "GRADO_CONFIANZA",
@@ -3362,6 +3386,62 @@ const MODELO = {
         "Huellas"
       ],
       "fuente": "Propuesta del usuario (2026-08-31), curaduría propia -- NO es un campo normativo CDC 2016 (verificado contra el Informe CDC 2016 Vol III antes de diseñar: no existe un campo 'CONTENIDO FÓSIL / bioestratigrafía'; lo más cercano es la rama carbonatada de COMPOSICIÓN CLÁSTICA-ALOQUÍMICA DEL DEPÓSITO, que es una clasificación litológica distinta y hoy sigue sin implementar para calizas). Orden tal como lo dio el usuario, sin reordenar por frecuencia."
+    },
+    "ESPACIAMIENTO_FRACTURA": {
+      "tipo": "simple",
+      "valores": [
+        "Extremadamente separado >6 m",
+        "Muy separado 2-6 m",
+        "Separado 0,6-2 m",
+        "Moderado 0,2-0,6 m",
+        "Cercano 0,06-0,2 m",
+        "Muy cercano 0,02-0,06 m",
+        "Extremadamente cercano <0,02 m"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, tabla TBL_AF_FRACTURA (\"DDA Descripción de Fracturas\"), campo 'ESPACIAMIENTO FRACTURA': espaciamiento promedio aproximado entre las fracturas del juego que se describe, escala de la Sociedad Internacional de Mecánica de Roca. ORDINAL: el orden es la escala, no se reordena por frecuencia. En una colada con disyunción columnar, este campo es en la práctica el diámetro de las columnas."
+    },
+    "PERSISTENCIA_FRACTURA": {
+      "tipo": "simple",
+      "valores": [
+        "Transregional, >100 km",
+        "Regional, 10-100 km",
+        "Distrital, 1-10 km",
+        "Local, 100-1.000 m",
+        "Afloramiento, <100 m",
+        "Muy alta a escala de afloramiento, 20-<100 m",
+        "Alta a escala de afloramiento, 10-20 m",
+        "Media a escala de afloramiento, 3-10 m",
+        "Baja a escala de afloramiento, 1-3 m",
+        "Muy baja a escala de afloramiento, <1 m"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, tabla TBL_AF_FRACTURA (\"DDA Descripción de Fracturas\"), campo 'PERSISTENCIA DE LA FRACTURA': continuidad del juego en su rumbo. La norma combina a propósito dos escalas -- los 5 primeros términos son de geología regional y los 5 últimos de ingeniería geotécnica (ISRM) -- para que sirva a ambas disciplinas; quien describe a escala de afloramiento puede quedarse en 'Afloramiento, <100 m' o bajar al detalle. ORDINAL."
+    },
+    "ABERTURA_FRACTURA": {
+      "tipo": "simple",
+      "valores": [
+        "Cavernosa >1 m",
+        "Extremadamente abierta 0,1-1 m",
+        "Ampliamente abierta 10-100 mm",
+        "Muy abierta 2,5-10 mm",
+        "Abierta 0,5-2,5 mm",
+        "Parcialmente abierta 0,25-0,5 mm",
+        "Cerrada 0,1-0,25 mm",
+        "Muy cerrada <0,1 mm"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, tabla TBL_AF_FRACTURA (\"DDA Descripción de Fracturas\"), campo 'ABERTURA': grado de abertura característico del juego, escala ISRM. ORDINAL. La norma escribe 'cerrado'/'muy cerrado' en masculino mientras el resto de la escala va en femenino; se normalizó a femenino."
+    },
+    "TEXTURA_SUPERFICIE_FRACTURA": {
+      "tipo": "simple",
+      "valores": [
+        "Plumosa",
+        "Corrugada (rib marks)",
+        "Plumosa y corrugada",
+        "Estilolítica",
+        "Estriada",
+        "Lisa",
+        "No determinada"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, tabla TBL_AF_FRACTURA (\"DDA Descripción de Fracturas\"), campo 'TEXTURA SUPERFICIE': textura más típica del juego descrito. Plumosa = marcas 'hackle' que irradian del origen de la fractura; corrugada = 'rib marks' concéntricas; estriada = 'slickenlines' de cizalle (si el desplazamiento es apreciable, la estructura es una falla, no una fractura). Lista NOMINAL, pero se conserva el orden de la norma, que agrupa por familia."
     }
   },
   "avisos": [
@@ -3381,7 +3461,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v117';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v118';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4382,7 +4462,20 @@ const FICHAS_CON_REVELADO = new Set(HIJAS.map(h=>h.store));
 function revelarProgresivo(store){
   return REVELADO_PROGRESIVO_ACTIVO && FICHAS_CON_REVELADO.has(store);
 }
+// Una fractura es lo único que tiene juego, espaciamiento y abertura: ni una falla con
+// desplazamiento ni un pliegue. TIPO_ESTRUCTURA='Estructura fractura' es el que agrupa
+// 'Diaclasa (plano)' y 'Set de diaclasas' en TIPO_MEDIDA_ESTRUCTURAL.
+const esFractura = v => v['TIPO_ESTRUCTURA']==='Estructura fractura';
 const CONDICIONALES = {
+  // Descriptores de un JUEGO de fracturas (v118, norma CDC 2016 Vol V / TBL_AF_FRACTURA):
+  // solo tienen sentido si lo que se está describiendo es una fractura. Se ocultan, no se
+  // bloquean, porque en una ficha de falla o de pliegue no aportan nada y solo estorban.
+  // Son la vía para describir una disyunción columnar: el ESPACIAMIENTO de ese juego es, en
+  // una colada, el diámetro de las columnas.
+  ESPACIAMIENTO_FRACTURA:      {modo:'ocultar', regla: esFractura},
+  PERSISTENCIA_FRACTURA:       {modo:'ocultar', regla: esFractura},
+  ABERTURA_FRACTURA:           {modo:'ocultar', regla: esFractura},
+  TEXTURA_SUPERFICIE_FRACTURA: {modo:'ocultar', regla: esFractura},
   // Una litología es roca O depósito: TIPO_DEPOSITO solo con TIPO_ROCA = "Depósito".
   TIPO_DEPOSITO: {modo:'bloquear', regla: v => v['TIPO_ROCA']==='Depósito'},
   // Lava/Rocas piroclásticas solo aplica a rocas volcánicas (acota NOMBRE_ROCA, ver filtrarNombreRocaVolcanica).
@@ -8260,8 +8353,23 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       // normal) (medida tentativa)") es la forma más rápida de que el redactor del informe
       // reescriba la oración entera en vez de aprovecharla.
       const paren=[]; if(e.TIPO_FALLA) paren.push(minuscula(e.TIPO_FALLA));
+      // Descriptores del juego de fracturas (v118). Van en el MISMO paréntesis por la razón
+      // de arriba, y antes de la confianza, que se lee mejor al final. Casi siempre están
+      // vacíos: solo aplican a TIPO_ESTRUCTURA='Estructura fractura'. El espaciamiento es lo
+      // que de verdad describe una disyunción columnar (es el diámetro de las columnas).
+      if(e.ESPACIAMIENTO_FRACTURA) paren.push('espaciamiento '+minuscula(e.ESPACIAMIENTO_FRACTURA));
+      if(e.ABERTURA_FRACTURA) paren.push('abertura '+minuscula(e.ABERTURA_FRACTURA));
+      if(e.PERSISTENCIA_FRACTURA) paren.push('persistencia '+minuscula(e.PERSISTENCIA_FRACTURA));
+      // 'No determinada' es la respuesta "no sé": no aporta nada al informe.
+      if(e.TEXTURA_SUPERFICIE_FRACTURA && e.TEXTURA_SUPERFICIE_FRACTURA!=='No determinada')
+        paren.push('superficie '+minuscula(e.TEXTURA_SUPERFICIE_FRACTURA));
       const cf=CONFIANZA_ESTR_FRASE[e.GRADO_CONFIANZA_ESTRUCTURA]; if(cf) paren.push(cf);
-      if(paren.length) s+=' ('+paren.join(', ')+')';
+      // Varios términos de PERSISTENCIA_FRACTURA llevan una coma adentro ("Media a escala de
+      // afloramiento, 3-10 m"), así que unir con comas deja el paréntesis ambiguo: no se ve
+      // dónde termina un descriptor y empieza el otro. Se pasa a punto y coma, el mismo
+      // recurso que ya usan las secciones de afloramiento y muestreo cuando la enumeración
+      // choca con su propio separador.
+      if(paren.length) s+=' ('+paren.join(paren.some(x=>x.includes(','))?'; ':', ')+')';
       return s;
     });
     // "Se midió 1 dato estructural": el numeral en cifra para el singular es de planilla, no de

@@ -403,6 +403,36 @@ async function correr(){
       } finally { f.node.remove(); }
     });
 
+    await prueba('Los descriptores de fractura solo salen en fracturas, y la prosa no se enreda', async () => {
+      const NUEVOS = ['ESPACIAMIENTO_FRACTURA','PERSISTENCIA_FRACTURA','ABERTURA_FRACTURA','TEXTURA_SUPERFICIE_FRACTURA'];
+      const f = w.formulario('estructural', {});
+      w.document.getElementById('app').append(f.node);
+      try {
+        const oculto = n => { const i = f.node.querySelector('[name="'+n+'"]');
+          ok(i, 'no existe el campo ' + n); return i.closest('.fld').style.display === 'none'; };
+        ok(NUEVOS.every(oculto), 'un descriptor de fractura se ve sin haber elegido TIPO_ESTRUCTURA');
+        const te = f.node.querySelector('[name="TIPO_ESTRUCTURA"]');
+        te.value = 'Estructura falla'; te.dispatchEvent(new w.Event('change', {bubbles:true}));
+        ok(NUEVOS.every(oculto), 'los descriptores de fractura se ven en una ficha de falla');
+        te.value = 'Estructura fractura'; te.dispatchEvent(new w.Event('change', {bubbles:true}));
+        ok(NUEVOS.every(n => !oculto(n)), 'los descriptores no aparecen con TIPO_ESTRUCTURA=Estructura fractura');
+      } finally { f.node.remove(); }
+      // La prosa: varios terminos de PERSISTENCIA llevan coma adentro ("Media a escala de
+      // afloramiento, 3-10 m"), asi que el parentesis tiene que separar con punto y coma o
+      // no se distingue donde termina cada descriptor.
+      const pt = {id:'smoke-fr', ID_PUNTO_CONTROL:'smoke-fr'};
+      pt[w.inLat] = -35.6; pt[w.inLon] = -71.0;
+      const p = w.prosaPunto(pt, {litos:[], aflora:[], geomorf:[], cont:[], mues:[],
+        estr:[{TIPO_ESTRUCTURA:'Estructura fractura', TIPO_MEDIDA_ESTRUCTURAL:'Set de diaclasas',
+               AZIMUT:'30', MANTEO_BUZAMIENTO:'85', ESPACIAMIENTO_FRACTURA:'Separado 0,6-2 m',
+               PERSISTENCIA_FRACTURA:'Media a escala de afloramiento, 3-10 m',
+               TEXTURA_SUPERFICIE_FRACTURA:'Plumosa'}]}, null, null, 500);
+      ok(/espaciamiento separado/.test(p), 'el espaciamiento del juego no llegó a la prosa');
+      ok(/;\s*persistencia/.test(p), 'los descriptores se unieron con coma: el paréntesis queda ambiguo');
+      ok(!/superficie no determinada/i.test(p), '"No determinada" no debería narrarse');
+      return 'ocultos sin fractura y en falla · visibles en fractura · prosa separada con ";"';
+    });
+
     await prueba('Un valor fuera del dominio no se borra al reabrir (regresión v37-#4)', async () => {
       const li = await w.get('litologia', P+'li-T');
       ok(li && li.UNIDAD_GEOLOGICA === 'Fm. Abanico', 'no se sembró el valor de dominio abierto');
