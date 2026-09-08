@@ -327,6 +327,82 @@ async function correr(){
       } finally { f.node.remove(); }
     });
 
+    // ---- v117: ESTRUCTURA_TIPO_ROCA es el primer campo multiseleccion + CASCADA del
+    // proyecto. Hasta v116 el widget de chips solo servia dominios simples y NINGUNA prueba
+    // tocaba chips ni cascadas: los siete fallos que trajo el cambio (widget vacio, filtro
+    // volcanico rompiendo el div, repoblarHijosDe ignorandolo, el chip que no disparaba el
+    // revelado...) no habrian hecho fallar nada. Estas cuatro cubren ese hueco.
+    await prueba('Un campo multiselección hijo de cascada se puebla y se repuebla', async () => {
+      const f = w.formulario('litologia', {TIPO_ROCA:'Volcánica'});
+      w.document.getElementById('app').append(f.node);
+      try {
+        const caja = [...f.node.querySelectorAll('.multichips')].find(m => m.name === 'ESTRUCTURA_TIPO_ROCA');
+        ok(caja, 'ESTRUCTURA_TIPO_ROCA no se renderizó como widget de chips');
+        eq(caja.dataset.cascadaPadre, 'TIPO_ROCA', 'el chips no quedó marcado como hijo de cascada');
+        const nVolc = caja.querySelectorAll('.chip').length;
+        ok(nVolc > 20, 'el widget nació casi vacío con ' + nVolc + ' chips (¿parentValue en null?)');
+        // marcar dos y comprobar que se serializan como el resto de los multi
+        const cbs = [...caja.querySelectorAll('input[type=checkbox]')];
+        cbs[1].checked = true; cbs[1].dispatchEvent(new w.Event('change', {bubbles:true}));
+        cbs[2].checked = true; cbs[2].dispatchEvent(new w.Event('change', {bubbles:true}));
+        ok(f.getData().ESTRUCTURA_TIPO_ROCA.includes('; '), 'no serializó dos valores separados por ";"');
+        // cambiar el padre repuebla con la rama nueva Y limpia lo elegido (listas disjuntas)
+        const tr = f.node.querySelector('[name="TIPO_ROCA"]');
+        tr.value = 'Metamórfica'; tr.dispatchEvent(new w.Event('change', {bubbles:true}));
+        const nMeta = caja.querySelectorAll('.chip').length;
+        ok(nMeta > 0 && nMeta !== nVolc, 'cambiar TIPO_ROCA no repobló el widget de chips');
+        eq(f.getData().ESTRUCTURA_TIPO_ROCA, '', 'quedó seleccionada una estructura de la rama anterior');
+        return 'Volcánica ' + nVolc + ' chips → Metamórfica ' + nMeta + ', y limpia lo elegido';
+      } finally { f.node.remove(); }
+    });
+
+    await prueba('"Sin estructura" e "Indeterminado" son excluyentes', async () => {
+      const f = w.formulario('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'});
+      w.document.getElementById('app').append(f.node);
+      try {
+        const caja = [...f.node.querySelectorAll('.multichips')].find(m => m.name === 'ESTRUCTURA_TIPO_ROCA');
+        const marcar = v => { const cb = [...caja.querySelectorAll('input[type=checkbox]')].find(c => c.value === v);
+          ok(cb, 'no existe el chip ' + v); cb.checked = true; cb.dispatchEvent(new w.Event('change', {bubbles:true})); };
+        marcar('Brechosa'); marcar('Bandeamiento de flujo');
+        marcar('Macizo (sin estructura)');
+        eq(f.getData().ESTRUCTURA_TIPO_ROCA, 'Macizo (sin estructura)',
+           'marcar "Macizo (sin estructura)" no apagó las otras estructuras');
+        marcar('Brechosa');
+        eq(f.getData().ESTRUCTURA_TIPO_ROCA, 'Brechosa',
+           'marcar una estructura real no apagó "Macizo (sin estructura)"');
+        return 'excluyente apaga al resto, y el resto apaga al excluyente';
+      } finally { f.node.remove(); }
+    });
+
+    await prueba('Un valor multi fuera del dominio sobrevive como chip huérfano', async () => {
+      // Equivalente multiseleccion de la regresion v37-#4 de aqui abajo: sin esto, getData()
+      // no veria el valor y el autoguardado lo borraria del disco en silencio.
+      const reg = {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava',
+                   ESTRUCTURA_TIPO_ROCA:'Pillow lava; Brechosa'};   // 'Pillow lava' salió del dominio en v115
+      const f = w.formulario('litologia', reg);
+      const caja = [...f.node.querySelectorAll('.multichips')].find(m => m.name === 'ESTRUCTURA_TIPO_ROCA');
+      eq(caja.querySelectorAll('.chip.huerfano').length, 1, 'el valor retirado no quedó como chip huérfano');
+      const v = f.getData().ESTRUCTURA_TIPO_ROCA;
+      ok(v.includes('Pillow lava') && v.includes('Brechosa'), 'se perdió un valor al reabrir: ' + v);
+      return 'huérfano marcado y conservado junto al valor vigente';
+    });
+
+    await prueba('Marcar un chip dispara el revelado progresivo', async () => {
+      // Los checkbox de los chips no llevan name: hasta v117 salian por el `if(!changed)return`
+      // del listener y marcar un chip no revelaba el campo siguiente ni corria condicionales.
+      const f = w.formulario('litologia', {TIPO_ROCA:'Volcánica'});
+      w.document.getElementById('app').append(f.node);
+      try {
+        const visibles = () => f.node.querySelectorAll('.fld:not(.fld-pendiente)').length;
+        const antes = visibles();
+        const caja = [...f.node.querySelectorAll('.multichips')].find(m => m.name === 'ESTRUCTURA_TIPO_ROCA');
+        const cb = caja.querySelector('input[type=checkbox]');
+        cb.checked = true; cb.dispatchEvent(new w.Event('change', {bubbles:true}));
+        ok(visibles() > antes, 'marcar un chip no reveló ningún campo nuevo (' + antes + ' → ' + visibles() + ')');
+        return antes + ' → ' + visibles() + ' campos visibles';
+      } finally { f.node.remove(); }
+    });
+
     await prueba('Un valor fuera del dominio no se borra al reabrir (regresión v37-#4)', async () => {
       const li = await w.get('litologia', P+'li-T');
       ok(li && li.UNIDAD_GEOLOGICA === 'Fm. Abanico', 'no se sembró el valor de dominio abierto');

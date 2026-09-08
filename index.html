@@ -287,7 +287,8 @@ const MODELO = {
           "nombre": "ESTRUCTURA_TIPO_ROCA",
           "obligatorio": false,
           "dominio": "ESTRUCTURA_TIPO_ROCA",
-          "nota": "Estructuras internas primarias del depósito, a escala de afloramiento. La norma CDC 2016 separa rocas lávicas de depósitos piroclásticos: al elegir TIPO_VOLCANICA la lista se acota sola. NO van aquí las texturas (Porfídica, Amigdaloidal, Escoriácea → TEXTURA), los componentes (pómez y escoria → TIPO_FRAGMENTO_VITREO / POMEZ_PCT; fenocristales → FENOCRISTALES_ESPECIE) ni las alteraciones (Silicificación, Oxidación → TIPO_ALTERACION_LITO). Cualquier estructura fuera de la lista se anota en DESCRIPCION_LITOLOGIA."
+          "nota": "Estructuras internas primarias del depósito, a escala de afloramiento. **Selección múltiple**: la norma CDC 2016 dice que un afloramiento tiene varias estructuras a la vez y pide espacio para registrar cada una. La norma separa además rocas lávicas de depósitos piroclásticos: al elegir TIPO_VOLCANICA la lista se acota sola. \"Macizo (sin estructura)\", \"Capa masiva (sin estructura)\", \"Estructura masiva (sin estructura)\" e \"Indeterminado\" son excluyentes: marcarlos desmarca el resto, y viceversa. NO van aquí las texturas (Porfídica, Amigdaloidal, Escoriácea → TEXTURA), los componentes (pómez y escoria → TIPO_FRAGMENTO_VITREO / POMEZ_PCT; fenocristales → FENOCRISTALES_ESPECIE) ni las alteraciones (Silicificación, Oxidación → TIPO_ALTERACION_LITO). Cualquier estructura fuera de la lista se anota en DESCRIPCION_LITOLOGIA.",
+          "multiple": true
         },
         {
           "nombre": "DESCRIPCION_LITOLOGIA",
@@ -3380,7 +3381,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v116';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v117';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4098,6 +4099,99 @@ function valorMultichips(inp){
       return fmtValorNumerado(c.dataset.valor,nums);
     }).join('; ');
 }
+
+// Excluyentes por campo: valores que no pueden convivir con ningun otro dentro del
+// mismo widget de chips. Declarativo a proposito, para que otro campo pueda optar sin
+// tocar el widget. Las cuatro redacciones de "sin estructura" son necesarias: cada rama
+// del dominio la nombra distinto (verificado contra ESTRUCTURA_TIPO_ROCA.mapa).
+const EXCLUSIVOS_POR_CAMPO = {
+  ESTRUCTURA_TIPO_ROCA: new Set(['Macizo (sin estructura)', 'Indeterminado',
+    'Capa masiva (sin estructura)', 'Estructura masiva (sin estructura)']),
+};
+// Dibuja (o REdibuja) el contenido de un widget de chips. Existe como funcion con nombre
+// porque hacen falta tres llamadores -- el armado del formulario, repoblarHijosDe() cuando
+// cambia el padre de la cascada, y filtrarEstructuraVolcanica() -- y tener tres copias del
+// mismo dibujado es exactamente el fallo que este proyecto ya pago con la copia paralela
+// del HTML (eliminada en 2026-08-12).
+//
+// CONTEXTO (v117): hasta v116 el widget de chips solo servia dominios SIMPLES; su lista se
+// pedia con opciones(dominio, null), con el valor del padre hardcodeado a null. Al pasar
+// ESTRUCTURA_TIPO_ROCA a multiseleccion aparecio el primer campo multiple + CASCADA del
+// proyecto, y con null una cascada devuelve [] -- el widget nacia vacio. Por eso la lista
+// se recibe ya resuelta por parametro en vez de calcularla aqui.
+// Nota historica: en v83->v84 se BORRO filtrarMatrizVolcanica() al pasar MATRIZ_COMPOSICION
+// a chips, porque el widget no se podia repoblar. Esta funcion es lo que faltaba entonces.
+function poblarChips(inp, campo, listaOpciones, valorActual){
+  inp.innerHTML='';
+  // Cada item guardado puede traer sus numeros pegados ("Plagioclasa (15%, 6 mm)"), asi que
+  // se indexa por la especie sola: el chip se marca por el mineral, no por la cadena entera.
+  const guardados=new Map();
+  (valorActual?String(valorActual).split(/\s*;\s*/):[]).filter(Boolean)
+    .forEach(item=>{const p=parseValorNumerado(item);guardados.set(p.valor,p.nums);});
+  const sel=new Set(guardados.keys());
+  const nums=campo.numeros||null;
+  const exclusivos=EXCLUSIVOS_POR_CAMPO[campo.nombre]||null;
+  // Desmarcar de verdad: el checkbox, la clase .on del chip y de su caja, y los numeros.
+  // Mismo barrido que hace aplicarCondicionales() al ocultar un campo multi.
+  const desmarcar=cb=>{
+    cb.checked=false;
+    const ch=cb.closest('.chip'); if(ch)ch.classList.remove('on');
+    const cj=cb.closest('.chipnum');
+    if(cj){cj.classList.remove('on');cj.querySelectorAll('.cn').forEach(c=>c.value='');}
+  };
+  // Marcar un excluyente apaga todo lo demas; marcar cualquier otro apaga los excluyentes.
+  // Desmarcar no hace nada. No se disparan eventos: el listener del formulario ya corre
+  // aplicarCondicionales()/actualizarRevelado() una vez por interaccion.
+  const aplicarExclusivos=cb=>{
+    if(!exclusivos||!cb.checked)return;
+    const esExcl=exclusivos.has(cb.value);
+    inp.querySelectorAll('input[type=checkbox]').forEach(otro=>{
+      if(otro===cb||!otro.checked)return;
+      if(esExcl||exclusivos.has(otro.value)) desmarcar(otro);
+    });
+  };
+  const chip1=(valor,etiqueta,huerfano)=>{
+    const chip=el('label',{class:'chip'+(sel.has(valor)?' on':'')+(huerfano?' huerfano':'')});
+    const cb=el('input',{type:'checkbox'});cb.checked=sel.has(valor);cb.value=valor;
+    chip.append(cb,el('span',{},etiqueta));
+    if(huerfano)chip.title='Valor guardado que ya no está en la lista vigente; se conserva para no perder el dato.';
+    if(!nums){
+      cb.addEventListener('change',()=>{chip.classList.toggle('on',cb.checked);aplicarExclusivos(cb);});
+      inp.append(chip); return;
+    }
+    // Con números por valor el chip va envuelto: label + una casilla por número, visibles
+    // solo mientras el mineral está marcado (ver CSS .chipnum).
+    const caja=el('div',{class:'chipnum'+(sel.has(valor)?' on':'')});
+    caja.dataset.valor=valor;
+    caja.append(chip);
+    const previos=guardados.get(valor)||{};
+    nums.forEach(cfg=>{
+      const casilla=el('input',{type:'number',step:'any',inputmode:'decimal',class:'cn',
+        placeholder:cfg.ph,title:etiqueta+' — '+cfg.ph,min:'0',max:String(cfg.max)});
+      casilla.dataset.suf=cfg.suf;
+      if(previos[cfg.suf]!=null) casilla.value=previos[cfg.suf];
+      caja.append(casilla);
+    });
+    cb.addEventListener('change',()=>{
+      chip.classList.toggle('on',cb.checked);
+      caja.classList.toggle('on',cb.checked);
+      // Desmarcar el mineral borra sus números: dejarlos escondidos y vivos hacía que
+      // volver a marcarlo resucitara un % de otra roca descrita antes en la misma ficha.
+      if(!cb.checked) caja.querySelectorAll('.cn').forEach(c=>c.value='');
+      aplicarExclusivos(cb);
+    });
+    inp.append(caja);
+  };
+  listaOpciones.forEach(o=>chip1(o.value,o.label,false));
+  // Red de seguridad, equivalente a preservarValor() para los <select> simples: un valor
+  // guardado que ya NO está en el dominio (lista depurada o término renombrado entre
+  // versiones -- ya pasó dos veces en este modelo) no tenía checkbox, así que getData()
+  // no lo veía y el auto-guardado de la ficha lo borraba del disco en silencio al tocar
+  // cualquier otro campo. Se le crea su propio chip, marcado, para conservarlo. Con
+  // números también: el chip huérfano los dibuja igual y conserva los suyos.
+  const vigentes=new Set(listaOpciones.map(o=>o.value));
+  [...sel].filter(v=>!vigentes.has(v)).forEach(v=>chip1(v,v,true));
+}
 // Etiqueta VISIBLE de un campo. El nombre canónico lleva la unidad como letras al final
 // (LITICOS_PCT, ESPESOR_MIN_CM) porque así viaja a los exports —CSV, GPKG, GDB— donde el
 // nombre de columna es el contrato con ArcGIS y NO se toca. En pantalla eso se leía
@@ -4513,57 +4607,19 @@ function formulario(store, reg, ctx){
     let inp;
     const w=tipoWidget(campo);
     if(w==='select' && campo.multiple){
-      // selección múltiple: grupo de chips con checkbox (ej. propósito de análisis)
+      // selección múltiple: grupo de chips con checkbox (ej. propósito de análisis).
+      // El dibujado vive en poblarChips() porque también lo necesitan repoblarHijosDe() y
+      // filtrarEstructuraVolcanica(); ver el comentario largo de esa función.
       inp=el('div',{class:'multichips'});
-      // Cada ítem guardado puede traer sus números pegados ("Plagioclasa (15%, 6 mm)"), así que
-      // se indexa por la especie sola: el chip se marca por el mineral, no por la cadena entera.
-      const guardados=new Map();
-      (reg[n]?String(reg[n]).split(/\s*;\s*/):[]).filter(Boolean)
-        .forEach(item=>{const p=parseValorNumerado(item);guardados.set(p.valor,p.nums);});
-      const sel=new Set(guardados.keys());
-      const nums=campo.numeros||null;
-      const chip1=(valor,etiqueta,huerfano)=>{
-        const chip=el('label',{class:'chip'+(sel.has(valor)?' on':'')+(huerfano?' huerfano':'')});
-        const cb=el('input',{type:'checkbox'});cb.checked=sel.has(valor);cb.value=valor;
-        chip.append(cb,el('span',{},etiqueta));
-        if(huerfano)chip.title='Valor guardado que ya no está en la lista vigente; se conserva para no perder el dato.';
-        if(!nums){
-          cb.addEventListener('change',()=>chip.classList.toggle('on',cb.checked));
-          inp.append(chip); return;
-        }
-        // Con números por valor el chip va envuelto: label + una casilla por número, visibles
-        // solo mientras el mineral está marcado (ver CSS .chipnum).
-        const caja=el('div',{class:'chipnum'+(sel.has(valor)?' on':'')});
-        caja.dataset.valor=valor;
-        caja.append(chip);
-        const previos=guardados.get(valor)||{};
-        nums.forEach(cfg=>{
-          const casilla=el('input',{type:'number',step:'any',inputmode:'decimal',class:'cn',
-            placeholder:cfg.ph,title:etiqueta+' — '+cfg.ph,min:'0',max:String(cfg.max)});
-          casilla.dataset.suf=cfg.suf;
-          if(previos[cfg.suf]!=null) casilla.value=previos[cfg.suf];
-          caja.append(casilla);
-        });
-        cb.addEventListener('change',()=>{
-          chip.classList.toggle('on',cb.checked);
-          caja.classList.toggle('on',cb.checked);
-          // Desmarcar el mineral borra sus números: dejarlos escondidos y vivos hacía que
-          // volver a marcarlo resucitara un % de otra roca descrita antes en la misma ficha.
-          if(!cb.checked) caja.querySelectorAll('.cn').forEach(c=>c.value='');
-        });
-        inp.append(caja);
-      };
-      const delDominio=opciones(campo.dominio,null);
-      delDominio.forEach(o=>chip1(o.value,o.label,false));
-      // Red de seguridad, equivalente a preservarValor() para los <select> simples: un valor
-      // guardado que ya NO está en el dominio (lista depurada o término renombrado entre
-      // versiones -- ya pasó dos veces en este modelo) no tenía checkbox, así que getData()
-      // no lo veía y el auto-guardado de la ficha lo borraba del disco en silencio al tocar
-      // cualquier otro campo. Se le crea su propio chip, marcado, para conservarlo. Con
-      // números también: el chip huérfano los dibuja igual y conserva los suyos.
-      const vigentes=new Set(delDominio.map(o=>o.value));
-      [...sel].filter(v=>!vigentes.has(v)).forEach(v=>chip1(v,v,true));
+      // Un campo multi PUEDE ser hijo de cascada desde v117 (ESTRUCTURA_TIPO_ROCA es el
+      // primero). Antes la lista se pedía con parentValue=null hardcodeado, que en una
+      // cascada devuelve [] y dejaba el widget vacío. Se resuelve el padre igual que en la
+      // rama <select> de abajo, y se marca cascadaPadre para que repoblarHijosDe() lo vea.
+      const padreM=campoPadreDe(store,campo);
+      const pvM = padreM? (reg[padreM]||'') : null;
+      if(padreM) inp.dataset.cascadaPadre=padreM;
       inp.name=n; inp._multi=true;
+      poblarChips(inp, campo, opciones(campo.dominio, pvM), reg[n]);
     } else if(w==='select'){
       inp=el('select');
       inp.append(el('option',{value:''},'— seleccionar —'));
@@ -4735,13 +4791,18 @@ function formulario(store, reg, ctx){
   // repuebla recursivamente los selects hijos de 'parentName' (cadena TIPO_ROCA→NOMBRE_ROCA→GRANULOMETRIA)
   function repoblarHijosDe(parentName, parentValue){
     Object.values(inputs).forEach(inp=>{
-      if(inp.tagName==='SELECT' && inp.dataset.cascadaPadre===parentName){
-        const campo=cs.find(c=>c.nombre===inp.name);
-        inp.innerHTML='';inp.append(el('option',{value:''},'— seleccionar —'));
-        opciones(campo.dominio, parentValue).forEach(o=>inp.append(el('option',{value:o.value},o.label)));
-        inp.value='';
-        repoblarHijosDe(inp.name,'');   // nietos: su padre quedó vacío
-      }
+      if(!inp.dataset || inp.dataset.cascadaPadre!==parentName) return;
+      const campo=cs.find(c=>c.nombre===inp.name);
+      // Hijo de cascada con widget de chips (v117: ESTRUCTURA_TIPO_ROCA). Se redibuja con
+      // la rama nueva y se pierde la selección anterior, igual que el <select> se vacía:
+      // las ramas del dominio son listas disjuntas, lo elegido para Volcánica no aplica a
+      // Sedimentaria. Un campo multi no es padre de cascada de nadie, así que no recursa.
+      if(inp._multi){ poblarChips(inp, campo, opciones(campo.dominio, parentValue), ''); return; }
+      if(inp.tagName!=='SELECT') return;
+      inp.innerHTML='';inp.append(el('option',{value:''},'— seleccionar —'));
+      opciones(campo.dominio, parentValue).forEach(o=>inp.append(el('option',{value:o.value},o.label)));
+      inp.value='';
+      repoblarHijosDe(inp.name,'');   // nietos: su padre quedó vacío
     });
   }
   // NOMBRE_ROCA sigue colgando de TIPO_ROCA en el motor genérico (cero riesgo de regresión
@@ -4793,12 +4854,20 @@ function formulario(store, reg, ctx){
     if(!iTV||!iES)return;
     const subset = iTV.value ? ESTRUCTURA_VOLCANICA[iTV.value] : null;
     if(!subset)return;
-    const actual=iES.value;
-    iES.innerHTML='';iES.append(el('option',{value:''},'— seleccionar —'));
-    subset.forEach(v=>iES.append(el('option',{value:v},v)));
-    if(subset.includes(actual)) iES.value=actual;
-    else if(esBuild){ preservarValor(iES, actual); iES.value=actual; }
-    else iES.value='';
+    const campo=cs.find(c=>c.nombre==='ESTRUCTURA_TIPO_ROCA');
+    if(!campo)return;
+    // v117: el campo pasó a chips, así que ya NO se puede repoblar con innerHTML/<option>
+    // (eso fue lo que obligó a borrar filtrarMatrizVolcanica() en v84). Se redibuja con
+    // poblarChips(). En el armado del formulario se conserva todo lo guardado -- lo que no
+    // esté en la sublista queda como chip huérfano, el equivalente multi de preservarValor().
+    // Si el cambio lo hizo el geólogo, se descarta lo que ya no aplica a la sublista nueva,
+    // pero NO se vacía a ciegas: 'Macizo (sin estructura)' e 'Indeterminado' están en las dos
+    // sublistas y deben sobrevivir al cambio de Lava a Rocas piroclásticas.
+    const actual = valorMultichips(iES);
+    const conservado = esBuild ? actual
+      : actual.split(/\s*;\s*/).filter(Boolean)
+          .filter(v=>subset.includes(parseValorNumerado(v).valor)).join('; ');
+    poblarChips(iES, campo, subset.map(v=>({value:v,label:v})), conservado);
   }
   aplicarCondicionales();
   filtrarNombreRocaVolcanica(true);
@@ -4809,8 +4878,16 @@ function formulario(store, reg, ctx){
 
   // cascadas: al cambiar el padre, repoblar hijos (y nietos)
   cont.addEventListener('change',e=>{
-    const changed=e.target.name; if(!changed)return;
-    repoblarHijosDe(changed, e.target.value);
+    // Los checkboxes de un widget de chips se crean SIN name, así que con e.target.name
+    // salían por el return y marcar un chip nunca disparaba aplicarCondicionales() ni
+    // actualizarRevelado(): el campo siguiente no se revelaba hasta tocar otro control.
+    // Bug preexistente de los 10 campos de chips, no solo del nuevo. El name vive en el
+    // <div> contenedor.
+    const cajaChips = e.target.closest ? e.target.closest('.multichips') : null;
+    const changed = cajaChips ? cajaChips.name : e.target.name;
+    if(!changed)return;
+    // Solo un <select> puede ser padre de una cascada; un multi no repuebla a nadie.
+    if(!cajaChips) repoblarHijosDe(changed, e.target.value);
     aplicarCondicionales();
     // TIPO_VOLCANICA no es un padre de cascada genérico: solo recorta NOMBRE_ROCA/TEXTURA
     // cuando el cambio viene de TIPO_ROCA o del propio TIPO_VOLCANICA (no en cada tecleo de
@@ -7883,7 +7960,11 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     if(l.CEMENTO) frag.push(CEMENTO_FRASE[l.CEMENTO]||('con cemento '+minuscula(l.CEMENTO)));
     if(l.SOLDADURA) frag.push(SOLDADURA_FRASE[l.SOLDADURA]||minuscula(l.SOLDADURA));
     if(l.GRADO_CONSOLIDACION) frag.push(CONSOLIDACION_FRASE[l.GRADO_CONSOLIDACION]||minuscula(l.GRADO_CONSOLIDACION));
-    if(l.ESTRUCTURA_TIPO_ROCA) frag.push('con '+minuscula(l.ESTRUCTURA_TIPO_ROCA));
+    // v117: pasó a multiselección (la norma CDC pide registrar cada estructura), así que
+    // se enumera con los mismos helpers que TIPO_LITICOS y compañía en vez de volcar la
+    // cadena cruda, que habría salido como 'con bandeamiento de flujo; Diaclasas columnares'.
+    const estrs=multi(l.ESTRUCTURA_TIPO_ROCA);
+    if(estrs.length) frag.push('con '+lista(estrs.map(minuscula)));
     // composición mineral: participio concuerda en género con el nombre de la roca
     // ("conformada"/"conformado"/"conformados"), no queda fijo en femenino.
     // Metamórfica (COMPOSICION_MINERAL_PRINCIPAL) e Intrusiva (COMPOSICION_MINERAL_INTRUSIVA)
@@ -8429,7 +8510,12 @@ function updateFormReadonly() {
     } else {
       // al salir del modo lectura NO se habilita todo a ciegas: los campos que
       // bloqueó una regla condicional (_condOff) siguen bloqueados.
-      input.disabled = !!input._condOff;
+      // En un widget de chips la bandera la puso aplicarCondicionales() en el <div>
+      // contenedor, no en cada checkbox: leyéndola del checkbox daba undefined y un campo
+      // multi bloqueado por una regla volvía a ser clickeable tras cualquier paso por aquí.
+      // Es la regresión v38-A, que el smoke cubría solo para <select>.
+      const dueno = (input.closest && input.closest('.multichips')) || input;
+      input.disabled = !!dueno._condOff;
       input.style.opacity = '1';
     }
   });
