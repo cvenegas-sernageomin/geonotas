@@ -17,3 +17,4 @@
 *.png   binary
 *.wasm  binary
 *.data  binary
+*.zip   binary

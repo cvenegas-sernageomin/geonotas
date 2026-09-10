@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.zip
 .DS_Store
+# ...salvo el shapefile de prueba del smoke, que SI se publica: sin el, la prueba de
+# importacion da 404 contra el sitio. Lo genera smoke-shapefile-generar.py.
+!smoke-shapefile-utm19s.zip

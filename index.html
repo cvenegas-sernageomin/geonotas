@@ -14,6 +14,7 @@
 <script src="vendor/georaster.browser.bundle.min.js"></script>
 <script src="vendor/georaster-layer-for-leaflet.min.js"></script>
 <script src="vendor/jszip.js"></script>
+<script src="vendor/shp.js"></script>
 <style>
   /* ---- Paleta: cálida, natural (geología), suave a la vista + modo oscuro auto ---- */
   :root{
@@ -43,7 +44,23 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--txt);
     background:linear-gradient(180deg,var(--bg1),var(--bg2)) fixed;min-height:100vh;-webkit-text-size-adjust:100%}
-  header{background:linear-gradient(135deg,var(--header1),var(--header2));color:#fff;padding:calc(12px + env(safe-area-inset-top)) 15px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;box-shadow:0 4px 14px -6px rgba(0,0,0,.4)}
+  /* flex-wrap: sin el, los ultimos hijos del header (los botones de respaldo e importar)
+     quedaban FUERA del viewport en un telefono y eran inalcanzables -- el usuario reporto
+     "ya no esta el icono" de cargar KMZ. Es el mismo fallo que ya obligo a repartir la barra
+     del mapa en varias filas (v105-v107), un piso mas arriba. Al envolverse el header cambia
+     de alto, asi que su alto lo mide el JS en --headh y el mapa lo descuenta: la constante
+     de 117 px que habia antes solo era correcta con el header de una sola forma. */
+  header{background:linear-gradient(135deg,var(--header1),var(--header2));color:#fff;padding:calc(12px + env(safe-area-inset-top)) 15px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:0 4px 14px -6px rgba(0,0,0,.4)}
+  /* El flex del bloque de titulo vive AQUI y no en un style inline: inline gana sobre la
+     hoja de estilos y dejaba sin efecto la media query de abajo. */
+  #hdr-titulo{min-width:0;flex:1 1 auto}
+  /* Los controles van en UN contenedor propio para que el corte sea predecible: en telefono
+     baja el grupo entero a la segunda fila y el titulo se queda con la primera, junto al
+     boton de volver. Marcar el titulo con flex-basis:100% no servia -- se llevaba una fila
+     para el solo y dejaba tres. El flex del titulo vive aqui y no en un style inline, que
+     gana sobre la hoja de estilos y dejaba sin efecto la media query. */
+  #hdr-acciones{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  @media (max-width:560px){ #hdr-acciones{flex:1 1 100%} }
   header h1{font-size:16px;margin:0;flex:1;font-weight:650;letter-spacing:.2px}
   header .ctx{font-size:11px;opacity:.88;font-weight:400}
   main{max-width:820px;margin:0 auto;padding:14px 12px calc(96px + env(safe-area-inset-bottom))}
@@ -176,7 +193,7 @@
      boton "mini" comun — 30px quedaba corto frente a las ~44px recomendadas para tocar en movil. */
   .medbar button{min-height:42px;padding:8px 14px}
   .mapfull{height:66vh;min-height:340px;width:100%;border-radius:10px;overflow:hidden;z-index:0}
-  .mapbig{height:calc(100vh - 117px - var(--fabh,45px));height:calc(100dvh - 117px - var(--fabh,45px));min-height:320px;width:100%;border-radius:10px;overflow:hidden;z-index:0}
+  .mapbig{height:calc(100vh - var(--headh,90px) - 27px - var(--fabh,45px));height:calc(100dvh - var(--headh,90px) - 27px - var(--fabh,45px));min-height:320px;width:100%;border-radius:10px;overflow:hidden;z-index:0}
   .mapcard{padding:0;margin-bottom:6px;overflow:hidden;position:relative}
   .drawbanner{position:absolute;top:8px;left:8px;right:8px;z-index:500;background:rgba(20,30,22,.92);color:#fff;border-radius:9px;padding:8px 10px;display:flex;gap:8px;align-items:center;font-size:12px;box-shadow:0 3px 12px rgba(0,0,0,.4)}
   .drawbanner span{flex:1}
@@ -215,11 +232,12 @@
 <body>
 <header>
   <button class="btn sec mini" id="btnBack" style="display:none">‹</button>
-  <div style="flex:1">
+  <div id="hdr-titulo">
     <h1 id="ttl">PWA Geonotas</h1>
     <div class="ctx" id="ctx"></div>
   </div>
-  <div style="margin:0 10px; display:inline-flex; gap:10px;">
+  <div id="hdr-acciones">
+  <div style="margin:0 10px 0 0; display:inline-flex; gap:10px;">
     <label style="font-weight:bold;">
       <input type="radio" name="coleccion-toggle" value="terreno" checked onchange="toggleColeccion('terreno')">
       🏔️ Terreno
@@ -231,8 +249,11 @@
   </div>
   <button id="btn-bloqueo-gabinete" class="btn sec mini" style="display:none" onclick="toggleBloqueoGabinete()"></button>
   <button class="btn sec mini" onclick="openBackupModal()" title="Archivar/Cargar día">💾</button>
-  <input type="file" id="kmz-file-input" accept=".kmz" style="display:none;">
-  <button class="btn sec mini" onclick="document.getElementById('kmz-file-input').click()" title="Cargar geometrías de KMZ">📂</button>
+  <!-- El id se conserva: lo nombra READONLY_EXENTOS, que exime este control del barrido de
+       updateFormReadonly(). Renombrarlo lo dejaria deshabilitado al bloquear Gabinete. -->
+  <input type="file" id="kmz-file-input" accept=".kmz,.kml,.zip,.shp,.shx,.dbf,.prj" multiple style="display:none;">
+  <button class="btn sec mini" onclick="document.getElementById('kmz-file-input').click()" title="Cargar geometrías: KMZ, KML o shapefile">📂</button>
+  </div>
 </header>
 <main id="app"></main>
 <button class="fabcortina" id="fabCortina" type="button" style="display:none" aria-expanded="true"></button>
@@ -3481,7 +3502,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v121';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v122';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4044,8 +4065,15 @@ async function parseKmzFile(file) {
     throw new Error('No se encontró archivo .kml dentro del ZIP');
   }
 
+  return parseKmlTexto(kmlFile, 'KMZ importado');
+}
+
+// El lector de KML vive aparte del de KMZ porque un .kml suelto es igual de comun que el .kmz
+// comprimido, y antes solo se podia abrir el segundo.
+function parseKmlTexto(texto, fuente) {
+  fuente = fuente || 'KML importado';
   const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(kmlFile, 'text/xml');
+  const xmlDoc = parser.parseFromString(texto, 'text/xml');
 
   // xmlDoc.parseError es una API SOLO de IE/MSXML: en Chrome/Firefox/Safari vale
   // undefined, asi que leer .errorCode lanzaba TypeError con CUALQUIER archivo y el
@@ -4068,29 +4096,35 @@ async function parseKmzFile(file) {
       return [parseFloat(lat), parseFloat(lon)];
     }).filter(([la, lo]) => !isNaN(la) && !isNaN(lo));
 
-    const pointNode = pm.querySelector('Point');
-    if (pointNode) {
+    for (const pointNode of pm.querySelectorAll('Point')) {
       const c = aLatLon(pointNode.querySelector('coordinates')?.textContent || '');
-      if (c.length) geometrias.push({tipo:'punto', lat:c[0][0], lon:c[0][1], nombre, descripcion:description});
+      if (c.length) geometrias.push({tipo:'punto', lat:c[0][0], lon:c[0][1], nombre, descripcion:description, fuente});
     }
 
-    const lineNode = pm.querySelector('LineString');
-    if (lineNode) {
+    for (const lineNode of pm.querySelectorAll('LineString')) {
       const c = aLatLon(lineNode.querySelector('coordinates')?.textContent || '');
-      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description});
+      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente});
+    }
+
+    // Un poligono entra como el CONTORNO de cada anillo (exterior e interiores): la app no
+    // tiene tipo poligono, y para un geologo el borde de una unidad es un contacto.
+    for (const anillo of pm.querySelectorAll('Polygon LinearRing')) {
+      const c = aLatLon(anillo.querySelector('coordinates')?.textContent || '');
+      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente});
     }
   }
 
   return geometrias;
 }
 
-// Inserta lo leido del KMZ como registros CANONICOS colgando del proyecto indicado.
+// Inserta lo leido del archivo (KMZ, KML o shapefile) como registros CANONICOS colgando del
+// proyecto indicado.
 // Antes escribia {latitud, longitud, coordenadas, nombre...} y sin _parent: campos que
 // ningun otro punto de la app lee (el mapa busca 'Coordenadas Geograficas Decimales_Lat/
 // _Long' y l.geom, y las listas filtran por _parent), asi que lo importado quedaba
 // invisible en el mapa, en las listas y en todos los exports.
-async function insertKmzGeometries(geometrias, proyectoId) {
-  if (!proyectoId) throw new Error('Abre un proyecto antes de importar el KMZ');
+async function insertarGeometrias(geometrias, proyectoId) {
+  if (!proyectoId) throw new Error('Abre un proyecto antes de importar');
   const f = ahora();
   let puntosInsertados = 0, lineasInsertadas = 0, omitidas = 0;
 
@@ -4101,7 +4135,7 @@ async function insertKmzGeometries(geometrias, proyectoId) {
           id: uid(), _parent: proyectoId,
           ID_PUNTO_CONTROL: g.nombre || '',
           [inLat]: g.lat.toFixed(6), [inLon]: g.lon.toFixed(6),
-          FUENTE_COORDENADAS: 'KMZ importado',
+          FUENTE_COORDENADAS: g.fuente || 'KMZ importado',
           NOTA: g.descripcion || '',
         }, f));
         puntosInsertados++;
@@ -4114,11 +4148,121 @@ async function insertKmzGeometries(geometrias, proyectoId) {
         lineasInsertadas++;
       }
     } catch (err) {
-      console.warn('No se pudo insertar una geometría del KMZ:', err);
+      console.warn('No se pudo insertar una geometría importada:', err);
       omitidas++;
     }
   }
   return {puntosInsertados, lineasInsertadas, omitidas};
+}
+
+// ---- Importar geometrias de referencia: KMZ/KML y shapefile ----
+// Un shapefile llega como .zip (shp+shx+dbf+prj) o como esos archivos sueltos elegidos juntos.
+// La reproyeccion la hace shpjs leyendo el .prj: verificado contra pyproj con un shapefile en
+// PSAD56 / UTM 19S (EPSG:24879), que es el datum historico de las cartas chilenas. Respeta el
+// TOWGS84 declarado en el archivo al metro; ignorarlo daria 538 m de error. Los ~17 m que
+// separan ese resultado de la transformacion refinada del EPSG son propiedad del .prj de
+// origen, no de la libreria: el datum se LEE de la hoja, no se deduce.
+const GEO_ACEPTA = '.kmz,.kml,.zip,.shp,.shx,.dbf,.prj';
+// Campos del .dbf donde suele venir el nombre del rasgo, en orden de preferencia.
+const GEO_CAMPOS_NOMBRE = ['NOMBRE','NAME','NOM','ETIQUETA','LABEL','CODIGO','COD','ID','UNIDAD','SIMBOLO'];
+
+function geoNombreDe(props){
+  if(!props) return '';
+  for(const k of GEO_CAMPOS_NOMBRE){
+    const hit = Object.keys(props).find(p => p.toUpperCase() === k);
+    if(hit && props[hit] != null && String(props[hit]).trim()) return String(props[hit]).trim();
+  }
+  const primero = Object.values(props).find(v => typeof v === 'string' && v.trim());
+  return primero ? primero.trim() : '';
+}
+// El resto de la tabla de atributos se conserva en NOTA: es informacion que el geologo trajo
+// a proposito y tirarla en silencio seria peor que una nota larga.
+function geoDescripcionDe(props, usado){
+  if(!props) return '';
+  return Object.entries(props)
+    .filter(([k,v]) => v != null && String(v).trim() && String(v).trim() !== usado)
+    .map(([k,v]) => k + ': ' + String(v).trim())
+    .join(' · ');
+}
+
+// GeoJSON (lo que devuelve shpjs) -> el MISMO arreglo de geometrias que produce el lector de
+// KML, para que insertarGeometrias no tenga que cambiar. GeoJSON da [lon,lat]; la app trabaja
+// en [lat,lon] (orden de Leaflet), asi que aqui se invierte una sola vez.
+function geojsonAGeometrias(fc){
+  const out = [];
+  for(const f of (fc && fc.features) || []){
+    const g = f.geometry; if(!g) continue;
+    const nombre = geoNombreDe(f.properties);
+    const descripcion = geoDescripcionDe(f.properties, nombre);
+    const linea = coords => { const g2 = coords.map(([lo,la]) => [la,lo])
+        .filter(([la,lo]) => isFinite(la) && isFinite(lo));
+      if(g2.length >= 2) out.push({tipo:'linea', geom:g2, nombre, descripcion, fuente:'Shapefile importado'}); };
+    const punto = ([lo,la]) => { if(isFinite(la) && isFinite(lo))
+        out.push({tipo:'punto', lat:la, lon:lo, nombre, descripcion, fuente:'Shapefile importado'}); };
+    switch(g.type){
+      case 'Point':           punto(g.coordinates); break;
+      case 'MultiPoint':      g.coordinates.forEach(punto); break;
+      case 'LineString':      linea(g.coordinates); break;
+      case 'MultiLineString': g.coordinates.forEach(linea); break;
+      // Un poligono entra como el CONTORNO de cada anillo: para un geologo el borde de una
+      // unidad es un contacto, asi que el dato sirve tal cual. La app no tiene tipo poligono.
+      case 'Polygon':         g.coordinates.forEach(linea); break;
+      case 'MultiPolygon':    g.coordinates.forEach(p => p.forEach(linea)); break;
+    }
+  }
+  return out;
+}
+
+// Shapefile suelto: agrupa por nombre base y arma cada capa con su .dbf y su .prj. Sin el .prj
+// shpjs no puede reproyectar y deja las coordenadas crudas -- por eso se avisa.
+async function parseShapefileSuelto(files){
+  const porBase = {};
+  for(const f of files){
+    const m = f.name.match(/^(.*)\.(shp|dbf|prj|shx)$/i);
+    if(m) (porBase[m[1]] = porBase[m[1]] || {})[m[2].toLowerCase()] = f;
+  }
+  const capas = [], sinPrj = [];
+  for(const base of Object.keys(porBase)){
+    const parte = porBase[base];
+    if(!parte.shp) continue;
+    const prj = parte.prj ? await parte.prj.text() : undefined;
+    if(!prj) sinPrj.push(base);
+    const geoms = shp.parseShp(await parte.shp.arrayBuffer(), prj);
+    const props = parte.dbf ? shp.parseDbf(await parte.dbf.arrayBuffer()) : geoms.map(() => ({}));
+    capas.push(shp.combine([geoms, props]));
+  }
+  return {capas, sinPrj};
+}
+
+// Lee uno o varios archivos y devuelve {geometrias, aviso}. Acepta KMZ, KML, shapefile en .zip
+// y shapefile suelto. Es el unico punto que sabe de formatos.
+async function parseArchivosGeo(files){
+  const lista = Array.from(files || []);
+  if(!lista.length) throw new Error('No se eligio ningun archivo');
+  const ext = f => (f.name.match(/\.([^.]+)$/) || [,''])[1].toLowerCase();
+  const geometrias = [];
+  const avisos = [];
+
+  for(const f of lista.filter(f => ext(f) === 'kmz')) geometrias.push(...await parseKmzFile(f));
+  for(const f of lista.filter(f => ext(f) === 'kml')) geometrias.push(...parseKmlTexto(await f.text()));
+
+  for(const f of lista.filter(f => ext(f) === 'zip')){
+    const geo = await shp(await f.arrayBuffer());
+    for(const capa of (Array.isArray(geo) ? geo : [geo])) geometrias.push(...geojsonAGeometrias(capa));
+  }
+
+  const sueltos = lista.filter(f => ['shp','dbf','prj','shx'].includes(ext(f)));
+  if(sueltos.length){
+    const {capas, sinPrj} = await parseShapefileSuelto(sueltos);
+    for(const capa of capas) geometrias.push(...geojsonAGeometrias(capa));
+    if(sinPrj.length) avisos.push('Sin .prj (' + sinPrj.join(', ') + '): las coordenadas se '
+      + 'usaron tal cual, sin reproyectar. Si el shapefile estaba en UTM, quedaran fuera de lugar.');
+  }
+
+  if(!lista.some(f => ['kmz','kml','zip','shp'].includes(ext(f))))
+    throw new Error('Formato no reconocido. Se aceptan .kmz, .kml y shapefile (.zip o .shp con su .dbf y .prj)');
+
+  return {geometrias, avisos};
 }
 
 // ============================ Dominios / cascadas ============================
@@ -5852,9 +5996,19 @@ async function render(){
 function cortinaPlegada(){
   try{ return localStorage.getItem('fabPlegado')==='1'; }catch(e){ return false; }
 }
+// El header envuelve a dos filas en un telefono, asi que su alto no es constante. Se mide y se
+// publica en --headh, igual que --fabh, para que el mapa descuente el alto REAL. Antes el CSS
+// restaba 117 px fijos y el mapa quedaba descuadrado en cuanto el header crecia.
+function medirHeader(){
+  const h=document.querySelector('header');
+  if(h) document.documentElement.style.setProperty('--headh', h.offsetHeight+'px');
+}
+addEventListener('resize', medirHeader);
+
 function ajustarCortina(){
   const fab=$('#fab'), c=$('#fabCortina');
   if(!fab||!c) return;
+  medirHeader();
   const enMapa = vista.n==='mapa' && fab.children.length>0;
   if(!enMapa){
     document.body.classList.remove('fab-plegado');
@@ -8952,17 +9106,18 @@ window.addEventListener('error',e=>{if(!db)pantallaError('Error al iniciar',(e.m
 })();
 
 document.getElementById('kmz-file-input').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
 
   try {
-    if (!curProyecto) throw new Error('Abre primero el proyecto donde quieres cargar el KMZ');
-    const geometrias = await parseKmzFile(file);
-    if (!geometrias.length) throw new Error('El KMZ no trae puntos ni líneas');
-    const r = await insertKmzGeometries(geometrias, curProyecto.id);
+    if (!curProyecto) throw new Error('Abre primero el proyecto donde quieres cargar las geometrías');
+    const {geometrias, avisos} = await parseArchivosGeo(files);
+    if (!geometrias.length) throw new Error('El archivo no trae puntos, líneas ni polígonos');
+    const r = await insertarGeometrias(geometrias, curProyecto.id);
     alert(`✓ Cargado en "${curProyecto.NOMBRE_PROYECTO || 'proyecto'}" (${coleccionActiva()}): `
         + `${r.puntosInsertados} puntos, ${r.lineasInsertadas} líneas`
-        + (r.omitidas ? `\n⚠️ ${r.omitidas} no se pudieron insertar` : ''));
+        + (r.omitidas ? `\n⚠️ ${r.omitidas} no se pudieron insertar` : '')
+        + (avisos.length ? '\n⚠️ ' + avisos.join('\n⚠️ ') : ''));
     render();   // que aparezcan sin recargar
   } catch (err) {
     alert(`✗ Error: ${err.message}`);

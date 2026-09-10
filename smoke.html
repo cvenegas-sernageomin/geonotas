@@ -273,7 +273,7 @@ async function correr(){
       const z = new w.JSZip(); z.file('doc.kml', kml);
       const geoms = await w.parseKmzFile(new w.File([await z.generateAsync({type:'blob'})], 'p.kmz'));
       eq(geoms.length, 2, 'el parseo no encontró las dos geometrías');
-      const r = await w.insertKmzGeometries(geoms, P+'pr');
+      const r = await w.insertarGeometrias(geoms, P+'pr');
       eq([r.puntosInsertados, r.lineasInsertadas, r.omitidas], [1,1,0], 'no insertó lo esperado');
 
       // tiene que ser visible por los MISMOS filtros que usan el mapa y las listas
@@ -717,6 +717,118 @@ async function correr(){
          'cambiaron los campos exportables de TBL_ESQUEMA_DIBUJO');
       ok(!cs.some(n => /^_/.test(n)), '_trazos/_fondo/_img se colaron a los campos del modelo');
       return 'los 4 campos del modelo intactos; _trazos, _fondo y _w/_h quedan fuera';
+    });
+
+    // ---- Importar geometrias: KMZ/KML y shapefile (v122 / light-21) ----
+    // El usuario reporto "ya no esta el icono" de cargar KMZ. El boton nunca se borro: el header
+    // desbordaba en un telefono y el ULTIMO hijo quedaba fuera del viewport, inalcanzable. Por eso
+    // la primera prueba mide el ancho de verdad, ensanchando el iframe a 375 px.
+    await prueba('Ningun control del header queda fuera de pantalla a 375 px (regresion del icono 📂)', async () => {
+      const ifr = document.getElementById('app');
+      const estilo = ifr.getAttribute('style');
+      ifr.setAttribute('style', 'width:375px;height:812px;border:0;position:absolute;left:-9999px');
+      try {
+        await new Promise(r => setTimeout(r, 400));
+        const h = w.document.querySelector('header');
+        // el estado peor: dentro de un proyecto, en Gabinete desbloqueable
+        w.document.getElementById('btnBack').style.display = '';
+        w.document.getElementById('ctx').textContent = 'Carta Curicó · PC-014 · Terreno';
+        const lock = w.document.getElementById('btn-bloqueo-gabinete');
+        lock.style.display = ''; lock.textContent = '🔓 Llevar a terreno';
+        await new Promise(r => setTimeout(r, 250));
+
+        const ancho = ifr.clientWidth;
+        const fuera = [...h.querySelectorAll('button')].filter(b => b.offsetWidth)
+          .filter(b => { const r = b.getBoundingClientRect(); return r.right > ancho + 0.5 || r.left < -0.5; })
+          .map(b => b.textContent.trim().slice(0, 12) || b.id);
+        eq(fuera, [], 'controles del header fuera del viewport a ' + ancho + 'px');
+        ok(h.scrollWidth <= h.clientWidth + 1, 'el header desborda horizontalmente: '
+           + h.scrollWidth + ' > ' + h.clientWidth);
+        // el alto del header se publica en --headh; el mapa lo descuenta en vez de restar 117 fijos
+        w.medirHeader();
+        const headh = w.getComputedStyle(w.document.documentElement).getPropertyValue('--headh').trim();
+        ok(/^\d+px$/.test(headh) && parseInt(headh) === h.offsetHeight,
+           '--headh no refleja el alto real del header: ' + headh + ' vs ' + h.offsetHeight);
+        return 'nada cortado a ' + ancho + 'px; header ' + h.offsetHeight + 'px publicado en --headh';
+      } finally {
+        ifr.setAttribute('style', estilo);
+        w.document.getElementById('btnBack').style.display = 'none';
+        w.document.getElementById('btn-bloqueo-gabinete').style.display = 'none';
+      }
+    });
+
+    await prueba('El shapefile (.zip) entra reproyectado desde su .prj, no crudo', async () => {
+      // Fixture en PSAD56 / UTM 19S (EPSG:24879), el datum historico de las cartas chilenas.
+      // Los valores esperados los calculo pyproj; se generan con smoke-shapefile-generar.py.
+      // Ignorar el datum daria 538 m de error, asi que la tolerancia de 50 m distingue
+      // "reproyecto bien" de "no reproyecto" sin atarse a la implementacion exacta.
+      const ESPERADO = {'PC-101': {lat:-35.226440, lon:-71.199637},
+                        'PC-102': {lat:-35.198688, lon:-71.138484},
+                        'PC-103': {lat:-35.258626, lon:-71.214245}};
+      const buf = await (await fetch('smoke-shapefile-utm19s.zip')).arrayBuffer();
+      const {geometrias, avisos} = await w.parseArchivosGeo(
+        [new w.File([buf], 'carto.zip', {type: 'application/zip'})]);
+      eq(avisos, [], 'un shapefile con .prj no deberia avisar nada');
+
+      const pts = geometrias.filter(g => g.tipo === 'punto');
+      eq(pts.length, 3, 'no llegaron los 3 puntos del shapefile');
+      eq(pts.map(p => p.nombre).sort(), ['PC-101','PC-102','PC-103'],
+         'no se leyo el campo NOMBRE de la tabla .dbf');
+      let peor = 0;
+      for (const p of pts) {
+        const e = ESPERADO[p.nombre];
+        const dlat = (p.lat - e.lat) * 111320;
+        const dlon = (p.lon - e.lon) * 111320 * Math.cos(e.lat * Math.PI / 180);
+        peor = Math.max(peor, Math.hypot(dlat, dlon));
+      }
+      ok(peor < 50, 'las coordenadas no se reproyectaron (error de ' + Math.round(peor)
+         + ' m; sin datum serian ~538 m)');
+      ok(geometrias.every(g => g.fuente === 'Shapefile importado'),
+         'FUENTE_COORDENADAS no distingue el shapefile del KMZ');
+      return '3 puntos con su nombre del .dbf; peor error ' + peor.toFixed(1) + ' m';
+    });
+
+    await prueba('Un poligono entra como el contorno de su anillo, no se pierde', async () => {
+      const buf = await (await fetch('smoke-shapefile-utm19s.zip')).arrayBuffer();
+      const {geometrias} = await w.parseArchivosGeo(
+        [new w.File([buf], 'carto.zip', {type: 'application/zip'})]);
+      const lineas = geometrias.filter(g => g.tipo === 'linea');
+      eq(lineas.length, 2, 'esperaba la polilinea + el contorno del poligono');
+      const poli = lineas.find(l => l.nombre === 'Fm. Abanico');
+      ok(poli, 'el poligono "Fm. Abanico" no llego como linea');
+      eq(poli.geom.length, 5, 'el anillo del poligono perdio vertices');
+      eq(poli.geom[0], poli.geom[4], 'el anillo dejo de estar cerrado');
+      // GeoJSON da [lon,lat] y la app trabaja en [lat,lon]: si se invirtiera el orden, la
+      // latitud saldria como -71 y el punto caeria en otro hemisferio.
+      ok(poli.geom.every(([la, lo]) => la < -30 && la > -40 && lo < -60 && lo > -80),
+         'los vertices no estan en [lat,lon] o cayeron fuera de Chile: ' + JSON.stringify(poli.geom[0]));
+      return 'contorno de 5 vertices, cerrado y en [lat,lon]';
+    });
+
+    await prueba('Un KML suelto se lee, con sus poligonos', async () => {
+      const kml = '<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+        + '<Placemark><name>Domo El Roble</name><description>dacitico</description><Polygon>'
+        + '<outerBoundaryIs><LinearRing><coordinates>-71.2,-35.2,0 -71.1,-35.2,0 -71.1,-35.3,0 -71.2,-35.2,0'
+        + '</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>'
+        + '<Placemark><name>PC-200</name><Point><coordinates>-71.15,-35.25,0</coordinates></Point></Placemark>'
+        + '</Document></kml>';
+      const {geometrias} = await w.parseArchivosGeo([new w.File([kml], 'unidades.kml')]);
+      const pt = geometrias.find(g => g.tipo === 'punto');
+      const ln = geometrias.find(g => g.tipo === 'linea');
+      ok(pt, 'no se leyo el punto del KML');
+      eq([+pt.lat.toFixed(2), +pt.lon.toFixed(2)], [-35.25, -71.15], 'el punto del KML quedo mal ubicado');
+      eq(pt.fuente, 'KML importado', 'un .kml suelto no deberia marcarse como KMZ');
+      ok(ln && ln.geom.length === 4, 'el poligono del KML no entro como contorno');
+      return 'punto + contorno del poligono, desde un .kml sin comprimir';
+    });
+
+    await prueba('Un formato que no se soporta lo dice, en vez de fallar callado', async () => {
+      let msg = '';
+      try { await w.parseArchivosGeo([new w.File(['hola'], 'notas.txt')]); }
+      catch (e) { msg = e.message; }
+      ok(/kmz/i.test(msg) && /shapefile/i.test(msg),
+         'el error no dice que formatos se aceptan: ' + JSON.stringify(msg));
+      return msg.slice(0, 60) + '…';
     });
 
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y

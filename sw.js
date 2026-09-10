@@ -1,5 +1,5 @@
 // Service worker offline-first (cache estatico)
-const CACHE='geonotas-v121';
+const CACHE='geonotas-v122';
 // Caches que ESTA app puede purgar al activarse. NO se borra "todo lo que no sea CACHE":
 // la Cache API tiene alcance de ORIGEN, no de ruta, y las dos PWAs (completa y light) viven
 // en el mismo cvenegas-sernageomin.github.io. Con el filtro viejo, activar una borraba la
@@ -13,7 +13,7 @@ const esMia=k=>MIAS.some(re=>re.test(k));
 const ASSETS=['./','./index.html','./manifest.json','./icons/icon-192.png','./icons/icon-512.png',
   './vendor/leaflet.css','./vendor/leaflet.js','./vendor/idb.js','./vendor/leaflet.offline.js',
   './vendor/georaster.browser.bundle.min.js','./vendor/georaster-layer-for-leaflet.min.js',
-  './vendor/sql-wasm.js','./vendor/sql-wasm.wasm','./vendor/jszip.js',
+  './vendor/sql-wasm.js','./vendor/sql-wasm.wasm','./vendor/jszip.js','./vendor/shp.js',
   './vendor/images/marker-icon.png','./vendor/images/marker-icon-2x.png','./vendor/images/marker-shadow.png',
   './vendor/images/layers.png','./vendor/images/layers-2x.png'];
 // vendor/gdal3.js + gdal3WebAssembly.{data,wasm} quedan FUERA de ASSETS a proposito: pesan
