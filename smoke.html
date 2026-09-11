@@ -276,15 +276,19 @@ async function correr(){
       const r = await w.insertarGeometrias(geoms, P+'pr');
       eq([r.puntosInsertados, r.lineasInsertadas, r.omitidas], [1,1,0], 'no insertó lo esperado');
 
-      // tiene que ser visible por los MISMOS filtros que usan el mapa y las listas
-      const pt = (await w.childrenOf('punto', P+'pr')).find(p => p.ID_PUNTO_CONTROL === 'Desde KMZ');
-      ok(pt, 'el punto importado no cuelga del proyecto');
+      // Desde v123 lo importado entra a GABINETE, no a la coleccion activa: es material de
+      // referencia, no observacion de terreno. Igual tiene que ser visible por los MISMOS
+      // filtros que usan el mapa y las listas.
+      const pt = (await w.childrenOf('punto_gabinete', P+'pr')).find(p => p.ID_PUNTO_CONTROL === 'Desde KMZ');
+      ok(pt, 'el punto importado no cuelga del proyecto en Gabinete');
       ok(!isNaN(parseFloat(pt[LAT])) && !isNaN(parseFloat(pt[LON])), 'el punto no tiene coordenadas legibles por el mapa');
-      const ln = (await w.childrenOf('linea', P+'pr')).find(l => l.id !== P+'ln-T');
+      // OJO: sembrar() ya dejo una linea de Gabinete (P+'ln-G') que tambien tiene 2 vertices.
+      // La importada es la unica SIN el prefijo de aislamiento.
+      const ln = (await w.childrenOf('linea_gabinete', P+'pr')).find(l => !String(l.id).startsWith(P));
       ok(ln && ln.geom && ln.geom.length === 2, 'la línea importada no tiene geom dibujable');
       eq(ln.geom[0], [-33.1,-70.1], 'la línea quedó con lon/lat invertidos');
-      await w.del('punto', pt.id); await w.del('linea', ln.id);   // no llevan prefijo: se limpian aquí
-      return 'punto y línea importados, visibles por childrenOf() y con geometría en [lat,lon]';
+      await w.del('punto_gabinete', pt.id); await w.del('linea_gabinete', ln.id);   // no llevan prefijo
+      return 'punto y línea importados a Gabinete, visibles por childrenOf() y en [lat,lon]';
     });
 
     await prueba('Un KMZ mal formado da un error legible, no un TypeError', async () => {
@@ -831,6 +835,146 @@ async function correr(){
       return msg.slice(0, 60) + '…';
     });
 
+    await prueba('El sistema de referencia se LEE del .prj y se clasifica bien', async () => {
+      const wgs = w.crsDeWkt('GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.25]]]');
+      const sir = w.crsDeWkt('PROJCS["SIRGAS 2000 / UTM zone 19S",GEOGCS["SIRGAS 2000",DATUM["SIRGAS_2000",SPHEROID["GRS 1980",6378137,298.25]]]]');
+      const psa = w.crsDeWkt('PROJCS["PSAD56 / UTM zone 19S",GEOGCS["PSAD56",DATUM["Provisional_South_American_Datum_1956",SPHEROID["International 1924",6378388,297]]]]');
+      ok(wgs.esWgs84, 'un .prj WGS84 se marco como incompatible');
+      ok(sir.esWgs84, 'SIRGAS se marco como incompatible: coincide con WGS84 dentro de cm');
+      ok(!psa.esWgs84, 'PSAD56 paso como WGS84 — es el datum que deja el dato corrido ~400 m');
+      eq(psa.nombre, 'PSAD56 / UTM zone 19S', 'no se leyo el nombre del sistema para poder avisarlo');
+      eq(w.crsDeWkt(''), null, 'un .prj vacio deberia dar null, no un objeto a medias');
+      return 'WGS84 y SIRGAS pasan; PSAD56 dispara la alarma';
+    });
+
+    await prueba('El diálogo alarma en rojo si el archivo NO viene en WGS84', async () => {
+      const buf = await (await fetch('smoke-shapefile-utm19s.zip')).arrayBuffer();
+      const {geometrias, crs} = await w.parseArchivosGeo(
+        [new w.File([buf], 'carto.zip', {type: 'application/zip'})]);
+      const p = w.dialogoImportar(geometrias, crs);
+      await new Promise(r => setTimeout(r, 250));
+      const dlg = w.document.querySelector('.imp-modal');
+      try {
+        ok(dlg, 'no se abrio el diálogo de importación');
+        const al = dlg.querySelector('.imp-alarma');
+        ok(/mal/.test(al.className), 'la alarma no salio marcada como problema con un PSAD56');
+        ok(/WGS84/.test(al.querySelector('b').textContent), 'la alarma no enuncia la regla');
+        ok(/PSAD56/.test(al.querySelector('p').textContent), 'la alarma no dice que declaraba el archivo');
+        // tres capas con el mismo .prj no deben nombrar el sistema tres veces
+        eq(al.querySelector('p').textContent.match(/PSAD56/g).length, 1,
+           'el mismo sistema se repite una vez por capa: la alarma queda ilegible');
+        ok(/Gabinete/.test(dlg.querySelector('.imp-destino').textContent),
+           'el diálogo no dice que lo importado entra a Gabinete');
+        return 'alarma en rojo, sistema nombrado una vez, destino Gabinete a la vista';
+      } finally {
+        // cerrar por el BOTON, no arrancando el nodo: dialogoImportar resuelve su promesa
+        // en cerrar(), asi que quitar el modal a mano la deja colgada para siempre.
+        const cancelar = dlg && dlg.querySelector('.imp-acciones button');
+        if (cancelar) cancelar.click(); else dlg && dlg.closest('.modal').remove();
+        await p;
+      }
+    });
+
+    await prueba('Cancelar el diálogo no escribe NADA', async () => {
+      const antes = (await w.all('punto_gabinete')).length + (await w.all('linea_gabinete')).length;
+      const buf = await (await fetch('smoke-shapefile-utm19s.zip')).arrayBuffer();
+      const {geometrias, crs} = await w.parseArchivosGeo(
+        [new w.File([buf], 'carto.zip', {type: 'application/zip'})]);
+      const p = w.dialogoImportar(geometrias, crs);
+      await new Promise(r => setTimeout(r, 250));
+      const dlg = w.document.querySelector('.imp-modal');
+      dlg.querySelector('.imp-acciones button').click();          // "Cancelar"
+      eq(await p, null, 'cancelar deberia devolver null');
+      eq((await w.all('punto_gabinete')).length + (await w.all('linea_gabinete')).length, antes,
+         'cancelar dejo registros escritos');
+      return 'devuelve null y la base queda igual';
+    });
+
+    await prueba('Lo importado entra a GABINETE, nunca a Terreno', async () => {
+      const buf = await (await fetch('smoke-shapefile-utm19s.zip')).arrayBuffer();
+      const {geometrias} = await w.parseArchivosGeo(
+        [new w.File([buf], 'carto.zip', {type: 'application/zip'})]);
+      const antesT = (await w.all('punto')).length, antesL = (await w.all('linea')).length;
+      // se cuenta por DIFERENCIA, no por total: los registros importados llevan uid() sin el
+      // prefijo de aislamiento, asi que una corrida anterior interrumpida puede dejar restos.
+      const antesG = (await w.all('punto_gabinete'))
+        .filter(p => p._parent === P+'pr' && !String(p.id).startsWith(P)).length;
+      // toggle en TERRENO a proposito: el destino no debe depender de la coleccion activa
+      const radio = w.document.querySelector('input[name="coleccion-toggle"][value="terreno"]');
+      if (radio) radio.checked = true;
+      const r = await w.insertarGeometrias(geometrias, P+'pr');
+      try {
+        eq(r.puntosInsertados, 3, 'no se insertaron los 3 puntos');
+        eq((await w.all('punto')).length, antesT, 'un punto importado se colo en Terreno');
+        eq((await w.all('linea')).length, antesL, 'una linea importada se colo en Terreno');
+        // sembrar() ya dejo un punto de Gabinete (P+'pt-G') colgando del mismo proyecto: los
+        // importados son los que NO llevan el prefijo de aislamiento.
+        const gp = (await w.all('punto_gabinete'))
+          .filter(p => p._parent === P+'pr' && !String(p.id).startsWith(P));
+        eq(gp.length - antesG, 3, 'los puntos no llegaron a Gabinete');
+        ok(gp.every(p => p.FUENTE_COORDENADAS === 'Shapefile importado'),
+           'se perdio la procedencia de la coordenada');
+        return '3 puntos y 2 lineas a Gabinete; Terreno intacto estando activo';
+      } finally {
+        for (const s of ['punto_gabinete','linea_gabinete'])
+          for (const x of await w.all(s)) if (x._parent === P+'pr') await w.del(s, x.id);
+      }
+    });
+
+    await prueba('El mapeo manda: lo desmarcado no se guarda y lo mapeado no se duplica', async () => {
+      const buf = await (await fetch('smoke-shapefile-utm19s.zip')).arrayBuffer();
+      const {geometrias} = await w.parseArchivosGeo(
+        [new w.File([buf], 'carto.zip', {type: 'application/zip'})]);
+      // lineas: NOMBRE -> CLASE_LINEA   ·   unidades: NOMBRE descartado (null)
+      const mapeo = {puntos: {NOMBRE: 'ID_PUNTO_CONTROL'}, lineas: {NOMBRE: 'CLASE_LINEA'},
+                     unidades: {NOMBRE: null}};
+      await w.insertarGeometrias(geometrias, P+'pr', mapeo);
+      try {
+        const gl = (await w.all('linea_gabinete')).filter(l => l._parent === P+'pr');
+        const conClase = gl.find(l => l.CLASE_LINEA);
+        ok(conClase, 'la columna mapeada a CLASE_LINEA no llego');
+        eq(conClase.CLASE_LINEA, 'Contacto A', 'CLASE_LINEA no tomo el valor del .dbf');
+        ok(!conClase.NOTA, 'el valor quedo TAMBIEN copiado en NOTA: el dato entra dos veces');
+        const descartada = gl.find(l => !l.CLASE_LINEA);
+        ok(descartada, 'la capa con la columna descartada no llego');
+        ok(!descartada.NOTA, 'una columna DESMARCADA se guardo igual en NOTA');
+        eq(descartada.geom.length, 5, 'descartar la columna no debe descartar la geometria');
+        const gp = (await w.all('punto_gabinete')).filter(p => p._parent === P+'pr');
+        eq(gp.map(p => p.ID_PUNTO_CONTROL).sort(), ['PC-101','PC-102','PC-103'],
+           'el mapeo a ID_PUNTO_CONTROL no se aplico');
+        return 'CLASE_LINEA sin copia en NOTA; columna desmarcada sin rastro, geometria intacta';
+      } finally {
+        for (const s of ['punto_gabinete','linea_gabinete'])
+          for (const x of await w.all(s)) if (x._parent === P+'pr') await w.del(s, x.id);
+      }
+    });
+
+    await prueba('Un KML expone name/description como columnas mapeables', async () => {
+      const kml = '<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+        + '<Placemark><name>PC-900</name><description>hito</description>'
+        + '<Point><coordinates>-71.15,-35.25,0</coordinates></Point></Placemark></Document></kml>';
+      const {geometrias, crs} = await w.parseArchivosGeo([new w.File([kml], 'ref.kml')]);
+      eq(geometrias[0].props, {name: 'PC-900', description: 'hito'},
+         'el KML no expone sus campos como tabla de atributos');
+      const p = w.dialogoImportar(geometrias, crs);
+      await new Promise(r => setTimeout(r, 250));
+      const dlg = w.document.querySelector('.imp-modal');
+      try {
+        ok(!/mal/.test(dlg.querySelector('.imp-alarma').className),
+           'un KML no deberia alarmar en rojo: por especificacion OGC ya viene en WGS84');
+        ok(/especificaci/.test(dlg.querySelector('.imp-alarma p').textContent),
+           'no se explica que un KML siempre es WGS84');
+        const cols = [...dlg.querySelectorAll('.imp-fila')].map(f => f.querySelector('.imp-col').textContent);
+        eq(cols.sort(), ['description','name'], 'las columnas del KML no llegaron al diálogo');
+        return 'name/description mapeables y alarma informativa, no de error';
+      } finally {
+        // cerrar por el BOTON, no arrancando el nodo: dialogoImportar resuelve su promesa
+        // en cerrar(), asi que quitar el modal a mano la deja colgada para siempre.
+        const cancelar = dlg && dlg.querySelector('.imp-acciones button');
+        if (cancelar) cancelar.click(); else dlg && dlg.closest('.modal').remove();
+        await p;
+      }
+    });
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.

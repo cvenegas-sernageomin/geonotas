@@ -222,6 +222,34 @@
   .modal-body{padding:15px}
   .modal-body h4{margin:0 0 6px;font-size:13px;color:var(--txt)}
   .modal-body p{margin:0 0 8px;font-size:12.5px;color:var(--muted)}
+  /* Dialogo de importacion: alarma de sistema de referencia + que columna se guarda donde. */
+  .imp-modal{max-width:560px}
+  .imp-alarma{border:1px solid var(--verde);border-left:4px solid var(--verde);border-radius:8px;
+    padding:10px 12px;margin-bottom:12px;background:var(--surface2)}
+  .imp-alarma.mal{border-color:var(--rojo);border-left-color:var(--rojo)}
+  .imp-alarma b{display:block;font-size:13px;margin-bottom:4px;color:var(--verde)}
+  .imp-alarma.mal b{color:var(--rojo)}
+  .imp-alarma p{margin:0;font-size:12px;line-height:1.45}
+  .imp-destino{font-size:12.5px;margin:0 0 12px}
+  .imp-capa{border:1px solid var(--bd);border-radius:9px;padding:9px 10px;margin-bottom:10px}
+  .imp-capa h4{margin:0;font-size:13px;color:var(--verde)}
+  .imp-sub{font-size:11.5px;color:var(--muted);margin-bottom:7px}
+  .imp-fila{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:12px}
+  .imp-chk{flex:0 0 auto;width:17px;height:17px}
+  .imp-col{flex:0 0 30%;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .imp-val{flex:1 1 auto;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .imp-sel{flex:0 0 40%;font-size:11.5px;padding:4px;max-width:180px}
+  .imp-pie{font-size:11.5px;color:var(--muted);margin:0}
+  /* Pegada abajo: con varias capas y muchas columnas la lista es larga y los botones
+     quedaban bajo el scroll, sin forma evidente de confirmar ni cancelar. */
+  .imp-acciones{border-bottom:none;border-top:1px solid var(--bd);justify-content:flex-end;gap:8px;
+    position:sticky;bottom:0;background:var(--surface);z-index:1}
+  @media (max-width:560px){
+    .imp-fila{flex-wrap:wrap}
+    .imp-col{flex:1 1 auto}
+    .imp-val{flex:1 1 100%;order:3;padding-left:24px}
+    .imp-sel{flex:0 0 auto;max-width:none}
+  }
   .tabs{display:flex;margin-bottom:15px;gap:10px;border-bottom:2px solid var(--bd)}
   .tab-button{padding:10px 15px;border:none;background:none;cursor:pointer;font-weight:650;color:var(--muted);border-bottom:3px solid transparent;font-size:13px}
   .tab-button.active{color:var(--verde);border-bottom-color:var(--verde)}
@@ -3502,7 +3530,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v122';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v123';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4065,13 +4093,14 @@ async function parseKmzFile(file) {
     throw new Error('No se encontró archivo .kml dentro del ZIP');
   }
 
-  return parseKmlTexto(kmlFile, 'KMZ importado');
+  return parseKmlTexto(kmlFile, 'KMZ importado', file.name.replace(/\.kmz$/i, ''));
 }
 
 // El lector de KML vive aparte del de KMZ porque un .kml suelto es igual de comun que el .kmz
 // comprimido, y antes solo se podia abrir el segundo.
-function parseKmlTexto(texto, fuente) {
+function parseKmlTexto(texto, fuente, capa) {
   fuente = fuente || 'KML importado';
+  capa = capa || 'KML';
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(texto, 'text/xml');
 
@@ -4089,6 +4118,12 @@ function parseKmlTexto(texto, fuente) {
   for (const pm of placemarks) {
     const nombre = pm.querySelector('name')?.textContent || 'Sin nombre';
     const description = pm.querySelector('description')?.textContent || '';
+    // Un KML no trae tabla de atributos, pero <name> y <description> cumplen ese papel: se
+    // exponen como props para que el dialogo de importacion los trate igual que las columnas
+    // de un .dbf y el geologo pueda mandarlos al campo que quiera.
+    const props = {};
+    if (nombre && nombre !== 'Sin nombre') props.name = nombre;
+    if (description) props.description = description;
 
     // KML da "lon,lat[,alt]"; la app trabaja siempre en [lat, lon] (orden de Leaflet).
     const aLatLon = txt => txt.trim().split(/\s+/).map(par => {
@@ -4098,19 +4133,19 @@ function parseKmlTexto(texto, fuente) {
 
     for (const pointNode of pm.querySelectorAll('Point')) {
       const c = aLatLon(pointNode.querySelector('coordinates')?.textContent || '');
-      if (c.length) geometrias.push({tipo:'punto', lat:c[0][0], lon:c[0][1], nombre, descripcion:description, fuente});
+      if (c.length) geometrias.push({tipo:'punto', lat:c[0][0], lon:c[0][1], nombre, descripcion:description, fuente, props, capa});
     }
 
     for (const lineNode of pm.querySelectorAll('LineString')) {
       const c = aLatLon(lineNode.querySelector('coordinates')?.textContent || '');
-      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente});
+      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente, props, capa});
     }
 
     // Un poligono entra como el CONTORNO de cada anillo (exterior e interiores): la app no
     // tiene tipo poligono, y para un geologo el borde de una unidad es un contacto.
     for (const anillo of pm.querySelectorAll('Polygon LinearRing')) {
       const c = aLatLon(anillo.querySelector('coordinates')?.textContent || '');
-      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente});
+      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente, props, capa});
     }
   }
 
@@ -4123,28 +4158,43 @@ function parseKmlTexto(texto, fuente) {
 // ningun otro punto de la app lee (el mapa busca 'Coordenadas Geograficas Decimales_Lat/
 // _Long' y l.geom, y las listas filtran por _parent), asi que lo importado quedaba
 // invisible en el mapa, en las listas y en todos los exports.
-async function insertarGeometrias(geometrias, proyectoId) {
+//
+// SIEMPRE escribe en GABINETE, nunca en Terreno, sin importar que coleccion este activa.
+// Terreno es lo que el geologo observo con el martillo en la mano; un archivo externo no es
+// una observacion de terreno -- de hecho su FUENTE_COORDENADAS dice "Shapefile importado".
+// Mezclarlo con Terreno contamina el levantamiento propio que se exporta a ArcGIS y despues
+// no hay como separarlos. Por eso tambien: si Gabinete esta BLOQUEADO, el import se niega.
+//
+// `mapeo` viene del dialogo de importacion: {capa: {columnaOrigen: campoDestino|'__NOTA__'|null}}.
+// Sin mapeo se usa el comportamiento heredado (nombre -> ID_PUNTO_CONTROL, resto -> NOTA).
+async function insertarGeometrias(geometrias, proyectoId, mapeo) {
   if (!proyectoId) throw new Error('Abre un proyecto antes de importar');
   const f = ahora();
   let puntosInsertados = 0, lineasInsertadas = 0, omitidas = 0;
 
   for (const g of geometrias) {
     try {
+      const hayReglas = !!(mapeo && mapeo[g.capa]);
+      const campos = aplicarMapeo(g, mapeo);
+      // Con mapeo manda SOLO lo que el geologo marco. Aplicar ademas los valores heredados
+      // rompia las dos promesas del dialogo: una columna mandada a CLASE_LINEA quedaba
+      // TAMBIEN copiada en NOTA, y una columna DESMARCADA se guardaba igual por la puerta de
+      // atras. Sin mapeo (llamada programatica) se conserva el comportamiento de siempre.
       if (g.tipo === 'punto') {
-        await put(storeActivo(), Object.assign({
+        const legado = hayReglas ? {} : {ID_PUNTO_CONTROL: g.nombre || '', NOTA: g.descripcion || ''};
+        await put(RM_GAB_STORE, Object.assign({
           id: uid(), _parent: proyectoId,
-          ID_PUNTO_CONTROL: g.nombre || '',
-          [inLat]: g.lat.toFixed(6), [inLon]: g.lon.toFixed(6),
           FUENTE_COORDENADAS: g.fuente || 'KMZ importado',
-          NOTA: g.descripcion || '',
-        }, f));
+        }, f, legado, campos, {
+          // las coordenadas las manda la geometria, no la tabla de atributos
+          [inLat]: g.lat.toFixed(6), [inLon]: g.lon.toFixed(6),
+        }));
         puntosInsertados++;
       } else if (g.tipo === 'linea') {
-        await put(storeLineaActivo(), {
+        const legado = hayReglas ? {} : {NOTA: [g.nombre, g.descripcion].filter(Boolean).join(' — ')};
+        await put(LINE_GAB_STORE, Object.assign({
           id: uid(), _parent: proyectoId,
-          geom: g.geom,
-          NOTA: [g.nombre, g.descripcion].filter(Boolean).join(' — '),
-        });
+        }, legado, campos, {geom: g.geom}));
         lineasInsertadas++;
       }
     } catch (err) {
@@ -4153,6 +4203,24 @@ async function insertarGeometrias(geometrias, proyectoId) {
     }
   }
   return {puntosInsertados, lineasInsertadas, omitidas};
+}
+
+// Traduce la tabla de atributos del archivo a campos de NUESTRO modelo, segun lo que el
+// geologo marco en el dialogo. Lo marcado sin campo propio se acumula en NOTA; lo desmarcado
+// se descarta. Sin mapeo devuelve {} y el llamador usa su comportamiento heredado.
+function aplicarMapeo(g, mapeo){
+  const reglas = mapeo && mapeo[g.capa];
+  if (!reglas || !g.props) return {};
+  const out = {}, aNota = [];
+  for (const col of Object.keys(g.props)){
+    const destino = reglas[col];
+    const v = g.props[col];
+    if (!destino || v == null || !String(v).trim()) continue;
+    if (destino === '__NOTA__') aNota.push(col + ': ' + String(v).trim());
+    else out[destino] = String(v).trim();
+  }
+  if (aNota.length) out.NOTA = [out.NOTA, aNota.join(' · ')].filter(Boolean).join(' · ');
+  return out;
 }
 
 // ---- Importar geometrias de referencia: KMZ/KML y shapefile ----
@@ -4185,20 +4253,76 @@ function geoDescripcionDe(props, usado){
     .join(' · ');
 }
 
+// ---- Sistema de referencia declarado en el .prj ----
+// La app guarda coordenadas geograficas WGS84 (crs_defecto del modelo). Se LEE lo que el
+// archivo declara y se avisa; no se deduce ni se asume. Un PSAD56 sin avisar deja el dato
+// corrido ~400 m y el geologo lo descubre en terreno.
+function crsDeWkt(wkt){
+  if(!wkt) return null;
+  const saca = re => { const m = wkt.match(re); return m ? m[1] : ''; };
+  const proyectado = saca(/PROJCS\s*\[\s*"([^"]+)"/i);
+  const geografico = saca(/GEOGCS\s*\[\s*"([^"]+)"/i);
+  const datum      = saca(/DATUM\s*\[\s*"([^"]+)"/i);
+  // SIRGAS coincide con WGS84 dentro de centimetros; para terreno son el mismo sistema.
+  const esWgs84 = /WGS[\s_]*(19)?84|SIRGAS/i.test(datum + ' ' + geografico);
+  return {proyectado, geografico, datum, esWgs84, nombre: proyectado || geografico || datum};
+}
+
+// Shapefile suelto: agrupa por nombre base y arma cada capa con su .dbf y su .prj. Sin el .prj
+// shpjs no puede reproyectar y deja las coordenadas crudas -- por eso se avisa.
+async function parseShapefileSuelto(files){
+  const porBase = {};
+  for(const f of files){
+    const m = f.name.match(/^(.*)\.(shp|dbf|prj|shx)$/i);
+    if(m) (porBase[m[1]] = porBase[m[1]] || {})[m[2].toLowerCase()] = f;
+  }
+  const capas = [], sinPrj = [], crs = [];
+  for(const base of Object.keys(porBase)){
+    const parte = porBase[base];
+    if(!parte.shp) continue;
+    const prj = parte.prj ? await parte.prj.text() : undefined;
+    if(!prj) sinPrj.push(base); else crs.push(Object.assign({capa:base}, crsDeWkt(prj)));
+    const geoms = shp.parseShp(await parte.shp.arrayBuffer(), prj);
+    const props = parte.dbf ? shp.parseDbf(await parte.dbf.arrayBuffer()) : geoms.map(() => ({}));
+    capas.push(Object.assign(shp.combine([geoms, props]), {fileName: base}));
+  }
+  return {capas, sinPrj, crs};
+}
+
+// Los .prj que vienen dentro del .zip: shpjs no expone el CRS de origen, asi que se lee aparte
+// con JSZip para poder AVISAR en que sistema venia el archivo.
+async function crsDeZip(buf){
+  try{
+    const zip = await new JSZip().loadAsync(buf);
+    const out = [];
+    for(const nombre of Object.keys(zip.files)){
+      if(!/\.prj$/i.test(nombre)) continue;
+      const wkt = await zip.file(nombre).async('text');
+      out.push(Object.assign({capa: nombre.replace(/\.prj$/i,'').split('/').pop()}, crsDeWkt(wkt)));
+    }
+    return out;
+  }catch(e){ return []; }
+}
+
 // GeoJSON (lo que devuelve shpjs) -> el MISMO arreglo de geometrias que produce el lector de
 // KML, para que insertarGeometrias no tenga que cambiar. GeoJSON da [lon,lat]; la app trabaja
 // en [lat,lon] (orden de Leaflet), asi que aqui se invierte una sola vez.
-function geojsonAGeometrias(fc){
+// Cada geometria conserva su tabla de atributos cruda en `props` y su capa de origen en `capa`:
+// es lo que el dialogo de importacion necesita para dejar elegir que se guarda y donde.
+function geojsonAGeometrias(fc, capa){
   const out = [];
+  capa = capa || fc.fileName || 'capa';
   for(const f of (fc && fc.features) || []){
     const g = f.geometry; if(!g) continue;
-    const nombre = geoNombreDe(f.properties);
-    const descripcion = geoDescripcionDe(f.properties, nombre);
+    const props = f.properties || {};
+    const nombre = geoNombreDe(props);
+    const descripcion = geoDescripcionDe(props, nombre);
+    const base = {nombre, descripcion, props, capa, fuente:'Shapefile importado'};
     const linea = coords => { const g2 = coords.map(([lo,la]) => [la,lo])
         .filter(([la,lo]) => isFinite(la) && isFinite(lo));
-      if(g2.length >= 2) out.push({tipo:'linea', geom:g2, nombre, descripcion, fuente:'Shapefile importado'}); };
+      if(g2.length >= 2) out.push(Object.assign({tipo:'linea', geom:g2}, base)); };
     const punto = ([lo,la]) => { if(isFinite(la) && isFinite(lo))
-        out.push({tipo:'punto', lat:la, lon:lo, nombre, descripcion, fuente:'Shapefile importado'}); };
+        out.push(Object.assign({tipo:'punto', lat:la, lon:lo}, base)); };
     switch(g.type){
       case 'Point':           punto(g.coordinates); break;
       case 'MultiPoint':      g.coordinates.forEach(punto); break;
@@ -4213,56 +4337,159 @@ function geojsonAGeometrias(fc){
   return out;
 }
 
-// Shapefile suelto: agrupa por nombre base y arma cada capa con su .dbf y su .prj. Sin el .prj
-// shpjs no puede reproyectar y deja las coordenadas crudas -- por eso se avisa.
-async function parseShapefileSuelto(files){
-  const porBase = {};
-  for(const f of files){
-    const m = f.name.match(/^(.*)\.(shp|dbf|prj|shx)$/i);
-    if(m) (porBase[m[1]] = porBase[m[1]] || {})[m[2].toLowerCase()] = f;
-  }
-  const capas = [], sinPrj = [];
-  for(const base of Object.keys(porBase)){
-    const parte = porBase[base];
-    if(!parte.shp) continue;
-    const prj = parte.prj ? await parte.prj.text() : undefined;
-    if(!prj) sinPrj.push(base);
-    const geoms = shp.parseShp(await parte.shp.arrayBuffer(), prj);
-    const props = parte.dbf ? shp.parseDbf(await parte.dbf.arrayBuffer()) : geoms.map(() => ({}));
-    capas.push(shp.combine([geoms, props]));
-  }
-  return {capas, sinPrj};
-}
-
-// Lee uno o varios archivos y devuelve {geometrias, aviso}. Acepta KMZ, KML, shapefile en .zip
-// y shapefile suelto. Es el unico punto que sabe de formatos.
+// Lee uno o varios archivos y devuelve {geometrias, avisos, crs}. Acepta KMZ, KML, shapefile en
+// .zip y shapefile suelto. Es el unico punto que sabe de formatos.
 async function parseArchivosGeo(files){
   const lista = Array.from(files || []);
   if(!lista.length) throw new Error('No se eligio ningun archivo');
   const ext = f => (f.name.match(/\.([^.]+)$/) || [,''])[1].toLowerCase();
   const geometrias = [];
   const avisos = [];
+  const crs = [];
 
   for(const f of lista.filter(f => ext(f) === 'kmz')) geometrias.push(...await parseKmzFile(f));
-  for(const f of lista.filter(f => ext(f) === 'kml')) geometrias.push(...parseKmlTexto(await f.text()));
+  for(const f of lista.filter(f => ext(f) === 'kml')) geometrias.push(...parseKmlTexto(await f.text(), 'KML importado', f.name));
 
   for(const f of lista.filter(f => ext(f) === 'zip')){
-    const geo = await shp(await f.arrayBuffer());
-    for(const capa of (Array.isArray(geo) ? geo : [geo])) geometrias.push(...geojsonAGeometrias(capa));
+    const buf = await f.arrayBuffer();
+    crs.push(...await crsDeZip(buf));
+    const geo = await shp(buf);
+    for(const capa of (Array.isArray(geo) ? geo : [geo]))
+      geometrias.push(...geojsonAGeometrias(capa, capa.fileName));
   }
 
   const sueltos = lista.filter(f => ['shp','dbf','prj','shx'].includes(ext(f)));
   if(sueltos.length){
-    const {capas, sinPrj} = await parseShapefileSuelto(sueltos);
-    for(const capa of capas) geometrias.push(...geojsonAGeometrias(capa));
-    if(sinPrj.length) avisos.push('Sin .prj (' + sinPrj.join(', ') + '): las coordenadas se '
+    const r = await parseShapefileSuelto(sueltos);
+    for(const capa of r.capas) geometrias.push(...geojsonAGeometrias(capa, capa.fileName));
+    crs.push(...r.crs);
+    if(r.sinPrj.length) avisos.push('Sin .prj (' + r.sinPrj.join(', ') + '): las coordenadas se '
       + 'usaron tal cual, sin reproyectar. Si el shapefile estaba en UTM, quedaran fuera de lugar.');
   }
 
   if(!lista.some(f => ['kmz','kml','zip','shp'].includes(ext(f))))
     throw new Error('Formato no reconocido. Se aceptan .kmz, .kml y shapefile (.zip o .shp con su .dbf y .prj)');
 
-  return {geometrias, avisos};
+  return {geometrias, avisos, crs};
+}
+
+// ---- Dialogo de importacion: alarma de sistema de referencia + que se guarda y donde ----
+// Inspirado en como lo resuelve StraboSpot: el archivo externo no entra a ciegas, el geologo
+// decide columna por columna. Lo que no se marca NO se guarda.
+// Campos que este dialogo NO ofrece como destino: los pone la propia importacion.
+// El Set se arma DENTRO de la funcion a proposito: inLat/inLon son `const` declarados mas
+// abajo en el archivo, asi que un Set de nivel superior aqui los leeria en su zona muerta
+// temporal y reventaria el script entero al cargar.
+function camposDestino(store){
+  const fuera = new Set(['ID_PROYECTO','ID_LINEA', inLat, inLon]);
+  return campos(store).map(c => c.nombre).filter(n => !fuera.has(n));
+}
+// Sugiere un destino por parecido de nombre: exacto primero, luego sin guiones ni tildes.
+function sugerirDestino(columna, destinos){
+  const norm = s => String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9]/g,'');
+  const c = norm(columna);
+  let hit = destinos.find(d => norm(d) === c);
+  if(hit) return hit;
+  if(GEO_CAMPOS_NOMBRE.includes(c)) return destinos.includes('ID_PUNTO_CONTROL') ? 'ID_PUNTO_CONTROL' : null;
+  hit = destinos.find(d => norm(d).includes(c) && c.length >= 4);
+  return hit || null;
+}
+
+// Devuelve una promesa con el mapeo elegido, o null si el geologo cancela.
+function dialogoImportar(geometrias, crs){
+  return new Promise(resolve => {
+    // una seccion por CAPA de origen: es lo que el geologo reconoce ("puntos.shp")
+    const capas = {};
+    for(const g of geometrias){
+      const c = (capas[g.capa] = capas[g.capa] || {puntos:0, lineas:0, cols:{}, tipo:g.tipo});
+      if(g.tipo === 'punto') c.puntos++; else c.lineas++;
+      for(const k of Object.keys(g.props || {}))
+        if(c.cols[k] == null && g.props[k] != null && String(g.props[k]).trim())
+          c.cols[k] = String(g.props[k]).trim();
+    }
+
+    const ov = el('div', {class:'modal', style:'display:flex'});
+    const cont = el('div', {class:'modal-content imp-modal'});
+    const cerrar = valor => { ov.remove(); resolve(valor); };
+    cont.append(el('div', {class:'modal-header'},
+      el('h3', {}, '📂 Importar geometrías'),
+      el('button', {class:'modal-close', onclick:()=>cerrar(null)}, '×')));
+    const body = el('div', {class:'modal-body'});
+
+    // --- ALARMA: la app guarda WGS84 ---
+    const malos = crs.filter(c => c && !c.esWgs84);
+    // Un shapefile con tres capas trae tres .prj iguales; nombrar el mismo sistema tres veces
+    // en la alarma la vuelve ilegible.
+    const nombres = arr => [...new Set(arr.map(c => c.nombre).filter(Boolean))]
+      .map(n => '«' + n + '»').join(', ');
+    const banner = el('div', {class:'imp-alarma' + (malos.length ? ' mal' : '')});
+    banner.append(el('b', {}, '⚠️ Los datos deben estar en WGS84'));
+    if(malos.length){
+      banner.append(el('p', {}, 'Este archivo declara ' + nombres(malos)
+        + ', que NO es WGS84. Se reproyectó con los parámetros del propio archivo, pero esa '
+        + 'conversión es aproximada (del orden de ±20 m). Verifica dónde caen los puntos antes '
+        + 'de usarlos como referencia en terreno.'));
+    } else if(crs.length){
+      banner.append(el('p', {}, 'El archivo declara ' + nombres(crs)
+        + ': compatible con WGS84.'));
+    } else if (geometrias.every(g => /^KM[LZ] /.test(g.fuente || ''))) {
+      // La especificacion OGC de KML fija EPSG:4326: un .kml/.kmz SIEMPRE viene en WGS84
+      // geograficas y no lleva .prj. Tratarlo como "no declara nada" alarmaba de mas en el
+      // caso mas comun.
+      banner.append(el('p', {}, 'Un KML siempre viene en WGS84 por especificación (OGC), '
+        + 'así que no hizo falta convertir nada.'));
+    } else {
+      banner.append(el('p', {}, 'Este archivo no declara su sistema de referencia. Se asumió que '
+        + 'ya venía en WGS84 geográficas. Si estaba en UTM, quedará fuera de lugar.'));
+    }
+    body.append(banner);
+
+    body.append(el('p', {class:'imp-destino'}, '📋 Entra a Gabinete. Lo importado es material de '
+      + 'referencia, no observación de terreno.'));
+
+    // --- que columnas se guardan y en que campo ---
+    const mapeo = {};
+    for(const capa of Object.keys(capas)){
+      const c = capas[capa];
+      const store = c.lineas > c.puntos ? 'linea' : 'punto';
+      const destinos = camposDestino(store);
+      mapeo[capa] = {};
+      const cols = Object.keys(c.cols);
+      const plural = (n, sing, pl) => n + ' ' + (n === 1 ? sing : pl);
+      const resumen = [c.puntos ? plural(c.puntos, 'punto', 'puntos') : '',
+                       c.lineas ? plural(c.lineas, 'línea', 'líneas') : '']
+        .filter(Boolean).join(' · ');
+      const sec = el('div', {class:'imp-capa'});
+      sec.append(el('h4', {}, capa), el('div', {class:'imp-sub'}, resumen
+        + (cols.length ? '' : ' · sin tabla de atributos')));
+      for(const col of cols){
+        const sug = sugerirDestino(col, destinos);
+        mapeo[capa][col] = sug || '__NOTA__';
+        const sel = el('select', {class:'imp-sel', onchange:e=>{ mapeo[capa][col] = e.target.value; }});
+        sel.append(el('option', {value:'__NOTA__'}, '→ NOTA'));
+        for(const d of destinos) sel.append(el('option', {value:d}, '→ ' + etiquetaCampo(d)));
+        sel.value = mapeo[capa][col];
+        const chk = el('input', {type:'checkbox', checked:'checked', class:'imp-chk',
+          onchange:e=>{ mapeo[capa][col] = e.target.checked ? sel.value : null; sel.disabled = !e.target.checked; }});
+        sec.append(el('label', {class:'imp-fila'},
+          chk,
+          el('span', {class:'imp-col'}, col),
+          el('span', {class:'imp-val'}, '"' + c.cols[col].slice(0,24) + '"'),
+          sel));
+      }
+      body.append(sec);
+    }
+    body.append(el('p', {class:'imp-pie'}, 'Lo desmarcado no se guarda. Lo marcado sin campo '
+      + 'propio se acumula en NOTA.'));
+
+    cont.append(body);
+    cont.append(el('div', {class:'modal-header imp-acciones'},
+      el('button', {class:'btn sec', onclick:()=>cerrar(null)}, 'Cancelar'),
+      el('button', {class:'btn', onclick:()=>cerrar(mapeo)}, '✓ Importar')));
+    ov.append(cont);
+    ov.addEventListener('click', e => { if(e.target === ov) cerrar(null); });
+    document.body.appendChild(ov);
+  });
 }
 
 // ============================ Dominios / cascadas ============================
@@ -9111,11 +9338,18 @@ document.getElementById('kmz-file-input').addEventListener('change', async (e) =
 
   try {
     if (!curProyecto) throw new Error('Abre primero el proyecto donde quieres cargar las geometrías');
-    const {geometrias, avisos} = await parseArchivosGeo(files);
+    // Lo importado entra a Gabinete, asi que el candado de Gabinete manda aunque el geologo
+    // este parado en Terreno: sin esto se podia escribir en una coleccion bloqueada.
+    if (gabineteBloqueado()) throw new Error('Gabinete está bloqueado y es donde entra lo '
+      + 'importado. Desbloquéalo para cargar geometrías.');
+    const {geometrias, avisos, crs} = await parseArchivosGeo(files);
     if (!geometrias.length) throw new Error('El archivo no trae puntos, líneas ni polígonos');
-    const r = await insertarGeometrias(geometrias, curProyecto.id);
-    alert(`✓ Cargado en "${curProyecto.NOMBRE_PROYECTO || 'proyecto'}" (${coleccionActiva()}): `
-        + `${r.puntosInsertados} puntos, ${r.lineasInsertadas} líneas`
+    const mapeo = await dialogoImportar(geometrias, crs);
+    if (!mapeo) { e.target.value = ''; return; }       // cancelado: no se escribe nada
+    const r = await insertarGeometrias(geometrias, curProyecto.id, mapeo);
+    const plural = (n, s, p) => n + ' ' + (n === 1 ? s : p);
+    alert(`✓ Cargado en "${curProyecto.NOMBRE_PROYECTO || 'proyecto'}" (gabinete): `
+        + plural(r.puntosInsertados, 'punto', 'puntos') + ', ' + plural(r.lineasInsertadas, 'línea', 'líneas')
         + (r.omitidas ? `\n⚠️ ${r.omitidas} no se pudieron insertar` : '')
         + (avisos.length ? '\n⚠️ ' + avisos.join('\n⚠️ ') : ''));
     render();   // que aparezcan sin recargar
