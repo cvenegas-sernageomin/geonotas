@@ -728,18 +728,38 @@ async function correr(){
     // desbordaba en un telefono y el ULTIMO hijo quedaba fuera del viewport, inalcanzable. Por eso
     // la primera prueba mide el ancho de verdad, ensanchando el iframe a 375 px.
     await prueba('Ningun control del header queda fuera de pantalla a 375 px (regresion del icono 📂)', async () => {
-      const ifr = document.getElementById('app');
-      const estilo = ifr.getAttribute('style');
-      ifr.setAttribute('style', 'width:375px;height:812px;border:0;position:absolute;left:-9999px');
+      // El usuario reporto "ya no esta el icono" de cargar KMZ. El boton nunca se borro: el
+      // header desbordaba en un telefono y el ULTIMO hijo quedaba fuera del viewport.
+      // Va en un iframe PROPIO de 375 px: redimensionar el del arnes lo dejaba inservible para
+      // las pruebas siguientes, que empezaban a fallar con "w.all is not a function".
+      const ifr = document.createElement('iframe');
+      ifr.style.cssText = 'width:375px;height:812px;border:0;position:absolute;left:-9999px;top:0';
+      ifr.src = 'index.html';
+      document.body.appendChild(ifr);
       try {
-        await new Promise(r => setTimeout(r, 400));
-        const h = w.document.querySelector('header');
+        const w2 = await new Promise((res, rej) => {
+          const t0 = Date.now();
+          (function poll(){
+            const cw = ifr.contentWindow;
+            if (cw && typeof cw.medirHeader === 'function' && cw.document.querySelector('header')) return res(cw);
+            if (Date.now() - t0 > 20000) return rej(new Error('la app no arranco en el iframe de 375 px'));
+            setTimeout(poll, 150);
+          })();
+        });
+        const h = w2.document.querySelector('header');
+        // Esperar a que el navegador de LAYOUT al iframe: con la pestana en segundo plano puede
+        // diferirlo, y entonces offsetHeight vale 0 y todas las medidas de abajo son basura.
+        // Sin esto el test fallaba con "--headh ... 102px vs 0" solo al correr contra el sitio.
+        const t1 = Date.now();
+        while (h.offsetHeight === 0 && Date.now() - t1 < 8000) await new Promise(r => setTimeout(r, 200));
+        ok(h.offsetHeight > 0, 'el navegador no dio layout al iframe de prueba (no es una regresion '
+           + 'de la app): offsetHeight sigue en 0');
         // el estado peor: dentro de un proyecto, en Gabinete desbloqueable
-        w.document.getElementById('btnBack').style.display = '';
-        w.document.getElementById('ctx').textContent = 'Carta Curicó · PC-014 · Terreno';
-        const lock = w.document.getElementById('btn-bloqueo-gabinete');
+        w2.document.getElementById('btnBack').style.display = '';
+        w2.document.getElementById('ctx').textContent = 'Carta Curicó · PC-014 · Terreno';
+        const lock = w2.document.getElementById('btn-bloqueo-gabinete');
         lock.style.display = ''; lock.textContent = '🔓 Llevar a terreno';
-        await new Promise(r => setTimeout(r, 250));
+        await new Promise(r => setTimeout(r, 300));
 
         const ancho = ifr.clientWidth;
         const fuera = [...h.querySelectorAll('button')].filter(b => b.offsetWidth)
@@ -749,16 +769,12 @@ async function correr(){
         ok(h.scrollWidth <= h.clientWidth + 1, 'el header desborda horizontalmente: '
            + h.scrollWidth + ' > ' + h.clientWidth);
         // el alto del header se publica en --headh; el mapa lo descuenta en vez de restar 117 fijos
-        w.medirHeader();
-        const headh = w.getComputedStyle(w.document.documentElement).getPropertyValue('--headh').trim();
+        w2.medirHeader();
+        const headh = w2.getComputedStyle(w2.document.documentElement).getPropertyValue('--headh').trim();
         ok(/^\d+px$/.test(headh) && parseInt(headh) === h.offsetHeight,
            '--headh no refleja el alto real del header: ' + headh + ' vs ' + h.offsetHeight);
         return 'nada cortado a ' + ancho + 'px; header ' + h.offsetHeight + 'px publicado en --headh';
-      } finally {
-        ifr.setAttribute('style', estilo);
-        w.document.getElementById('btnBack').style.display = 'none';
-        w.document.getElementById('btn-bloqueo-gabinete').style.display = 'none';
-      }
+      } finally { ifr.remove(); }
     });
 
     await prueba('El shapefile (.zip) entra reproyectado desde su .prj, no crudo', async () => {
