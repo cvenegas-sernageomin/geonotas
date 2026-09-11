@@ -250,6 +250,19 @@
     .imp-val{flex:1 1 100%;order:3;padding-left:24px}
     .imp-sel{flex:0 0 auto;max-width:none}
   }
+  /* Panel "Mis mapas": rasteres propios (GeoTIFF o GroundOverlay de KMZ). */
+  .mp-modal{max-width:520px}
+  .mp-item{border:1px solid var(--bd);border-radius:9px;padding:9px 10px;margin-bottom:8px}
+  .mp-item.on{border-color:var(--verde);background:var(--surface2)}
+  .mp-nom{font-size:13px;font-weight:650;color:var(--txt);word-break:break-word}
+  .mp-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .mp-item .btnbar{margin-top:7px}
+  .mp-item .btn{min-height:38px}
+  .mp-vacio{border:1px dashed var(--bd);border-radius:9px;padding:18px 12px;text-align:center;
+    color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .mp-op{display:flex;align-items:center;gap:9px;font-size:12.5px;margin:4px 0 10px}
+  .mp-rng{flex:1}
+  .mp-pie{font-size:11.5px;color:var(--muted);margin:9px 0 0}
   .tabs{display:flex;margin-bottom:15px;gap:10px;border-bottom:2px solid var(--bd)}
   .tab-button{padding:10px 15px;border:none;background:none;cursor:pointer;font-weight:650;color:var(--muted);border-bottom:3px solid transparent;font-size:13px}
   .tab-button.active{color:var(--verde);border-bottom-color:var(--verde)}
@@ -3530,7 +3543,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v123';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v124';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -3623,7 +3636,7 @@ function esDeProyecto(store,r,proyectoId,idsPuntos){
 function nombreArchivoProyecto(proyecto){return (proyecto&&proyecto.NOMBRE_PROYECTO||'proyecto').replace(/[\\/:*?"<>|]+/g,'_');}
 
 // ============================ IndexedDB ============================
-const DB='captura-terreno', VER=13;   // v13: + store 'cartageo' (cartas geológicas SERNAGEOMIN descargadas para terreno; no es del modelo canónico)
+const DB='captura-terreno', VER=14;   // v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios). Ninguno es del modelo canónico.
 let db;
 function openDB(){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -3638,6 +3651,12 @@ function openDB(){return new Promise((res,rej)=>{
     // cuelga de punto/proyecto — sin índice 'parent'. Su id es el id del manifest remoto
     // (ej. 'geo_F19_pichibelco'), no un uid().
     if(!d.objectStoreNames.contains('cartageo')) d.createObjectStore('cartageo',{keyPath:'id'});
+    // 'mapaprop' (v14): mapas raster que sube el propio geólogo -- el .tif original de un
+    // GeoTIFF, o la imagen de un <GroundOverlay> de KMZ con su LatLonBox. Mismo trato que
+    // 'cartageo': guarda Blobs, no pasa por el modelo canónico ni por el respaldo, y es
+    // GLOBAL (no cuelga de un proyecto), así que no lleva índice 'parent'.
+    // Crear un store vacío no toca ningún dato existente: es la migración más inocua que hay.
+    if(!d.objectStoreNames.contains('mapaprop')) d.createObjectStore('mapaprop',{keyPath:'id'});
     // Migración v7: EXPOSICION_AFLORAMIENTO vivía en PUNTO_CONTROL; se traslada a
     // GRADO_EXPOSICION_AFLORAMIENTO en la ficha nueva 'aflora' (panel único). Se copia
     // automáticamente para no perder el dato ya capturado en campañas anteriores.
@@ -5402,7 +5421,7 @@ function formulario(store, reg, ctx){
 // ============================ Mapa satelital (Leaflet + Esri) ============================
 const ESRI_URL='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ICONO=L.icon({iconUrl:'vendor/images/marker-icon.png',iconRetinaUrl:'vendor/images/marker-icon-2x.png',shadowUrl:'vendor/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
-let mapa=null, marcador=null, gtLayer=null, savetiles=null;
+let mapa=null, marcador=null, savetiles=null;
 const inLat='Coordenadas Geográficas Decimales_Lat', inLon='Coordenadas Geográficas Decimales_Long';
 
 // ============================ Conversión UTM (WGS84, Transverse Mercator de Snyder) ============================
@@ -5578,9 +5597,9 @@ function initMapPunto(reg, f){
   if(!isNaN(la))sync();
   f.node.addEventListener('change',e=>{if(e.target.name===inLat||e.target.name===inLon){
     const a=parseFloat(iLat().value),o=parseFloat(iLon().value);if(!isNaN(a)&&!isNaN(o)){marcador.setLatLng([a,o]);mapa.panTo([a,o]);}}});
-  // reponer GeoTIFF del proyecto (como imagen) si existe
-  if(curProyecto&&curProyecto._geotiffB64&&curProyecto._geotiffBounds){const b=curProyecto._geotiffBounds;
-    L.imageOverlay('data:image/jpeg;base64,'+curProyecto._geotiffB64,[[b.south,b.west],[b.north,b.east]],{opacity:.85}).addTo(mapa);}
+  // El GeoTIFF del proyecto ya no se repone aqui: los mapas raster propios viven en el store
+  // 'mapaprop' y se ven en el mapa del PROYECTO, con su control de opacidad. Este es el mapa
+  // chico de ubicar el punto, no el sitio de un mapa de fondo.
   setTimeout(()=>mapa.invalidateSize(),120);
 }
 function ubicarGPSmapa(){if(!navigator.geolocation||!marcador)return;toast('Obteniendo GPS…');
@@ -5602,23 +5621,11 @@ async function capturarSatelital(){
     toast('Satelital capturada ✓');
   }catch(e){toast('No se pudo capturar (¿sin conexión?)');}
 }
-function cargarGeoTIFF(){
-  if(typeof parseGeoraster==='undefined'||typeof GeoRasterLayer==='undefined'){toast('Librería GeoTIFF no cargada');return;}
-  const inp=el('input',{type:'file',accept:'.tif,.tiff'});
-  inp.onchange=async()=>{const file=inp.files[0];if(!file)return;toast('Cargando GeoTIFF…');
-    try{const gr=await parseGeoraster(await file.arrayBuffer());
-      if(gtLayer){mapa.removeLayer(gtLayer);}
-      gtLayer=new GeoRasterLayer({georaster:gr,opacity:.85,resolution:256});gtLayer.addTo(mapa);
-      mapa.fitBounds(gtLayer.getBounds());
-      const bd=gtLayer.getBounds();
-      curProyecto._geotiffBounds={south:bd.getSouth(),west:bd.getWest(),north:bd.getNorth(),east:bd.getEast()};
-      curProyecto._geotiffB64=georasterToJPG(gr,800);
-      await put('proyecto',curProyecto);
-      toast('GeoTIFF cargado ✓');
-    }catch(e){toast('Error GeoTIFF: '+e.message);}
-  };inp.click();
-}
-// rasteriza un georaster (1 o ≥3 bandas) a JPG base64 (para overlay KMZ y persistencia)
+// Rasteriza un georaster a JPG base64. Lo usaba el cargador de GeoTIFF que vivia en la ficha de
+// punto, retirado al llegar "Mis mapas": ahora el .tif se guarda ENTERO y lo dibuja
+// GeoRasterLayer, que reproyecta solo -- rasterizar aqui perdia resolucion (800 px) y, con un
+// GeoTIFF en UTM, lo dejaba corrido. Se conserva la funcion por si hace falta volver a
+// rasterizar un raster para un GroundOverlay.
 function georasterToJPG(gr,maxdim){
   const bands=gr.values,h=gr.height,w=gr.width,nb=bands.length,nd=gr.noDataValue;
   const sc=Math.min(1,maxdim/Math.max(w,h)),ow=Math.max(1,Math.round(w*sc)),oh=Math.max(1,Math.round(h*sc));
@@ -5632,6 +5639,274 @@ function georasterToJPG(gr,maxdim){
   cx.putImageData(img,0,0);return cv.toDataURL('image/jpeg',.8).split(',')[1];
 }
 function b64ToBytes(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+
+// ============================ "Mis mapas": rasteres propios del geologo ============================
+// Sube un mapa raster propio y lo usa de fondo en el mapa del proyecto, offline. Dos formatos:
+//   · GeoTIFF  -> se guarda el .tif ORIGINAL y se dibuja con GeoRasterLayer, que reproyecta solo.
+//     Verificado contra pyproj con un GeoTIFF en EPSG:32719 (UTM 19S): coincide dentro de 0,4 m.
+//     Por eso NO se rasteriza a imagen al subirlo: colocar una grilla UTM con bordes lat/lon la
+//     deformaria, y este proyecto ya tiene historia de mapas corridos.
+//   · KMZ/KML con <GroundOverlay> -> se guarda la IMAGEN tal como viene dentro del .kmz (sin
+//     recomprimir) mas su <LatLonBox>. Un KML es WGS84 por especificacion OGC, asi que la caja
+//     ya viene en grados y no hay nada que convertir.
+// Los mapas son GLOBALES, no del proyecto (decision del usuario): mismo criterio que Cartas SG,
+// son material de referencia del dispositivo y sirven en cualquier campana de la misma zona.
+// Store 'mapaprop': fuera del modelo canonico, igual que 'cartageo' -- guarda Blobs, que no
+// sobreviven a JSON.stringify, asi que no entra en el respaldo. El archivo original lo tiene el
+// geologo; lo que se pierde al reinstalar es la copia, no el dato.
+const MP_ACEPTA = '.tif,.tiff,.kmz,.kml';
+const MP_AVISO_MB = 60;            // sobre esto se avisa el peso antes de guardar
+let mpOverlay = null, mpObjUrl = null, mpActivoId = null, mpOpacidad = .85;
+const mpCacheRaster = {};          // id -> georaster ya parseado (re-parsear un .tif es caro)
+
+const mpTam = b => b < 1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(1)+' MB';
+async function mpLista(){
+  return (await all('mapaprop')).sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||'')));
+}
+
+// ---- lectura de KMZ/KML con GroundOverlay (mapa raster) ----
+// Es un camino APARTE del importador de geometrias: un mismo .kmz puede traer Placemarks
+// (puntos/lineas, boton 📂) o un GroundOverlay (mapa de fondo, este boton). Antes el
+// GroundOverlay se ignoraba en silencio y el usuario veia "no trae puntos ni lineas".
+async function mpDesdeKml(file){
+  const esKmz = /\.kmz$/i.test(file.name);
+  let zip = null, texto;
+  if(esKmz){
+    zip = await new JSZip().loadAsync(await file.arrayBuffer());
+    const nom = Object.keys(zip.files).find(n => /\.kml$/i.test(n));
+    if(!nom) throw new Error('El KMZ no trae ningún .kml adentro');
+    texto = await zip.file(nom).async('text');
+  } else {
+    texto = await file.text();
+  }
+  const doc = new DOMParser().parseFromString(texto, 'text/xml');
+  const err = doc.querySelector('parsererror');
+  if(err) throw new Error('KML mal formado: ' + err.textContent.trim().split('\n')[0]);
+
+  const gos = [...doc.querySelectorAll('GroundOverlay')];
+  if(!gos.length) throw new Error('Este archivo no trae ningún mapa raster (GroundOverlay). '
+    + 'Si es un KMZ de puntos y líneas, cárgalo con el botón 📂 de importar geometrías.');
+
+  const out = [];
+  for(const go of gos){
+    const nombre = (go.querySelector('name')?.textContent || '').trim()
+      || file.name.replace(/\.km[lz]$/i, '');
+    const caja = go.querySelector('LatLonBox');
+    if(!caja){
+      // gx:LatLonQuad permite un cuadrilatero cualquiera; L.imageOverlay solo sabe de cajas
+      // norte/sur/este/oeste, asi que colocarlo seria inventar. Mejor decirlo.
+      if(go.getElementsByTagNameNS('*','LatLonQuad').length)
+        throw new Error('"' + nombre + '" usa gx:LatLonQuad (cuadrilátero libre). Solo se admite '
+          + 'LatLonBox; reexporta el mapa como GroundOverlay simple.');
+      continue;
+    }
+    const num = t => parseFloat((caja.querySelector(t)?.textContent || '').trim());
+    const bounds = {north:num('north'), south:num('south'), east:num('east'), west:num('west')};
+    if(Object.values(bounds).some(v => !isFinite(v)))
+      throw new Error('El LatLonBox de "' + nombre + '" está incompleto: falta algún borde');
+    if(bounds.north <= bounds.south || bounds.east <= bounds.west)
+      throw new Error('El LatLonBox de "' + nombre + '" está invertido (norte<=sur o este<=oeste)');
+
+    const rot = num('rotation');
+    const rotacion = isFinite(rot) ? rot : 0;
+
+    const href = (go.querySelector('Icon > href')?.textContent || '').trim();
+    if(!href) throw new Error('"' + nombre + '" no declara su imagen (<Icon><href>)');
+    if(/^https?:/i.test(href)) throw new Error('"' + nombre + '" apunta a una imagen en internet, '
+      + 'no incluida en el archivo. En terreno sin señal no se vería: reexporta el KMZ con la '
+      + 'imagen adentro.');
+    if(!zip) throw new Error('Un .kml suelto no lleva la imagen adentro. Usa el .kmz, que sí la trae.');
+
+    // el href puede venir con ruta, con %20, o con separadores distintos: se busca por nombre
+    const suelto = href.split('/').pop();
+    const entrada = zip.file(href) || zip.file(decodeURIComponent(href))
+      || Object.keys(zip.files).map(n => zip.files[n])
+           .find(f => !f.dir && f.name.split('/').pop() === suelto);
+    if(!entrada) throw new Error('No encontré la imagen "' + href + '" dentro del KMZ');
+
+    const ext = (suelto.match(/\.([a-z0-9]+)$/i) || [,''])[1].toLowerCase();
+    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp'
+               : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+    const datos = await entrada.async('blob');
+    out.push({nombre, tipo:'imagen', blob:new Blob([datos], {type:mime}), mime, bounds, rotacion});
+  }
+  if(!out.length) throw new Error('Ningún GroundOverlay de este archivo trae un LatLonBox utilizable');
+  return out;
+}
+
+// ---- lectura de GeoTIFF ----
+async function mpDesdeGeoTIFF(file){
+  if(typeof parseGeoraster === 'undefined' || typeof GeoRasterLayer === 'undefined')
+    throw new Error('La librería de GeoTIFF no está cargada');
+  let gr;
+  // OJO: parseGeoraster DESPRENDE el ArrayBuffer que recibe (se lo pasa a un worker). Construir
+  // el Blob despues, con `new Blob([buf])`, daba un archivo de 0 BYTES: se guardaba un GeoTIFF
+  // vacio e inservible. Por eso se guarda el File mismo -- que ya es un Blob -- y a
+  // parseGeoraster se le entrega una lectura APARTE, que puede desprender sin dano.
+  try { gr = await parseGeoraster(await file.arrayBuffer()); }
+  catch(e){ throw new Error('No se pudo leer el GeoTIFF: ' + (e.message || e)); }
+  // Sin transform afin no hay forma de ubicarlo: un TIFF cualquiera no es un GeoTIFF.
+  if(!isFinite(gr.xmin) || !isFinite(gr.ymax) || !gr.pixelWidth)
+    throw new Error('Este TIFF no trae georreferenciación: no se puede ubicar en el mapa');
+  return [{nombre: file.name.replace(/\.tiff?$/i, ''), tipo:'geotiff',
+           blob: file, mime:'image/tiff',
+           proyeccion: gr.projection || null, bounds: null, rotacion: 0}];
+}
+
+async function mpLeerArchivo(file){
+  if(/\.tiff?$/i.test(file.name)) return mpDesdeGeoTIFF(file);
+  if(/\.km[lz]$/i.test(file.name)) return mpDesdeKml(file);
+  throw new Error('Formato no reconocido. Se aceptan GeoTIFF (.tif) y KMZ/KML con GroundOverlay');
+}
+
+// ---- overlay sobre el mapa del proyecto ----
+function mpQuitarOverlay(){
+  if(mpOverlay && mapaVista){ try{ mapaVista.removeLayer(mpOverlay); }catch(e){} }
+  mpOverlay = null;
+  if(mpObjUrl){ URL.revokeObjectURL(mpObjUrl); mpObjUrl = null; }
+}
+async function mpMostrar(id, volar){
+  if(!mapaVista) return;
+  mpQuitarOverlay();
+  const rec = await get('mapaprop', id);
+  if(!rec){ mpActivoId = null; return; }
+  try{
+    if(rec.tipo === 'geotiff'){
+      const gr = mpCacheRaster[id] || (mpCacheRaster[id] = await parseGeoraster(await rec.blob.arrayBuffer()));
+      mpOverlay = new GeoRasterLayer({georaster:gr, opacity:mpOpacidad, resolution:256});
+    } else {
+      mpObjUrl = URL.createObjectURL(rec.blob);
+      const b = rec.bounds;
+      mpOverlay = L.imageOverlay(mpObjUrl, [[b.south,b.west],[b.north,b.east]],
+                                 {opacity:mpOpacidad, interactive:false});
+    }
+    mpOverlay.addTo(mapaVista);
+    mpActivoId = id;
+    if(volar){
+      try{ mapaVista.flyToBounds(mpOverlay.getBounds(), {padding:[20,20], duration:.6}); }catch(e){}
+    }
+  }catch(e){
+    mpQuitarOverlay(); mpActivoId = null;
+    toast('No se pudo dibujar el mapa: ' + (e.message || e));
+  }
+}
+// initMapaVista destruye y reconstruye mapaVista, asi que el overlay activo hay que reengancharlo
+// al final -- mismo cuidado que ya obligo a tomar la capa de Cartas SG.
+async function mpReponer(){ if(mpActivoId) await mpMostrar(mpActivoId, false); }
+
+// ---- panel ----
+function mpPanel(){
+  const ov = el('div', {class:'modal', style:'display:flex'});
+  const cont = el('div', {class:'modal-content mp-modal'});
+  const cerrar = () => ov.remove();
+  cont.append(el('div', {class:'modal-header'},
+    el('h3', {}, '🖼️ Mis mapas'),
+    el('button', {class:'modal-close', onclick:cerrar}, '×')));
+  const body = el('div', {class:'modal-body'});
+  cont.append(body);
+
+  const pintar = async () => {
+    body.innerHTML = '';
+    const mapas = await mpLista();
+    body.append(el('p', {}, 'Mapas rasterizados propios, guardados en este dispositivo para usarlos '
+      + 'sin señal. Se ven en el mapa del proyecto, debajo de tus puntos y líneas.'));
+
+    if(!mapas.length){
+      body.append(el('div', {class:'mp-vacio'}, 'Todavía no has subido ningún mapa.'));
+    }
+    for(const m of mapas){
+      const fila = el('div', {class:'mp-item' + (m.id === mpActivoId ? ' on' : '')});
+      fila.append(el('div', {class:'mp-nom'}, m.nombre || 'Sin nombre'),
+        // 'imagen' cubre tanto un GroundOverlay de KMZ como un GeoTIFF viejo ya migrado, asi
+        // que la etiqueta describe lo que ES (imagen con su caja de coordenadas), no de donde vino.
+        el('div', {class:'mp-meta'}, (m.tipo === 'geotiff' ? 'GeoTIFF' : 'Imagen georreferenciada')
+          + ' · ' + mpTam(m.bytes || 0)
+          + (m.proyeccion ? ' · EPSG:' + m.proyeccion : '')
+          + (m.rotacion ? ' · ⚠️ rotación ' + m.rotacion + '° no aplicada' : '')));
+      const barra = el('div', {class:'btnbar'});
+      barra.append(el('button', {class:'btn' + (m.id === mpActivoId ? '' : ' sec') + ' mini',
+        onclick:async()=>{
+          if(m.id === mpActivoId){ mpQuitarOverlay(); mpActivoId = null; }
+          else await mpMostrar(m.id, true);
+          await pintar();
+        }}, m.id === mpActivoId ? '✓ En el mapa' : 'Ver en el mapa'));
+      barra.append(el('button', {class:'btn del mini', onclick:async()=>{
+        if(!confirm('¿Borrar "' + (m.nombre||'') + '" del dispositivo? El archivo original no se toca.')) return;
+        if(m.id === mpActivoId){ mpQuitarOverlay(); mpActivoId = null; }
+        delete mpCacheRaster[m.id];
+        await del('mapaprop', m.id);
+        await pintar(); toast('Mapa borrado');
+      }}, '🗑️'));
+      fila.append(barra);
+      body.append(fila);
+    }
+
+    // opacidad: solo tiene sentido con un mapa puesto
+    if(mpActivoId){
+      const rng = el('input', {type:'range', min:'10', max:'100', value:String(Math.round(mpOpacidad*100)),
+        class:'mp-rng'});
+      rng.addEventListener('input', () => {
+        mpOpacidad = rng.value/100;
+        if(mpOverlay && mpOverlay.setOpacity) mpOverlay.setOpacity(mpOpacidad);
+      });
+      body.append(el('label', {class:'mp-op'}, 'Opacidad', rng));
+    }
+
+    const entrada = el('input', {type:'file', accept:MP_ACEPTA, style:'display:none'});
+    entrada.addEventListener('change', async e => {
+      const file = e.target.files[0]; e.target.value = '';
+      if(!file) return;
+      try{
+        toast('Leyendo ' + file.name + '…');
+        const leidos = await mpLeerArchivo(file);
+        const pesa = leidos.reduce((a,m) => a + m.blob.size, 0);
+        if(pesa > MP_AVISO_MB*1048576 &&
+           !confirm('Este mapa ocupa ' + mpTam(pesa) + ' en el teléfono. ¿Guardarlo igual?')) return;
+        for(const m of leidos){
+          await put('mapaprop', {id:uid(), nombre:m.nombre, tipo:m.tipo, blob:m.blob, mime:m.mime,
+            bounds:m.bounds, rotacion:m.rotacion || 0, proyeccion:m.proyeccion || null,
+            bytes:m.blob.size, creado:new Date().toISOString()});
+        }
+        await pintar();
+        toast(leidos.length === 1 ? 'Mapa agregado ✓' : leidos.length + ' mapas agregados ✓');
+      }catch(err){
+        alert('✗ ' + (err.message || err));
+      }
+    });
+    body.append(el('div', {class:'btnbar'},
+      el('button', {class:'btn blue', onclick:()=>entrada.click()}, '+ Subir mapa'), entrada));
+    body.append(el('p', {class:'mp-pie'}, 'GeoTIFF (.tif) o KMZ/KML con GroundOverlay. Un GeoTIFF '
+      + 'en UTM se reproyecta solo. Estos mapas NO entran en el respaldo: son archivos tuyos, '
+      + 'guardados aquí para terreno.'));
+  };
+
+  pintar();
+  ov.append(cont);
+  ov.addEventListener('click', e => { if(e.target === ov) cerrar(); });
+  document.body.appendChild(ov);
+}
+
+// Los proyectos anteriores guardaban UN GeoTIFF por proyecto como JPEG de 800 px en
+// _geotiffB64 + _geotiffBounds, cargado desde la ficha de punto. Se traslada a 'mapaprop' la
+// primera vez que se abre el panel, para no dejar el dato viejo huerfano ni mantener dos
+// sistemas escribiendo en sitios distintos. La imagen conserva su resolucion de entonces.
+async function mpMigrarGeotiffViejo(){
+  for(const pr of await all('proyecto')){
+    if(!pr._geotiffB64 || !pr._geotiffBounds || pr._geotiffMigrado) continue;
+    try{
+      const bin = atob(pr._geotiffB64);
+      const u = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+      const blob = new Blob([u], {type:'image/jpeg'});
+      await put('mapaprop', {id:uid(), nombre:'GeoTIFF · ' + (pr.NOMBRE_PROYECTO || 'proyecto'),
+        tipo:'imagen', blob, mime:'image/jpeg', bounds:pr._geotiffBounds, rotacion:0,
+        proyeccion:null, bytes:blob.size, creado:new Date().toISOString()});
+      pr._geotiffMigrado = true;
+      await put('proyecto', pr);
+    }catch(e){ console.warn('No se pudo migrar el GeoTIFF de', pr.id, e); }
+  }
+}
+async function mpAbrir(){ await mpMigrarGeotiffViejo(); mpPanel(); }
 
 // ============================ Cartas Geológicas SERNAGEOMIN (offline-first) ============================
 // Capa de referencia con Cartas Geológicas oficiales ya georreferenciadas (piloto: 9 mapas de
@@ -6624,7 +6899,6 @@ async function renderPunto(app){
   cm.body.append(el('div',{class:'btnbar'},
     el('button',{class:'btn blue mini',onclick:ubicarGPSmapa},'📡 GPS'),
     el('button',{class:'btn sec mini',onclick:descargarTiles},'⬇️ Tiles offline'),
-    el('button',{class:'btn sec mini',onclick:cargarGeoTIFF},'🗺️ GeoTIFF'),
     el('button',{class:'btn orange mini',onclick:capturarSatelital},'📸 Capturar satelital')));
   cm.body.append(el('div',{class:'muted',id:'coordlbl'},''));
   const satThumb=el('div',{class:'thumbs',id:'satthumb'});
@@ -7112,6 +7386,7 @@ async function renderMapa(app){
     el('button',{class:'btn sec mini',onclick:e=>toggleGPSLive(e.target)},'📡 GPS'),
     el('button',{class:'btn sec mini',onclick:descargarTilesConZoom},'⬇️ Tiles'),
     el('button',{class:'btn sec mini',id:'btnCartasSG',onclick:cgToggle},'🗺️ Cartas SG'),
+    el('button',{class:'btn sec mini',id:'btnMisMapas',onclick:mpAbrir},'🖼️ Mis mapas'),
     el('button',{class:'btn sec mini',onclick:()=>nav({n:'home'})},'⌂'));
   setTimeout(()=>initMapaVista(conC),80);
 }
@@ -7309,6 +7584,8 @@ async function initMapaVista(puntos){
   // hay que soltar el object URL del overlay de Cartas Geológicas ANTES de perder la
   // referencia, si no se filtra (el mapa viejo se destruye igual, pero el blob: URL no).
   if(cgOverlayObjUrl){ URL.revokeObjectURL(cgOverlayObjUrl); cgOverlayObjUrl=null; } cgOverlay=null;
+  // mismo cuidado para el mapa propio: soltar su object URL ANTES de perder la referencia
+  if(mpObjUrl){ URL.revokeObjectURL(mpObjUrl); mpObjUrl=null; } mpOverlay=null;
   if(mapaVista){try{mapaVista.remove();}catch(e){}mapaVista=null;}
   mapaVista=L.map('projmap',{zoomControl:true});
   savetiles=capaSatelital(mapaVista);
@@ -7379,6 +7656,7 @@ async function initMapaVista(puntos){
   // primer toque, que parecia encenderla, en realidad la apagaba.
   if(cgOn){ cgCtrl=cgCrearControl(); cgCtrl.addTo(mapaVista); cgBtnEstado('🗺️ Cartas SG',true);
             if(cgActivoId) cgMostrar(cgActivoId,false); }
+  mpReponer();   // el mapa raster propio se vuelve a colgar del mapa recién creado
   setTimeout(()=>mapaVista.invalidateSize(),160);
 }
 // ---- iconos / simbología (SVG orientada por azimut; norte = arriba) ----
@@ -7755,12 +8033,18 @@ async function exportKMZ(proyectoId){
   const carpeta=(titulo,contenido)=>contenido?'<Folder><name>'+esc(titulo)+'</name>\n'+contenido+'</Folder>\n':'';
   const pk=carpeta('📍 Puntos · Terreno', await placemarksPunto('punto'))
           +carpeta('📍 Puntos · Gabinete', await placemarksPunto('punto_gabinete'));
-  // GeoTIFF por proyecto -> GroundOverlay
-  for(const pr of proyectos){
-    if(pr._geotiffB64&&pr._geotiffBounds){const fn='geotiff_'+pr.id+'.jpg';files.push({name:fn,data:b64ToBytes(pr._geotiffB64)});
-      const b=pr._geotiffBounds;
-      overlays+='<GroundOverlay><name>GeoTIFF '+esc(pr.NOMBRE_PROYECTO||'')+'</name><Icon><href>'+fn+'</href></Icon>'
-        +'<LatLonBox><north>'+b.north+'</north><south>'+b.south+'</south><east>'+b.east+'</east><west>'+b.west+'</west></LatLonBox></GroundOverlay>\n';}
+  // Mapas raster propios -> GroundOverlay. Solo los que tienen LatLonBox (los que vinieron de un
+  // KMZ, y los GeoTIFF viejos ya migrados a imagen): un .tif no se puede meter tal cual en un
+  // KMZ, Google Earth no lo lee, y rasterizarlo aqui sin reproyectar lo dejaria corrido.
+  let nMapa=0;
+  for(const m of await all('mapaprop')){
+    if(m.tipo!=='imagen'||!m.bounds) continue;
+    const ext=(m.mime||'').split('/')[1]||'jpg';
+    const fn='mapa_'+(nMapa++)+'.'+(ext==='jpeg'?'jpg':ext);
+    files.push({name:fn,data:new Uint8Array(await m.blob.arrayBuffer())});
+    const b=m.bounds;
+    overlays+='<GroundOverlay><name>'+esc(m.nombre||'Mapa')+'</name><Icon><href>'+fn+'</href></Icon>'
+      +'<LatLonBox><north>'+b.north+'</north><south>'+b.south+'</south><east>'+b.east+'</east><west>'+b.west+'</west></LatLonBox></GroundOverlay>\n';
   }
   // líneas de control -> LineString con color por CLASE_LINEA
   let lineasKml=''; let nLin=0;

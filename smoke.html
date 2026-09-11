@@ -742,7 +742,9 @@ async function correr(){
           (function poll(){
             const cw = ifr.contentWindow;
             if (cw && typeof cw.medirHeader === 'function' && cw.document.querySelector('header')) return res(cw);
-            if (Date.now() - t0 > 20000) return rej(new Error('la app no arranco en el iframe de 375 px'));
+            // 35 s y no 20: este iframe levanta una SEGUNDA copia completa de la app (index.html
+            // + todo vendor) en paralelo con la del arnes, y en la light eso se pasaba de 20 s.
+            if (Date.now() - t0 > 35000) return rej(new Error('la app no arranco en el iframe de 375 px'));
             setTimeout(poll, 150);
           })();
         });
@@ -990,6 +992,115 @@ async function correr(){
         if (cancelar) cancelar.click(); else dlg && dlg.closest('.modal').remove();
         await p;
       }
+    });
+    // ---- "Mis mapas": rasteres propios, GeoTIFF y GroundOverlay de KMZ (v124 / light-23) ----
+    // Los fixtures los genera smoke-raster-generar.py: dos mapas que cubren EXACTAMENTE el mismo
+    // recuadro, uno como GeoTIFF en UTM 19S y otro como imagen dentro de un KMZ. Con eso se puede
+    // afirmar que caen en el mismo sitio sin depender de la implementacion de cada camino.
+    const RASTER = {west:-71.25, south:-35.30, east:-71.10, north:-35.18};
+
+    await prueba('Un KMZ con GroundOverlay entra como mapa, con su LatLonBox exacto', async () => {
+      const buf = await (await fetch('smoke-groundoverlay.kmz')).arrayBuffer();
+      const leidos = await w.mpLeerArchivo(new w.File([buf], 'carta.kmz'));
+      eq(leidos.length, 1, 'no se leyo exactamente un GroundOverlay');
+      const m = leidos[0];
+      eq(m.tipo, 'imagen', 'un GroundOverlay deberia entrar como imagen, no como geotiff');
+      eq(m.nombre, 'Carta de prueba', 'no se leyo el <name> del GroundOverlay');
+      ok(m.blob.size > 500, 'la imagen del KMZ salio vacia: ' + m.blob.size + ' bytes');
+      eq(m.mime, 'image/jpeg', 'se perdio el tipo de la imagen');
+      for (const lado of ['west','south','east','north'])
+        ok(Math.abs(m.bounds[lado] - RASTER[lado]) < 1e-6,
+           'el LatLonBox quedo mal en ' + lado + ': ' + m.bounds[lado]);
+      return 'imagen de ' + Math.round(m.blob.size/1024) + ' KB con su caja al grado exacto';
+    });
+
+    await prueba('Un GeoTIFF se guarda ENTERO, no vaciado por el parser', async () => {
+      // parseGeoraster DESPRENDE el ArrayBuffer que recibe: construir el Blob despues daba un
+      // archivo de 0 bytes y se guardaba un GeoTIFF inservible. Esta prueba existe por eso.
+      const buf = await (await fetch('smoke-geotiff-utm19s.tif')).arrayBuffer();
+      const tam = buf.byteLength;
+      const leidos = await w.mpLeerArchivo(new w.File([buf], 'carta.tif'));
+      eq(leidos.length, 1, 'no se leyo el GeoTIFF');
+      const m = leidos[0];
+      eq(m.tipo, 'geotiff', 'no se reconocio como GeoTIFF');
+      eq(m.blob.size, tam, 'el .tif guardado no pesa lo mismo que el original (parser lo vacio)');
+      eq(m.proyeccion, 32719, 'no se leyo la proyeccion del GeoTIFF');
+      eq(m.bounds, null, 'un GeoTIFF trae sus bordes adentro: no deberia inventarse un LatLonBox');
+      return m.blob.size + ' bytes intactos, EPSG:' + m.proyeccion;
+    });
+
+    await prueba('Un GeoTIFF en UTM se reproyecta al dibujarlo, no queda corrido', async () => {
+      // El fixture UTM cubre el MISMO recuadro que el KMZ. Reproyectado, su caja envolvente es
+      // algo mayor (un rectangulo UTM deja de serlo en lat/lon), pero debe CONTENER el recuadro
+      // y no pasarse de ~600 m. Sin reproyectar caeria a cientos de km.
+      const buf = await (await fetch('smoke-geotiff-utm19s.tif')).arrayBuffer();
+      // OJO REALMS: un ArrayBuffer nacido en ESTA pagina no pasa el `instanceof ArrayBuffer` de
+      // dentro del iframe y georaster responde "couldn't find a way to parse". Se reenvuelve con
+      // el constructor del iframe, igual que ya obliga JSZip con los Blob.
+      const gr = await w.parseGeoraster(await new w.File([buf], 'carta.tif').arrayBuffer());
+      const capa = new w.GeoRasterLayer({georaster: gr, resolution: 64});
+      const b = capa.getBounds();
+      const mLat = 111320, mLon = 111320 * Math.cos(RASTER.south * Math.PI/180);
+      ok(b.getWest()  <= RASTER.west  && b.getEast()  >= RASTER.east &&
+         b.getSouth() <= RASTER.south && b.getNorth() >= RASTER.north,
+         'la caja reproyectada no contiene el recuadro del mapa: ' + b.toBBoxString());
+      const holgura = Math.max((RASTER.west - b.getWest()) * mLon, (b.getEast() - RASTER.east) * mLon,
+                               (RASTER.south - b.getSouth()) * mLat, (b.getNorth() - RASTER.north) * mLat);
+      ok(holgura < 600, 'la caja se pasa ' + Math.round(holgura) + ' m: no se reproyecto bien');
+      // y el raster viene con el norte arriba: la primera fila es la franja roja del fixture
+      const arriba = [gr.values[0][0][40], gr.values[1][0][40]];
+      ok(arriba[0] > 180 && arriba[1] < 80, 'el GeoTIFF salio volteado: la fila 0 no es el norte');
+      return 'contiene el recuadro con ' + Math.round(holgura) + ' m de holgura y norte arriba';
+    });
+
+    await prueba('Un KMZ de puntos NO se confunde con un mapa raster', async () => {
+      const kml = '<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+        + '<Placemark><name>PC-1</name><Point><coordinates>-71.2,-35.2,0</coordinates></Point></Placemark>'
+        + '</Document></kml>';
+      const z = new w.JSZip(); z.file('doc.kml', kml);
+      const kmz = new w.File([await z.generateAsync({type:'blob'})], 'puntos.kmz');
+      let msg = '';
+      try { await w.mpLeerArchivo(kmz); } catch(e){ msg = e.message; }
+      ok(/GroundOverlay/.test(msg), 'el error no explica que falta un GroundOverlay: ' + msg);
+      ok(/importar/i.test(msg), 'el error no manda al botón correcto para puntos y líneas');
+      return msg.slice(0, 70) + '…';
+    });
+
+    await prueba('El GeoTIFF viejo por proyecto se migra sin duplicarse ni perderse', async () => {
+      // Hasta v123 se guardaba UN GeoTIFF por proyecto como JPEG en _geotiffB64, cargado desde
+      // la ficha de punto. Ese camino se retiro; el dato tiene que sobrevivir en 'mapaprop'.
+      const cv = w.document.createElement('canvas'); cv.width = 40; cv.height = 30;
+      cv.getContext('2d').fillRect(0, 0, 40, 30);
+      const b64 = cv.toDataURL('image/jpeg', .8).split(',')[1];
+      const caja = {south:-35.4, west:-71.4, north:-35.3, east:-71.3};
+      await w.put('proyecto', {id: P+'pr-geo', NOMBRE_PROYECTO: 'Campaña vieja',
+                               _geotiffB64: b64, _geotiffBounds: caja});
+      const antes = (await w.all('mapaprop')).length;
+      try {
+        await w.mpMigrarGeotiffViejo();
+        const tras1 = await w.all('mapaprop');
+        eq(tras1.length - antes, 1, 'no se migro exactamente un mapa');
+        const m = tras1.find(x => /Campaña vieja/.test(x.nombre || ''));
+        ok(m, 'el mapa migrado no lleva el nombre del proyecto');
+        eq(m.bounds, caja, 'se perdieron los bordes del GeoTIFF viejo');
+        ok(m.blob && m.blob.size > 100, 'la imagen migrada llego vacia');
+        const pr = await w.get('proyecto', P+'pr-geo');
+        ok(pr._geotiffB64, 'se borro el dato original antes de tiempo');
+        await w.mpMigrarGeotiffViejo();
+        eq((await w.all('mapaprop')).length, tras1.length, 'una segunda pasada duplico el mapa');
+        return 'migrado con sus bordes, idempotente y sin tocar el original';
+      } finally {
+        for (const x of await w.all('mapaprop'))
+          if (/Campaña vieja/.test(x.nombre || '')) await w.del('mapaprop', x.id);
+        await w.del('proyecto', P+'pr-geo');
+      }
+    });
+
+    await prueba('Los mapas raster no entran al modelo ni a los exports', async () => {
+      // 'mapaprop' guarda Blobs, igual que 'cartageo': no pasa por campos() ni por el respaldo.
+      ok(!STORES_TODOS.includes('mapaprop'), '"mapaprop" se colo en los stores del modelo');
+      eq(w.campos('mapaprop'), [], '"mapaprop" no deberia resolver a ninguna tabla del modelo');
+      return 'fuera de STORES_TODOS y sin campos de modelo, como cartageo';
     });
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
