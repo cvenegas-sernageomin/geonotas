@@ -3543,7 +3543,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v124';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v125';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -8004,11 +8004,44 @@ async function exportCSV(proyectoId){
   toast('CSV exportado ('+files.length+' tablas)');
 }
 
+// Fotos y esquemas del punto -> imagenes DENTRO del KMZ (carpeta files/, la que usa Google Earth)
+// y una galeria en el globo del punto. Cada foto lleva su pie con el azimut (ORIENTACION_FOTO) y la
+// descripcion (COMENTARIO_FOTO): una foto de afloramiento sin hacia donde mira no sirve para
+// ubicarla despues. Antes el globo solo traia la vista satelital y las fotos quedaban fuera.
+// El pie va ARRIBA de la imagen: Google Earth recorta globos largos y el texto no se debe perder.
+function kmzAzimut(v){
+  const s=String(v==null?'':v).trim();
+  if(!s) return 'sin azimut';
+  const x=parseFloat(s.replace(',','.'));
+  return (isNaN(x)||!/^-?\d+([.,]\d+)?°?$/.test(s)) ? esc(s) : x+'°';
+}
+async function kmzGaleriaPunto(p,files){
+  const fotos=(await childrenOf('foto',p.id)).filter(f=>dataUrlBytes(f._img));
+  const esqs=(await childrenOf('esquema',p.id)).filter(e=>dataUrlBytes(e._img));
+  const seguro=s=>String(s).replace(/[^A-Za-z0-9_-]/g,'_');
+  const ext=d=>/^data:image\/png/i.test(d)?'png':'jpg';
+  let html='';
+  const figura=(fn,pie)=>'<div style="margin-top:10px">'+pie+'<br><img src="'+fn+'" width="340"/></div>';
+  fotos.forEach((f,i)=>{
+    const fn='files/foto_'+seguro(p.id)+'_'+(i+1)+'.'+ext(f._img);
+    files.push({name:fn,data:dataUrlBytes(f._img)});
+    html+=figura(fn,'<b>📷 Foto '+(i+1)+'</b>'+(f.ID_FOTOGRAFIA?' · '+esc(f.ID_FOTOGRAFIA):'')
+      +' · <b>Azimut:</b> '+kmzAzimut(f.ORIENTACION_FOTO)
+      +(f.COMENTARIO_FOTO?'<br>'+esc(f.COMENTARIO_FOTO):''));
+  });
+  esqs.forEach((e,i)=>{
+    const fn='files/esquema_'+seguro(p.id)+'_'+(i+1)+'.'+ext(e._img);
+    files.push({name:fn,data:dataUrlBytes(e._img)});
+    html+=figura(fn,'<b>✏️ Esquema '+(i+1)+'</b>'+(e.OBSERVACION?'<br>'+esc(e.OBSERVACION):''));
+  });
+  return {html, n:fotos.length+esqs.length};
+}
+
 async function exportKMZ(proyectoId){
   const proyectos=proyectoId?[await get('proyecto',proyectoId)]:await all('proyecto');
   const latF=p=>p['Coordenadas Geográficas Decimales_Lat']||p.LAT;
   const lonF=p=>p['Coordenadas Geográficas Decimales_Long']||p.LONG;
-  const files=[]; let overlays='', n=0;
+  const files=[]; let overlays='', n=0, nFoto=0;
   // Puntos de las dos colecciones; cada una va en su propia carpeta de Google Earth.
   const placemarksPunto=async(store)=>{
     let s='';
@@ -8023,7 +8056,8 @@ async function exportKMZ(proyectoId){
       let satImg='';
       if(p._satelital){const fn='sat_'+p.id+'.jpg';files.push({name:fn,data:b64ToBytes(p._satelital)});
         satImg='<br><img src="'+fn+'" style="max-width:340px"/>';}
-      const desc='<![CDATA['+'<b>'+esc(p.ID_PUNTO_CONTROL||'')+'</b><br>'+litos.map(l=>'• '+esc(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA)||'')).join('<br>')+satImg+']]>';
+      const galeria=await kmzGaleriaPunto(p,files); nFoto+=galeria.n;
+      const desc='<![CDATA['+'<b>'+esc(p.ID_PUNTO_CONTROL||'')+'</b><br>'+litos.map(l=>'• '+esc(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA)||'')).join('<br>')+satImg+galeria.html+']]>';
       s+='<Placemark><name>'+esc(p.ID_PUNTO_CONTROL||p.id)+'</name><description>'+desc+'</description>'
         +'<ExtendedData>'+ed+'</ExtendedData>'
         +'<Point><coordinates>'+lon+','+lat+',0</coordinates></Point></Placemark>\n';
@@ -8091,7 +8125,7 @@ async function exportKMZ(proyectoId){
   files.unshift({name:'doc.kml',data:new TextEncoder().encode(kml)});
   const nombre=proyectoId?'captura_terreno_'+nombreArchivoProyecto(proyectos[0])+'.kmz':'captura_terreno.kmz';
   descargar(nombre,zipStore(files));
-  toast('KMZ exportado ('+n+' puntos'+(nLin?', '+nLin+' líneas':'')+(nNot?', '+nNot+' notas':'')+(files.length>1?', imágenes':'')+')');
+  toast('KMZ exportado ('+n+' puntos'+(nLin?', '+nLin+' líneas':'')+(nNot?', '+nNot+' notas':'')+(nFoto?', '+nFoto+' fotos/esquemas':'')+')');
 }
 
 // -------- ZIP store-only (sin compresión) --------

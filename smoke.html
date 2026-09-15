@@ -125,6 +125,40 @@ async function capturar(w, fn){
   ok(cap, 'la exportación no llamó a descargar()');
   return cap;
 }
+// Siembra 2 fotos (una sin azimut) y 1 esquema PNG bajo el punto, exporta el KMZ y verifica que
+// cada imagen del globo esta DENTRO del zip con sus bytes intactos, y que el pie trae azimut y
+// descripcion escapada. Borra lo sembrado aunque falle.
+const IMG1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+async function probarKmzFotos(w, ptId, ptNombre){
+  const sembrados = [['foto', P+'kf1', {ID_FOTOGRAFIA:'F-1', ORIENTACION_FOTO:'135', COMENTARIO_FOTO:'Contacto <lava> & toba', _img:'data:image/jpeg;base64,'+IMG1x1}],
+                     ['foto', P+'kf2', {ID_FOTOGRAFIA:'F-2', ORIENTACION_FOTO:'', _img:'data:image/jpeg;base64,'+IMG1x1}],
+                     ['esquema', P+'ke1', {OBSERVACION:'Pliegue volcado', _img:'data:image/png;base64,'+IMG1x1}]];
+  for (const [s, id, d] of sembrados) await w.put(s, Object.assign({id, _parent:ptId}, d));
+  try {
+    const cap = await capturar(w, () => w.exportKMZ(P+'pr'));
+    const zip = await new w.JSZip().loadAsync(await cap.blob.arrayBuffer());
+    const d = new DOMParser().parseFromString(await zip.file('doc.kml').async('text'), 'text/xml');
+    ok(!d.querySelector('parsererror'), 'el KML generado no es XML válido');
+    const pm = [...d.querySelectorAll('Placemark')].find(x => x.querySelector('name').textContent === ptNombre);
+    ok(pm, 'no está el Placemark ' + ptNombre);
+    const desc = pm.querySelector('description').textContent;
+    const srcs = [...desc.matchAll(/<img src="(files\/[^"]+)"/g)].map(m => m[1]);
+    eq(srcs.length, 3, 'el globo no enlaza las 2 fotos + 1 esquema');
+    for (const s of srcs){
+      const f = zip.file(s);
+      ok(f, 'imagen enlazada en el globo pero ausente del KMZ: ' + s);
+      eq(await f.async('base64'), IMG1x1, 'bytes alterados en ' + s);
+    }
+    ok(srcs.some(s => /esquema_.*\.png$/.test(s)), 'el esquema PNG salió con extensión equivocada');
+    ok(/Azimut:<\/b> 135°/.test(desc), 'falta el azimut de la foto');
+    ok(desc.includes('Contacto &lt;lava&gt; &amp; toba'), 'la descripción no va o no se escapó');
+    ok(/sin azimut/.test(desc), 'una foto sin azimut no lo indica');
+    ok(desc.includes('Pliegue volcado'), 'falta la observación del esquema');
+    return srcs.length + ' imágenes en files/ con bytes intactos; azimut 135° y descripción en el globo';
+  } finally {
+    for (const [s, id] of sembrados) await w.del(s, id);
+  }
+}
 const soloMios = bk => {                  // el respaldo lleva TODOS los proyectos/notas: lo acotamos
   const f = {}; for (const k in bk) f[k] = Array.isArray(bk[k]) ? bk[k].filter(mio) : bk[k];
   return f;
@@ -263,6 +297,11 @@ async function correr(){
       ok(nombres.every(n => n.trim()), 'hay Placemarks con <name> vacío');
       ok(nombres.includes('PC-T') && nombres.includes('PC-G'), 'faltan puntos de alguna colección');
       return carpetas.length + ' carpetas: ' + carpetas.join(' · ');
+    });
+
+    // v125: el KMZ no llevaba las fotografias ni los esquemas del punto, solo la vista satelital.
+    await prueba('El KMZ incrusta fotos y esquemas, con azimut y descripción en el globo', async () => {
+      return await probarKmzFotos(w, P+'pt-T', 'PC-T');
     });
 
     await prueba('Importar un KMZ deja registros que la app puede ver (regresión v37-#1+2)', async () => {
