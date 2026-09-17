@@ -3593,7 +3593,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v128';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v129';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -3691,7 +3691,15 @@ let db;
 function openDB(){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
   const r=indexedDB.open(DB,VER);
+  // El TIMEOUT de abajo existe para no colgar la app si open() nunca responde (Safari con la
+  // base en mal estado). Pero una vez que dispara onupgradeneeded la base YA es nuestra: las
+  // migraciones de mas abajo leen y reescriben la litologia completa y en un telefono con una
+  // campaña entera pueden tardar mas de 6 s -- y el TIMEOUT abortaba con "No se pudo abrir la
+  // base de datos" mientras la migracion seguia corriendo bien por detras. Desde aqui el unico
+  // final posible es onsuccess u onerror, asi que el temporizador se cancela.
+  let tTimeout=null;
   r.onupgradeneeded=()=>{const d=r.result;
+    if(tTimeout){clearTimeout(tTimeout);tTimeout=null;}
     const yaTeniaAflora=d.objectStoreNames.contains('aflora');
     STORES.concat(['fotomapa','linea','nota']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
       if(s!=='proyecto')os.createIndex('parent','_parent',{unique:false});}});
@@ -3855,18 +3863,38 @@ function openDB(){return new Promise((res,rej)=>{
     finish(res,db);};
   r.onerror=()=>finish(rej,r.error||new Error('IndexedDB error'));
   r.onblocked=()=>finish(rej,new Error('BLOCKED'));         // otra pestaña/instancia tiene la BD abierta
-  setTimeout(()=>finish(rej,new Error('TIMEOUT')),6000);    // no colgar la app indefinidamente
+  tTimeout=setTimeout(()=>finish(rej,new Error('TIMEOUT')),6000);    // no colgar la app indefinidamente
 });}
 // carga una imagen comprimida devolviendo dataURL + dimensiones naturales (para el foto-mapa)
 function cargarImagen(file,max,q){return new Promise(res=>{const img=new Image();const rd=new FileReader();
   rd.onload=()=>{img.onload=()=>{let w=img.width,h=img.height;const s=Math.min(1,max/Math.max(w,h));w=Math.round(w*s);h=Math.round(h*s);
     const cv=el('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);res({dataUrl:cv.toDataURL('image/jpeg',q),w,h});};img.src=rd.result;};rd.readAsDataURL(file);});}
 function tx(store,mode='readonly'){return db.transaction(store,mode).objectStore(store);}
-function put(store,obj){return new Promise((res,rej)=>{const r=tx(store,'readwrite').put(obj);r.onsuccess=()=>res(obj);r.onerror=()=>rej(r.error);});}
-function del(store,id){return new Promise((res,rej)=>{const r=tx(store,'readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+// put/del rechazan tambien si la TRANSACCION aborta, no solo si falla el request: al quedarse
+// sin espacio (QuotaExceededError) Chrome puede abortar la transaccion entera y, sin este
+// segundo camino, la promesa quedaba colgada para siempre y la foto "se guardaba" en silencio.
+function put(store,obj){return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.put(obj);
+  r.onsuccess=()=>res(obj);r.onerror=()=>rej(r.error);os.transaction.onabort=()=>rej(os.transaction.error||r.error||new Error('transacción abortada'));});}
+function del(store,id){return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.delete(id);
+  r.onsuccess=()=>res();r.onerror=()=>rej(r.error);os.transaction.onabort=()=>rej(os.transaction.error||r.error||new Error('transacción abortada'));});}
 function all(store){return new Promise((res,rej)=>{const r=tx(store).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
 function get(store,id){return new Promise((res,rej)=>{const r=tx(store).get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
-async function childrenOf(store,parentId){return (await all(store)).filter(x=>x._parent===parentId);}
+// Hijos de un padre por el INDICE 'parent' que openDB() crea en todos los stores salvo
+// 'proyecto'. Hasta v128 esto hacia getAll() del store ENTERO y filtraba en memoria: el mapa
+// del proyecto, la libreta PDF y el KMZ llaman childrenOf por CADA punto (estructural,
+// muestreo, foto, esquema...), asi que con 300 puntos y 1.000 fotos en base64 se releian y
+// deserializaban cientos de MB de imagenes por cada dibujo del mapa. Es la operacion que
+// hace arrastrarse la app con una campaña completa en el telefono. Con el indice, cada
+// llamada trae solo los registros de ese padre.
+// Fallback al barrido si el store no tiene el indice (una base creada por una version muy
+// antigua): el resultado es el mismo, solo mas lento. parentId nulo devuelve [] a proposito:
+// index.getAll(undefined) devolveria el store completo, no "los sin padre".
+async function childrenOf(store,parentId){
+  if(parentId==null) return [];
+  const os=tx(store);
+  if(!os.indexNames.contains('parent')) return (await all(store)).filter(x=>x._parent===parentId);
+  return new Promise((res,rej)=>{const r=os.index('parent').getAll(parentId);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+}
 
 // ============================ Colección activa (terreno / gabinete) ============================
 const RM_STORE = 'punto';
@@ -3945,8 +3973,25 @@ async function buildBackupBlob(coleccion = 'terreno') {
   // "Archivar dia" dejaba los foto-mapas fuera en silencio.
   backup.fotomapa = (await all('fotomapa')).filter(r => idsPuntos.has(r._punto));
 
-  const json = JSON.stringify(backup, null, 2);
-  return new Blob([json], { type: 'application/json' });
+  // El JSON se arma POR PARTES (un trozo por registro) y no con un JSON.stringify del objeto
+  // entero: las fotos van adentro como dataURL, asi que el respaldo de una campaña son decenas
+  // o cientos de MB, y una sola cadena de ese tamaño mas su copia dentro del Blob era el pico
+  // de memoria que tumbaba la pestaña en un telefono justo al archivar el dia. El Blob recibe
+  // los trozos y el navegador los guarda sin concatenarlos. El resultado es el mismo JSON
+  // (mismas claves, formato 1): importBackup() y la light lo leen igual.
+  const partes = ['{'];
+  let primero = true;
+  for (const clave of Object.keys(backup)) {
+    partes.push((primero ? '\n' : ',\n') + JSON.stringify(clave) + ': ');
+    primero = false;
+    const v = backup[clave];
+    if (!Array.isArray(v)) { partes.push(JSON.stringify(v)); continue; }
+    partes.push('[');
+    v.forEach((reg, i) => partes.push((i ? ',\n  ' : '\n  ') + JSON.stringify(reg)));
+    partes.push(v.length ? '\n]' : ']');
+  }
+  partes.push('\n}\n');
+  return new Blob(partes, { type: 'application/json' });
 }
 
 async function importBackup(file, destinoColeccion = null) {
@@ -6810,7 +6855,9 @@ function v3dCargarCesium(){
     // podemos distinguir un 404 de un 200 -- la cache se llenaria de respuestas rotas.
     s.crossOrigin='anonymous';
     s.src=V3D_CESIUM_BASE+'Cesium.js';
-    s.onload=()=>window.Cesium?res(window.Cesium):rej(new Error('Cesium cargo sin definir window.Cesium'));
+    s.onload=()=>{ if(window.Cesium) return res(window.Cesium);
+      v3dCesiumCargando=null; s.remove(); link.remove();   // como onerror: que el proximo toque reintente
+      rej(new Error('Cesium cargo sin definir window.Cesium')); };
     s.onerror=()=>{ v3dCesiumCargando=null; s.remove(); link.remove();
       rej(new Error('No se pudo cargar Cesium (¿sin conexion?)')); };
     document.head.appendChild(s);
@@ -9290,6 +9337,10 @@ function iconoPunto(estr,mus){
 }
 // compone la foto base con pines numerados (para la libreta PDF)
 function compositaFotomapa(node){return new Promise(async res=>{
+  // Un foto-mapa recien creado (o restaurado sin imagen) no tiene _base: sin este corte se
+  // hacia img.src=undefined, que pide "/undefined" a la red y deja <img src="undefined"> en
+  // la libreta impresa. Se devuelve null y paginaLibreta() omite la imagen.
+  if(!node._base) return res(null);
   const hijos=await fotomapaHijos(node.id);
   const img=new Image();
   img.onload=()=>{const cv=el('canvas');cv.width=img.width;cv.height=img.height;const c=cv.getContext('2d');
@@ -10897,15 +10948,17 @@ async function paginaLibreta(pr,pt,coleccion){
   const fotos=await childrenOf('foto',pt.id);
   const esqs=await childrenOf('esquema',pt.id);
   let imgs='';
-  fotos.forEach((f,i)=>{if(f._img)imgs+='<figure><img src="'+f._img+'"><figcaption>Foto '+(i+1)+' '+esc(f.ORIENTACION_FOTO||'')+' — '+esc(f.COMENTARIO_FOTO||'')+'</figcaption></figure>';});
-  esqs.forEach((e,i)=>{if(e._img)imgs+='<figure><img src="'+e._img+'"><figcaption>Esquema '+(i+1)+' — '+esc(e.OBSERVACION||'')+'</figcaption></figure>';});
+  // esc() tambien en los src: _img/_base vienen del respaldo JSON (un archivo que el usuario
+  // puede haber editado o recibido) y este HTML se escribe en un iframe del MISMO origen.
+  fotos.forEach((f,i)=>{if(f._img)imgs+='<figure><img src="'+esc(f._img)+'"><figcaption>Foto '+(i+1)+' '+esc(f.ORIENTACION_FOTO||'')+' — '+esc(f.COMENTARIO_FOTO||'')+'</figcaption></figure>';});
+  esqs.forEach((e,i)=>{if(e._img)imgs+='<figure><img src="'+esc(e._img)+'"><figcaption>Esquema '+(i+1)+' — '+esc(e.OBSERVACION||'')+'</figcaption></figure>';});
   // foto-mapas: base con pines numerados + galería de detalles
   let fmHtml='';
   for(const fm of await fotomapasRaiz(pt.id)){
     const comp=await compositaFotomapa(fm); const hijos=await fotomapaHijos(fm.id);
-    let gal=''; hijos.forEach((c,i)=>{gal+='<figure><img src="'+c._base+'"><figcaption>'+(i+1)+'. '+esc(c.TITULO||'detalle')+'</figcaption></figure>';});
+    let gal=''; hijos.forEach((c,i)=>{gal+='<figure><img src="'+esc(c._base)+'"><figcaption>'+(i+1)+'. '+esc(c.TITULO||'detalle')+'</figcaption></figure>';});
     fmHtml+='<div class="sec"><h2>Foto-mapa: '+esc(fm.TITULO||'')+'</h2>'
-      +'<img style="max-width:100%;border:1px solid #999" src="'+comp+'">'
+      +(comp?'<img style="max-width:100%;border:1px solid #999" src="'+esc(comp)+'">':'<p class="lbl" style="font-size:8.5pt">(sin foto base)</p>')
       +(gal?'<div class="imgs">'+gal+'</div>':'')+'</div>';
   }
   // Con prosa redactada, la libreta se lee como tal: el parrafo REEMPLAZA las tablas de
@@ -11065,6 +11118,20 @@ function pantallaError(msg,detalle){
 }
 // muestra cualquier error de JS en pantalla (para no quedar en blanco)
 window.addEventListener('error',e=>{if(!db)pantallaError('Error al iniciar',(e.message||'')+'');});
+// Quedarse sin espacio en el telefono era SILENCIOSO: put() rechaza con QuotaExceededError, pero
+// los guardados de foto/esquema/nota/foto-mapa no atrapan el error (son handlers async sueltos)
+// y la promesa moria como "unhandled rejection" en la consola, que en terreno nadie mira. La
+// miniatura no aparecia y el boton parecia no hacer nada; el geologo seguia sacando fotos que
+// no se guardaban. Un solo aviso global cubre todos los sitios, presentes y futuros, sin
+// repetir un try/catch en cada uno. Solo se avisa por este error: el resto de rechazos ya tiene
+// su propio manejo donde importa.
+window.addEventListener('unhandledrejection',e=>{
+  const r=e&&e.reason;
+  if(r&&(r.name==='QuotaExceededError'||/quota/i.test(String(r.message||r)))){
+    e.preventDefault();
+    alert('\u26a0\ufe0f Sin espacio en el dispositivo: lo \u00faltimo NO se guard\u00f3.\n\nLibera espacio (borra teselas, cartas o el motor 3D descargados, o fotos de otras campa\u00f1as) y vuelve a intentarlo.');
+  }
+});
 (async()=>{
   restaurarAbiertos();   // re-mezcla los valores de dominio abierto agregados en sesiones previas
   try{

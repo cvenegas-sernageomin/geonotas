@@ -1232,6 +1232,10 @@ async function correr(){
       // ESRI_URL es `const` y no se ve desde aquí; la plantilla se recupera de la propia
       // función que arma la clave, que es justo lo que se quiere contrastar.
       const capa = w.L.tileLayer.offline(w.v3dUrlEsri('{z}','{y}','{x}'), {subdomains:'abc'});
+      // Solo se necesitan las CLAVES: se anula createTile para que la capa no pida ni una tesela
+      // a Esri (la prueba no depende de la red) ni deje <img> huerfanos pidiendo "/undefined"
+      // cuando el mapa se destruye antes de que leaflet.offline resuelva su lookup asincrono.
+      capa.createTile = (coords, done) => { const i = w.document.createElement('img'); setTimeout(() => done(null, i), 0); return i; };
       capa.addTo(m);
       const teselas = w.LeafletOffline.getTileUrls(capa, m.getPixelBounds(), 13);
       ok(teselas.length, 'no se enumeró ninguna tesela');
@@ -1272,6 +1276,60 @@ async function correr(){
       ok(w.v3dElevSync(RASTER.north + 0.5, cLon, dem) == null, '55 km al norte no puede haber dato');
       ok(w.v3dElevSync(cLat, RASTER.west - 0.5, dem) == null, '45 km al oeste no puede haber dato');
       return 'EPSG:32719 ubicado en su recuadro real';
+    });
+
+    // ---- Auditoría v129 ----
+    await prueba('childrenOf() usa el índice parent y devuelve lo mismo que el barrido', async () => {
+      // Hasta v128 childrenOf() leía el store ENTERO y filtraba en memoria: con una campaña con
+      // fotos en base64 eso releía cientos de MB por cada dibujo del mapa. Se afirma que el
+      // índice existe en la base real, que el resultado es idéntico al filtro, y que un padre
+      // nulo da [] (index.getAll(undefined) devolvería el store completo).
+      await sembrar(w);
+      for (const store of ['punto','punto_gabinete','litologia','estructural','foto','esquema','nota','linea','fotomapa'])
+        ok(w.tx(store).indexNames.contains('parent'), 'el store ' + store + ' no tiene el índice parent');
+      const porIndice = await w.childrenOf('litologia', P+'pt-T');
+      const porBarrido = (await w.all('litologia')).filter(x => x._parent === P+'pt-T');
+      eq(porIndice.map(x=>x.id).sort(), porBarrido.map(x=>x.id).sort(), 'el índice y el barrido difieren');
+      eq(porIndice.length, 1, 'el punto de Terreno debía tener exactamente 1 litología');
+      eq(await w.childrenOf('litologia', null), [], 'padre nulo debe devolver []');
+      eq(await w.childrenOf('litologia', undefined), [], 'padre undefined debe devolver []');
+      eq((await w.childrenOf('punto', P+'pr')).map(x=>x.id), [P+'pt-T'], 'los puntos del proyecto por índice');
+      return 'índice presente en 9 stores; mismo resultado que el barrido; [] con padre nulo';
+    });
+
+    await prueba('El respaldo armado por partes sigue siendo el mismo JSON (formato 1)', async () => {
+      // buildBackupBlob ya no hace un JSON.stringify del objeto entero (pico de memoria con
+      // fotos adentro): arma el Blob por trozos. El texto resultante tiene que seguir siendo
+      // JSON válido con las mismas claves y registros, o importBackup() y la light dejan de leerlo.
+      await sembrar(w);
+      const blob = await w.buildBackupBlob('terreno');
+      const j = JSON.parse(await blob.text());
+      eq(j.app, 'captura-terreno', 'app'); eq(j.formato, 1, 'formato'); eq(j.coleccion, 'terreno', 'coleccion');
+      ok(Array.isArray(j.proyecto) && Array.isArray(j.punto) && Array.isArray(j.litologia) && Array.isArray(j.fotomapa),
+         'faltan arreglos de stores en el respaldo');
+      ok(j.proyecto.some(x => x.id === P+'pr'), 'el proyecto sembrado no viajó');
+      ok(j.punto.some(x => x.id === P+'pt-T'), 'el punto de Terreno no viajó');
+      ok(!j.punto.some(x => x.id === P+'pt-G'), 'un punto de Gabinete se coló en el respaldo de Terreno');
+      ok(!('punto_gabinete' in j), 'el respaldo de Terreno no debe traer la clave punto_gabinete');
+      const vacio = JSON.parse(await (await w.buildBackupBlob('gabinete')).text());
+      ok(Array.isArray(vacio.punto_gabinete), 'el respaldo de Gabinete debe traer punto_gabinete como arreglo');
+      return 'JSON válido, mismas claves, filtro por colección intacto';
+    });
+
+    await prueba('La libreta PDF escapa los data URL de las imágenes (respaldo manipulado)', async () => {
+      // _img viene del respaldo JSON, que es un archivo que el usuario puede haber editado o
+      // recibido; y el HTML de la libreta se escribe en un iframe del MISMO origen. Sin esc()
+      // en el src, un valor con comillas cerraba el atributo e inyectaba una etiqueta.
+      await sembrar(w);
+      const malo = 'data:image/png;base64,AAAA"><scr'+'ipt>window.__pwned=1</scr'+'ipt><img src="x';
+      await w.put('esquema', {id:P+'esq-x', _parent:P+'pt-T', _img:malo, OBSERVACION:'smoke'});
+      try {
+        const pr = await w.get('proyecto', P+'pr'), pt = await w.get('punto', P+'pt-T');
+        const html = await w.paginaLibreta(pr, pt, 'Terreno');
+        ok(!/<script>/.test(html), 'el src sin escapar inyectó una etiqueta <script> en la libreta');
+        ok(html.indexOf('&quot;&gt;&lt;scr'+'ipt&gt;') >= 0, 'el data URL no salió escapado');
+      } finally { await w.del('esquema', P+'esq-x'); }
+      return 'src escapado; sin etiquetas inyectadas';
     });
 
     await prueba('El plano 3D respeta el rumbo/manteo al construir sus esquinas', async () => {
