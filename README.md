@@ -16,6 +16,11 @@ Instalable en celular; funciona sin conexión tras la primera carga.
   TIPO_ESTRUCTURA → tipo de medida).
 - **Mapa satelital** (Esri World Imagery) con pin arrastrable ↔ coordenadas, GPS, descarga de
   **tiles offline**, captura de vista satelital y overlay de **GeoTIFF** propio.
+- **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
+  proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
+  defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas
+  Terrarium (~30 m) del área visible o de un GeoTIFF propio; el motor (Cesium) y las teselas se
+  descargan la primera vez con conexión y quedan cacheados para terreno.
 - Cámara para fotografías y **esquema en canvas**.
 - **Exportación: CSV** (ZIP con todas las tablas), **KMZ** (puntos + imagen satelital + GeoTIFF como
   GroundOverlay), **GeoPackage** (.gpkg con capas de puntos y líneas EPSG:4326 + tablas de
@@ -52,7 +57,9 @@ Dos cosas a tener presentes al tocarla:
 - `index.html` — app monolítica (generada por `build_pwa.py`, que inyecta el modelo canónico).
 - `manifest.json`, `sw.js`, `icons/` — PWA instalable/offline.
 - `vendor/` — librerías locales (Leaflet, leaflet.offline, idb, georaster, sql.js para GPKG,
-  gdal3.js para GDB) para 100% offline.
+  gdal3.js para GDB) para 100% offline. Cesium (Vista 3D) NO está aquí: pesa ~15 MB con sus
+  workers y assets, así que se baja de su CDN la primera vez y el `sw.js` lo guarda cache-first
+  en `geonotas-cesium` (igual que gdal3, que tampoco entra al install).
 - `build_pwa.py` — regenera `index.html` desde `../modelo/modelo_canonico.json`.
 - `smoke.html` — prueba de humo (ver arriba); no forma parte de la app ni del `sw.js`.
 

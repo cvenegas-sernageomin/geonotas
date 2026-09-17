@@ -175,6 +175,31 @@
   .sk-gr{border-radius:9px;border:1px solid #57626d;background:#1c242c;color:#eef4ee}
   .sk-gr.on{background:var(--verde);border-color:var(--verde2);color:#fff}
   .sk-gr i{display:block;width:20px;background:currentColor;border-radius:99px}
+  /* Vista 3D (Cesium): mismo molde que .sk-ov (pantalla completa + safe-area + barra con "Listo").
+     REGLA DURA: .v3d-cv nunca puede quedar en display:none ni a 0x0. A diferencia de Leaflet, que
+     se recupera con invalidateSize(), el canvas de Cesium se crea con las dimensiones que tenga su
+     contenedor en ese instante y si son 0x0 queda roto de forma PERMANENTE (el render loop no
+     vuelve a avanzar). Por eso los estados ("Cargando Cesium...", errores) van en .v3d-msg
+     SUPERPUESTA y nunca reemplazando al contenedor del canvas. */
+  .v3d-ov{position:fixed;inset:0;z-index:4000;background:#10151a;display:flex;flex-direction:column;
+    padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left))}
+  .v3d-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#eef4ee;font-size:13px;padding:0 2px 6px}
+  .v3d-top .btn{padding:8px 14px}
+  .v3d-cuerpo{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}
+  .v3d-cv{flex:1;min-height:0;position:relative;border-radius:8px;overflow:hidden;background:#0b1016}
+  .v3d-lado{flex:0 0 auto;max-height:38vh;overflow-y:auto;color:#eef4ee;font-size:12.5px;
+    background:#1c242c;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:7px}
+  .v3d-lado .btn{min-height:42px;padding:8px 12px;font-size:13px}   /* 42 px: se toca con guantes */
+  .v3d-lado b{color:#fff}
+  .v3d-fila{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .v3d-msg{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:16px;color:#eef4ee;font-size:13px;line-height:1.6;
+    background:rgba(16,21,26,.86);pointer-events:none}
+  .v3d-msg.acc{pointer-events:auto}
+  @media(min-width:760px){
+    .v3d-cuerpo{flex-direction:row}
+    .v3d-lado{flex:0 0 300px;max-height:none}
+  }
   .muted{color:var(--muted);font-size:12px}
   .creditos{font-size:12px;color:var(--muted);text-align:center;line-height:1.75}
   .creditos b{color:var(--txt);font-weight:650}
@@ -3543,7 +3568,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v126';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v127';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -5428,8 +5453,11 @@ const inLat='Coordenadas Geográficas Decimales_Lat', inLon='Coordenadas Geográ
 // Chile es siempre hemisferio sur (husos 17S-19S). Sin dependencias externas (offline-first).
 const UTM_A=6378137.0, UTM_E2=0.00669438, UTM_K0=0.9996;
 const husoDeLon = lon => Math.floor((lon+180)/6)+1;
-function latLonAUtm(lat,lon){
-  const zona=husoDeLon(lon);
+// zonaForzada: para trabajar dentro de un huso ya fijado (p.ej. un DEM en EPSG:32719 cuyo borde
+// oeste cruza el meridiano 72°O). Sin esto, esos píxeles se calculaban en el huso 18 y el
+// resultado caía cientos de kilómetros fuera. Omitirlo mantiene el comportamiento de siempre.
+function latLonAUtm(lat,lon,zonaForzada){
+  const zona=zonaForzada||husoDeLon(lon);
   const latR=lat*Math.PI/180, lonR=lon*Math.PI/180;
   const lonOrigenR=((zona-1)*6-180+3)*Math.PI/180;
   const ep2=UTM_E2/(1-UTM_E2);
@@ -6713,6 +6741,943 @@ async function agToggle(){
   }
 }
 
+// ============================ Vista 3D (Cesium sobre DEM local) ============================
+// Portada del "Trazador de Planos Geologicos": globo 3D con el relieve real y, encima, los
+// puntos/notas/lineas del proyecto. Se abre desde el boton ⛰️ 3D de la botonera del mapa.
+//
+// Cesium NO se vendoriza: son ~15 MB entre Cesium.js, sus Workers, ThirdParty, Assets y Widgets,
+// y meterlos en ASSETS del sw.js los bajaria en CADA dispositivo aunque el geologo nunca abra el
+// 3D (mismo criterio por el que gdal3 quedo fuera). Se carga del CDN de Cesium y el sw.js lo
+// guarda cache-first en 'geonotas-cesium': a partir de la primera apertura con señal, el 3D
+// funciona en terreno sin conexion.
+//
+// Sin token de Ion a proposito: no existe terreno mundial gratis sin cuenta (Cesium World Terrain
+// exige una), asi que TODO el relieve sale del DEM local que el geologo descarga o carga.
+const V3D_CESIUM_VER   = '1.120';
+const V3D_CESIUM_BASE  = 'https://cesium.com/downloads/cesiumjs/releases/'+V3D_CESIUM_VER+'/Build/Cesium/';
+const V3D_CESIUM_CACHE = 'geonotas-cesium';   // cadena, NO regex: ver la nota de MIAS en sw.js
+let v3dCesiumCargando=null;
+let v3dViewer=null, v3dOv=null, v3dOnKey=null, v3dMsg=null, v3dLado=null;
+let v3dDEM=null;                 // { datos:Int16Array, width, height, crs, bbox, nombre } | null
+let v3dBoundsAlAbrir=null;
+let v3dTilesIdx=null;            // Set de claves de teselas satelitales ya guardadas (ver abajo)
+let v3dEntsProy=[], v3dHandler=null;
+
+function v3dBtnEstado(txt, activo){
+  const b=document.getElementById('btnVista3D'); if(!b) return;
+  b.textContent=txt; b.classList.toggle('active',!!activo);
+}
+
+// Inyecta Cesium desde su CDN una sola vez y memoriza la promesa.
+function v3dCargarCesium(){
+  if(window.Cesium) return Promise.resolve(window.Cesium);
+  if(v3dCesiumCargando) return v3dCesiumCargando;
+  v3dCesiumCargando=new Promise((res,rej)=>{
+    // Cesium deduce de donde bajar sus Workers/Assets a partir del <script> que lo cargo.
+    // Fijarlo explicitamente evita que los busque en el origen de la PWA, donde no estan.
+    window.CESIUM_BASE_URL=V3D_CESIUM_BASE;
+    const link=document.createElement('link');
+    link.rel='stylesheet'; link.crossOrigin='anonymous';
+    link.href=V3D_CESIUM_BASE+'Widgets/widgets.css';
+    document.head.appendChild(link);
+    const s=document.createElement('script');
+    // crossOrigin: sin esto la respuesta llega 'opaque' (status 0) y ni el sw.js ni nosotros
+    // podemos distinguir un 404 de un 200 -- la cache se llenaria de respuestas rotas.
+    s.crossOrigin='anonymous';
+    s.src=V3D_CESIUM_BASE+'Cesium.js';
+    s.onload=()=>window.Cesium?res(window.Cesium):rej(new Error('Cesium cargo sin definir window.Cesium'));
+    s.onerror=()=>{ v3dCesiumCargando=null; s.remove(); link.remove();
+      rej(new Error('No se pudo cargar Cesium (¿sin conexion?)')); };
+    document.head.appendChild(s);
+  });
+  return v3dCesiumCargando;
+}
+
+// ¿Esta el motor 3D guardado para terreno? Sirve para avisar ANTES de quedarse sin señal.
+async function v3dCesiumGuardado(){
+  try{
+    const c=await caches.open(V3D_CESIUM_CACHE);
+    return !!(await c.match(V3D_CESIUM_BASE+'Cesium.js'));
+  }catch(e){ return false; }
+}
+// El sw.js no purga 'geonotas-cesium' al subir de version (a proposito), asi que al cambiar
+// V3D_CESIUM_VER la copia vieja quedaria ocupando espacio para siempre: este es el desague.
+async function v3dBorrarCesium(){
+  if(!confirm('¿Borrar el motor 3D descargado? Habra que volver a bajarlo con conexion.')) return;
+  try{ await caches.delete(V3D_CESIUM_CACHE); toast('Motor 3D borrado'); v3dPintarLado(); }
+  catch(e){ console.warn('Vista 3D:',e); toast('⚠️ No se pudo borrar'); }
+}
+
+// ---- Imagen satelital del globo ----
+// El MISMO servicio que la capa base de Leaflet, para que el 2D y el 3D no puedan verse
+// distintos, y además leyendo primero las teselas que el geólogo ya bajó con "⬇️ Tiles":
+// así el 3D hereda el trabajo del 2D en vez de obligar a descargar todo dos veces.
+// leaflet.offline guarda cada tesela con la URL como clave (con el PRIMER subdominio si la
+// plantilla trae {s}; ESRI_URL no trae, así que clave === URL). Orden {z}/{y}/{x}: si se
+// invierten x e y el mapa sale corrido de una forma que "casi" se ve bien.
+function v3dUrlEsri(z,y,x){ return ESRI_URL.replace('{z}',z).replace('{y}',y).replace('{x}',x); }
+
+// Índice de teselas guardadas, armado UNA vez al abrir la vista. Tiene que poder consultarse de
+// forma SÍNCRONA: requestImage() usa el valor `undefined` para decir "hay demasiadas peticiones
+// en vuelo, reintenta luego", no "no la tengo". Si devolviéramos siempre una promesa, Cesium
+// perdería su RequestScheduler y dispararía miles de lecturas a IndexedDB al girar la cámara.
+async function v3dIndiceTilesOffline(){
+  try{
+    // leaflet.offline abre su base (v2, store 'tileStore') al cargarse, así que aquí abrimos
+    // SIN versión a propósito: pedir una versión podría crear una base vacía y romper la suya.
+    const db=await idb.openDB('leaflet.offline');
+    if(!db.objectStoreNames.contains('tileStore')) return new Set();
+    return new Set(await db.getAllKeys('tileStore'));
+  }catch(e){ console.warn('Vista 3D:',e); return new Set(); }
+}
+
+// Blob de imagen → algo que se pueda dibujar o entregarle a Cesium.
+// colorSpaceConversion:'none' es obligatorio para el DEM (ver v3dDecodificarTerrarium): si el
+// navegador aplicara un perfil de color, un error de 1 en el canal rojo serían 256 metros.
+function v3dBlobADibujable(blob){
+  if(window.createImageBitmap) return createImageBitmap(blob,{colorSpaceConversion:'none'});
+  return new Promise((res,rej)=>{          // Safari viejo: object URL + <img>, soltándola siempre
+    const u=URL.createObjectURL(blob), img=new Image();
+    img.onload =()=>{ URL.revokeObjectURL(u); res(img); };
+    img.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('imagen ilegible')); };
+    img.src=u;
+  });
+}
+
+function v3dTileOfflineAImagen(url){
+  return LeafletOffline.getTile(url).then(blob=>{
+    if(!blob) throw new Error('tesela vacia');
+    return v3dBlobADibujable(blob);        // el ImageBitmap NO se cierra: Cesium toma posesión
+  });
+}
+
+function v3dImageryEsri(){
+  const prov=new Cesium.UrlTemplateImageryProvider({url:ESRI_URL, maximumLevel:19, credit:'Tiles © Esri'});
+  const original=prov.requestImage.bind(prov);
+  prov.requestImage=function(x,y,level,request){
+    const url=v3dUrlEsri(level,y,x);
+    if(v3dTilesIdx && v3dTilesIdx.has(url)) return v3dTileOfflineAImagen(url);
+    return original(x,y,level,request);    // puede devolver undefined: es la señal de throttle
+  };
+  // Un solo aviso por apertura: sin esto, sin señal el usuario ve un globo gris y ningún motivo,
+  // y con el aviso por tesela serían cientos de toasts encadenados.
+  let avisado=false;
+  prov.errorEvent.addEventListener(()=>{
+    if(avisado) return; avisado=true;
+    toast('📴 Sin señal: solo se ve el satelital que bajaste con ⬇️ Tiles');
+  });
+  return prov;
+}
+
+// ---- Relieve: DEM local a partir de teselas Terrarium ----
+// Geonotas no tenía ninguna noción de elevación salvo la COTA del GPS por punto. El relieve del
+// 3D sale de las teselas Terrarium de AWS (SRTM ~30 m), las mismas que usa el Trazador, pero
+// decodificadas aquí con un canvas: la librería maplibre-contour que usa el Trazador solo aporta
+// eso y no vale un vendor nuevo.
+//
+// Persistencia: se guardan las teselas PNG crudas en la Cache API ('geonotas-dem', ~30 KB cada
+// una) y la DEFINICIÓN del área (zoom + rango de teselas) en localStorage. Rearmar el mosaico
+// desde ahí cuesta un segundo y no duplica almacenamiento; guardar además el mosaico armado
+// serían 13 MB por área repetidos. No se usa IndexedDB a propósito: la base 'captura-terreno'
+// la comparten las dos PWAs y agregar un store obliga a subir VER en las dos a la vez (misma
+// razón que la capa de artículos, ver AG_CACHE).
+const V3D_TERRARIUM   = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+const V3D_DEM_Z       = 13;        // ~19 m/px: el dato real es SRTM ~30 m, más zoom solo interpola
+const V3D_DEM_MAX_TILES = 100;     // 10x10 teselas = 2560x2560 px = 13 MB en Int16
+const V3D_SIN_DATO    = -32768;    // centinela "aquí no hay dato", distinto de "0 m" (nivel del mar)
+const V3D_MERC        = 20037508.342789244;
+const V3D_DEM_CACHE   = 'geonotas-dem';   // cadena, NO regex: ver la nota de MIAS en sw.js
+const V3D_DEM_IDX     = 'v3d-dems';       // índice liviano de áreas descargadas, en localStorage
+let v3dCanvasDem=null;
+
+function v3dAMercator(lat,lon){
+  const y=Math.log(Math.tan((90+lat)*Math.PI/360))/(Math.PI/180);
+  return {X:V3D_MERC*lon/180, Y:V3D_MERC*y/180};
+}
+function v3dTileDe(lon,lat,z){
+  const n=Math.pow(2,z);
+  const x=Math.floor((lon+180)/360*n);
+  const y=Math.floor((1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*n);
+  return {x:Math.max(0,Math.min(n-1,x)), y:Math.max(0,Math.min(n-1,y))};
+}
+
+// PNG Terrarium → alturas en metros. La fórmula es exacta: h = R*256 + G + B/256 - 32768.
+// Un error de 1 en R son 256 m y el relieve igual "se ve bien", así que esto lleva prueba en
+// smoke.html con un PNG de valor conocido.
+async function v3dDecodificarTerrarium(blob){
+  const img=await v3dBlobADibujable(blob);
+  const w=img.width, h=img.height;
+  // Un canvas REUTILIZADO para las 100 teselas: crear cien canvas de 256x256 es gratis en
+  // teoría y no en la práctica (cada uno retiene su textura hasta que el GC pase).
+  if(!v3dCanvasDem || v3dCanvasDem.width!==w || v3dCanvasDem.height!==h){
+    let c=null;
+    try{ c=new OffscreenCanvas(w,h); }catch(e){ c=document.createElement('canvas'); c.width=w; c.height=h; }
+    c._ctx=c.getContext('2d',{willReadFrequently:true, colorSpace:'srgb'});
+    v3dCanvasDem=c;
+  }
+  const ctx=v3dCanvasDem._ctx;
+  ctx.clearRect(0,0,w,h);
+  ctx.drawImage(img,0,0);
+  if(img.close) img.close();
+  const d=ctx.getImageData(0,0,w,h).data;
+  const out=new Int16Array(w*h);
+  for(let i=0,p=0;i<out.length;i++,p+=4) out[i]=Math.round(d[p]*256+d[p+1]+d[p+2]/256-32768);
+  return {datos:out, width:w, height:h};
+}
+
+// Una tesela de elevación: primero la copia guardada, si no la red (y se guarda).
+async function v3dTeselaDem(z,x,y){
+  const url=V3D_TERRARIUM.replace('{z}',z).replace('{x}',x).replace('{y}',y);
+  let cache=null;
+  try{ cache=await caches.open(V3D_DEM_CACHE); }catch(e){}
+  if(cache){ const hit=await cache.match(url); if(hit) return v3dDecodificarTerrarium(await hit.blob()); }
+  const resp=await fetch(url,{mode:'cors'});
+  if(!resp.ok) throw new Error('HTTP '+resp.status);
+  if(cache){ try{ await cache.put(url,resp.clone()); }catch(e){} }
+  return v3dDecodificarTerrarium(await resp.blob());
+}
+
+function v3dRangoTeselas(bounds,z){
+  const a=v3dTileDe(bounds.getWest(), bounds.getNorth(), z);
+  const b=v3dTileDe(bounds.getEast(), bounds.getSouth(), z);
+  const r={xMin:Math.min(a.x,b.x), xMax:Math.max(a.x,b.x), yMin:Math.min(a.y,b.y), yMax:Math.max(a.y,b.y), z};
+  r.total=(r.xMax-r.xMin+1)*(r.yMax-r.yMin+1);
+  return r;
+}
+
+// Arma el mosaico del rango de teselas. Descarga SECUENCIAL a propósito: cien peticiones
+// simultáneas desde un teléfono con mala señal es peor que cien seguidas, y así hay progreso.
+async function v3dArmarDEM(rango, nombre, onProg){
+  const {xMin,xMax,yMin,yMax,z,total}=rango;
+  const TS=256, W=(xMax-xMin+1)*TS, H=(yMax-yMin+1)*TS;
+  // Int16 (no Float32): la mitad de memoria con precisión de 1 m, muy por debajo del error del
+  // dato. Y se inicializa en V3D_SIN_DATO, no en 0: una tesela que falle no puede quedar como
+  // "0 m" en plena cordillera, que es un dato falso y silencioso.
+  const datos=new Int16Array(W*H).fill(V3D_SIN_DATO);
+  const tileM=2*V3D_MERC/Math.pow(2,z);
+  const bbox={ minX:-V3D_MERC+xMin*tileM, maxX:-V3D_MERC+(xMax+1)*tileM,
+               maxY: V3D_MERC-yMin*tileM, minY: V3D_MERC-(yMax+1)*tileM };
+  let hechos=0, fallidos=0;
+  for(let ty=yMin; ty<=yMax; ty++){
+    for(let tx=xMin; tx<=xMax; tx++){
+      try{
+        const t=await v3dTeselaDem(z,tx,ty);
+        const ox=(tx-xMin)*TS, oy=(ty-yMin)*TS;
+        for(let r=0;r<t.height;r++)
+          for(let c=0;c<t.width;c++)
+            datos[(oy+r)*W+(ox+c)]=t.datos[r*t.width+c];
+      }catch(e){ fallidos++; }
+      hechos++;
+      if(onProg) onProg(hechos,total);
+    }
+  }
+  if(fallidos===total) throw new Error('No se pudo obtener ninguna tesela de elevacion (¿sin conexion?)');
+  return {datos, width:W, height:H, crs:3857, bbox, nombre, fallidos, total, def:rango};
+}
+
+// Índice de áreas descargadas. Guarda solo la definición: con zoom + rango de teselas se puede
+// rearmar el mosaico desde las teselas ya cacheadas, sin red.
+function v3dListaDEM(){
+  try{ return JSON.parse(localStorage.getItem(V3D_DEM_IDX)||'[]'); }catch(e){ return []; }
+}
+function v3dGuardarDefDEM(dem){
+  try{
+    const lista=v3dListaDEM().filter(d=>d.id!==dem.def.id);
+    lista.unshift({id:dem.def.id||('d'+Date.now().toString(36)), nombre:dem.nombre, ...dem.def,
+                   fecha:new Date().toISOString().slice(0,10)});
+    localStorage.setItem(V3D_DEM_IDX, JSON.stringify(lista.slice(0,12)));
+  }catch(e){ console.warn('Vista 3D:',e); }
+}
+function v3dBorrarDefDEM(id){
+  try{ localStorage.setItem(V3D_DEM_IDX, JSON.stringify(v3dListaDEM().filter(d=>d.id!==id))); }
+  catch(e){ console.warn('Vista 3D:',e); }
+}
+
+// Lookup de elevación. SÍNCRONO a propósito: el terrain provider de Cesium hace miles de
+// llamadas por tesela y no puede pagar una promesa por cada una.
+// El tercer argumento existe para poder probar el lookup contra un DEM sintético: v3dDEM es
+// `let` de nivel superior y desde el smoke (otro window) no se puede asignar.
+function v3dElevSync(lat,lon,dem){
+  const d=dem||v3dDEM;
+  if(!d || !isFinite(lat) || !isFinite(lon)) return null;
+  let X,Y;
+  if(d.crs===4326){ X=lon; Y=lat; }
+  else if(d.crs===3857){ const p=v3dAMercator(lat,lon); X=p.X; Y=p.Y; }
+  else { const u=latLonAUtm(lat,lon,d.zonaUTM); X=u.este; Y=u.norte; }
+  if(!isFinite(X)||!isFinite(Y)) return null;         // los polos no existen en Mercator
+  const b=d.bbox;
+  if(X<b.minX||X>b.maxX||Y<b.minY||Y>b.maxY) return null;
+  // Clamp: justo en el borde (X===maxX, Y===minY) el índice se pasa en uno y leería el primer
+  // píxel de la fila siguiente —un valor de otro sitio— o undefined en la última fila.
+  const col=Math.min(d.width -1, Math.max(0, Math.floor((X-b.minX)/(b.maxX-b.minX)*d.width)));
+  const fil=Math.min(d.height-1, Math.max(0, Math.floor((b.maxY-Y)/(b.maxY-b.minY)*d.height)));
+  const v=d.datos[fil*d.width+col];
+  return (v===undefined||v===V3D_SIN_DATO||v<-9000)?null:v;
+}
+
+// SAMPLES=48: más densidad no agrega información (el DEM fuente es de ~19-30 m), solo reduce el
+// facetado visible al acercarse mucho.
+function v3dTerrainProvider(){
+  if(!v3dDEM) return new Cesium.EllipsoidTerrainProvider();
+  const S=48;
+  const ts=new Cesium.GeographicTilingScheme();
+  return new Cesium.CustomHeightmapTerrainProvider({
+    width:S, height:S, tilingScheme:ts,
+    callback:(x,y,level)=>{
+      const rect=ts.tileXYToRectangle(x,y,level);
+      const hs=new Float32Array(S*S);
+      for(let j=0;j<S;j++){
+        const lat=Cesium.Math.toDegrees(Cesium.Math.lerp(rect.north, rect.south, j/(S-1)));
+        for(let i=0;i<S;i++){
+          const lon=Cesium.Math.toDegrees(Cesium.Math.lerp(rect.west, rect.east, i/(S-1)));
+          // A zoom bajo, GeographicTilingScheme entrega teselas cuyo rect.north/south cae en
+          // ±90° exactos (la tesela raíz cubre el globo entero). Ahí la proyección a Mercator es
+          // singular y CUALQUIER excepción que escape de este callback detiene TODO el render
+          // loop de Cesium ("Rendering has stopped") dejando la escena en negro de forma
+          // PERMANENTE. Fuera del DEM da 0 igual, así que cualquier fallo se trata como
+          // "sin dato". Son tres líneas contra una clase entera de fallos irrecuperables.
+          let h;
+          try{ h=v3dElevSync(lat,lon); }catch(e){ h=null; }
+          hs[j*S+i]=h===null?0:h;
+        }
+      }
+      return hs;
+    }
+  });
+}
+
+// Cambiar el terreno en caliente con el sombreado ENCENDIDO deja el globo negro: Cesium sigue
+// iluminando con las normales del terreno anterior y no recompila el shader hasta que algo lo
+// obliga. Así que se apaga el sombreado durante el retejado y se vuelve a encender cuando las
+// teselas nuevas ya están. Medido: sin esto la vista queda a oscuras indefinidamente después de
+// descargar el relieve, que es justo el momento en que uno quiere mirarla.
+function v3dResombrear(){
+  if(!v3dViewer || !v3dViewer.scene.globe.enableLighting) return;
+  v3dViewer.scene.globe.enableLighting=false;
+  let intentos=0;
+  const reintentar=()=>{
+    if(!v3dViewer) return;
+    if(v3dViewer.scene.globe.tilesLoaded || ++intentos>40){
+      v3dViewer.scene.globe.enableLighting=true;
+      v3dPintarLado();          // el interruptor del panel quedó pintado en "apagado"
+    } else setTimeout(reintentar,300);
+  };
+  setTimeout(reintentar,600);
+}
+
+// Activa un DEM y re-teja el globo sin cerrar la vista.
+function v3dActivarDEM(dem){
+  v3dDEM=dem;
+  if(v3dViewer){
+    try{
+      v3dViewer.terrainProvider=v3dTerrainProvider();
+      v3dResombrear();
+    }catch(e){ console.warn('Vista 3D:',e); }
+  }
+  // Los puntos sin COTA colgaban de la altura de respaldo: con relieve real hay que recolocarlos.
+  v3dPintarProyecto();
+  v3dPintarLado();
+}
+
+async function v3dBajarDEMArea(){
+  if(!v3dBoundsAlAbrir){ toast('Sin área: abre la Vista 3D desde el mapa'); return; }
+  const rango=v3dRangoTeselas(v3dBoundsAlAbrir, V3D_DEM_Z);
+  if(rango.total>V3D_DEM_MAX_TILES){
+    const menor=v3dRangoTeselas(v3dBoundsAlAbrir, V3D_DEM_Z-1);
+    if(menor.total>V3D_DEM_MAX_TILES){
+      alert('El área visible son '+rango.total+' teselas de elevación (máximo '+V3D_DEM_MAX_TILES+').\n'+
+            'Cierra la Vista 3D, acércate al sector de interés y vuelve a abrirla.');
+      return;
+    }
+    if(!confirm('El área visible son '+rango.total+' teselas al detalle máximo (~19 m).\n'+
+                '¿Bajarla a la mitad de resolución (~38 m, '+menor.total+' teselas)?')) return;
+    Object.assign(rango, menor);
+  }
+  rango.id='d'+Date.now().toString(36);
+  const b=v3dBoundsAlAbrir.getCenter();
+  const nombre='Área '+b.lat.toFixed(2)+', '+b.lng.toFixed(2);
+  const est=el('div',{class:'muted',style:'color:#9fb0c0'},'⬇️ Relieve 0/'+rango.total);
+  if(v3dLado) v3dLado.append(est);
+  try{
+    const dem=await v3dArmarDEM(rango, nombre, (h,t)=>{ est.textContent='⬇️ Relieve '+h+'/'+t; });
+    v3dGuardarDefDEM(dem);
+    v3dActivarDEM(dem);
+    toast(dem.fallidos ? ('Relieve listo, '+dem.fallidos+' teselas sin dato') : 'Relieve listo');
+  }catch(err){
+    console.warn('Vista 3D:',err);
+    est.remove();
+    toast('⚠️ '+err.message);
+  }
+}
+
+// ---- DEM propio en GeoTIFF ----
+// Reusa georaster, que ya está vendorizado para "Mis mapas": no hace falta GeoTIFF.js.
+// Vive solo en la sesión: no se guarda. Un DEM propio puede pesar decenas de MB y el archivo ya
+// está en el teléfono del geólogo; volver a cargarlo son dos toques.
+const V3D_DEM_MAX_PX=12e6;    // ~24 MB en Int16: el techo de lo que un teléfono tolera sin penar
+async function v3dDEMdesdeGeoTIFF(file){
+  if(typeof parseGeoraster==='undefined') throw new Error('La librería de GeoTIFF no está cargada');
+  let gr;
+  // parseGeoraster DESPRENDE el ArrayBuffer que recibe (se lo pasa a un worker): hay que darle
+  // una lectura recién hecha y no reutilizarla después (ver la nota de mpDesdeGeoTIFF).
+  try{ gr=await parseGeoraster(await file.arrayBuffer()); }
+  catch(e){ throw new Error('No se pudo leer el GeoTIFF: '+(e.message||e)); }
+  if(!isFinite(gr.xmin)||!isFinite(gr.ymax)||!gr.pixelWidth)
+    throw new Error('Este TIFF no trae georreferenciación: no se puede ubicar');
+  // gr.projection es un NÚMERO EPSG. Sin proj4, lo que se soporta es lo que Geonotas sabe
+  // convertir por su cuenta: geográficas, Mercator y UTM SUR (utmALatLon tiene el hemisferio
+  // sur fijo por diseño — aceptar un huso norte colocaría el DEM 10.000 km corrido en silencio).
+  const epsg=gr.projection|0;
+  let crs, zonaUTM=null;
+  if(!epsg || epsg===4326) crs=4326;
+  else if(epsg===3857 || epsg===900913) crs=3857;
+  else if(epsg>=32717 && epsg<=32720){ crs=epsg; zonaUTM=epsg-32700; }
+  else throw new Error('EPSG '+epsg+' no soportado en la Vista 3D. Reexporta el DEM en WGS84 '+
+                       '(4326) o UTM sur (32718/32719).');
+  const vals=gr.values && gr.values[0];
+  if(!vals || !vals.length) throw new Error('El GeoTIFF no trae banda de datos');
+  // Submuestreo si no cabe: mejor un DEM más grueso que quedarse sin memoria en terreno.
+  let paso=1;
+  while(Math.ceil(gr.height/paso)*Math.ceil(gr.width/paso)>V3D_DEM_MAX_PX) paso++;
+  const W=Math.ceil(gr.width/paso), H=Math.ceil(gr.height/paso);
+  // Aplanado a Int16 en una sola pasada: el callback del terreno hace 2.304 lecturas por tesela
+  // y no puede pagar un acceso anidado values[fila][col] en cada una.
+  const datos=new Int16Array(W*H);
+  const nulo=gr.noDataValue;
+  for(let r=0;r<H;r++){
+    const fila=vals[r*paso]; if(!fila){ datos.fill(V3D_SIN_DATO, r*W, r*W+W); continue; }
+    for(let c=0;c<W;c++){
+      const v=fila[c*paso];
+      datos[r*W+c]=(v==null||!isFinite(v)||v===nulo||v<-9000)?V3D_SIN_DATO:Math.round(v);
+    }
+  }
+  // bbox derivado de xmin/ymax y del tamaño real, no copiado de xmax/ymin: así la aritmética
+  // fila/columna y el rectángulo no pueden discrepar.
+  const bbox={ minX:gr.xmin, maxX:gr.xmin+gr.width*gr.pixelWidth,
+               maxY:gr.ymax, minY:gr.ymax-gr.height*gr.pixelHeight };
+  return {datos, width:W, height:H, crs, zonaUTM, bbox, nombre:file.name.replace(/\.tiff?$/i,''),
+          fallidos:0, total:1, def:null, paso};
+}
+
+function v3dPedirGeoTIFF(){
+  const inp=el('input',{type:'file', accept:'.tif,.tiff', style:'display:none',
+    onchange:async e=>{
+      const f=e.target.files&&e.target.files[0]; inp.remove();
+      if(!f) return;
+      toast('Leyendo el GeoTIFF…');
+      try{
+        const dem=await v3dDEMdesdeGeoTIFF(f);
+        v3dActivarDEM(dem);
+        toast(dem.paso>1 ? ('Relieve cargado (submuestreado 1:'+dem.paso+')') : 'Relieve cargado');
+      }catch(err){ console.warn('Vista 3D:',err); alert(err.message||String(err)); }
+    }});
+  document.body.append(inp);
+  inp.click();
+}
+
+// Rearma un área ya descargada desde las teselas guardadas (funciona sin señal).
+async function v3dRecuperarDEM(def){
+  const est=el('div',{class:'muted',style:'color:#9fb0c0'},'⏳ Rearmando relieve…');
+  if(v3dLado) v3dLado.append(est);
+  try{
+    const dem=await v3dArmarDEM(def, def.nombre, (h,t)=>{ est.textContent='⏳ Relieve '+h+'/'+t; });
+    v3dActivarDEM(dem);
+  }catch(err){
+    console.warn('Vista 3D:',err); est.remove();
+    toast('⚠️ No se pudo rearmar: '+err.message);
+  }
+}
+
+// ---- Geometría de un plano geológico (rumbo/manteo) ----
+// Portada del Trazador, que trabaja en UTM; aquí se reusa la conversión propia de Geonotas
+// (latLonAUtm/utmALatLon, Snyder) en vez de sumar proj4. Regla de la mano derecha: la dirección
+// de buzamiento es rumbo + 90°.
+function v3dMod360(d){ return ((d%360)+360)%360; }
+function v3dAzBuz(rumbo){ return v3dMod360(rumbo+90); }
+function v3dDirPlano(rumbo, manteo){
+  const az=v3dAzBuz(rumbo)*D2R, dip=manteo*D2R, ru=rumbo*D2R;
+  return { rumboDir:[Math.sin(ru), Math.cos(ru), 0],
+           buzDir:[Math.sin(az)*Math.cos(dip), Math.cos(az)*Math.cos(dip), -Math.sin(dip)] };
+}
+// Las 4 esquinas del cuadrado que representa el plano, centrado en el punto medido.
+// Devuelve [[lat,lon,z],...]; L es el lado en metros.
+function v3dCornersPlano(lat, lon, z0, rumbo, manteo, L){
+  const {este,norte,zona}=latLonAUtm(lat,lon);
+  const az=v3dAzBuz(rumbo)*D2R, dip=manteo*D2R;
+  const sE=Math.sin(rumbo*D2R), sN=Math.cos(rumbo*D2R);
+  const dE=Math.sin(az)*Math.cos(dip), dN=Math.cos(az)*Math.cos(dip), dZ=-Math.sin(dip);
+  const h=L/2;
+  return [[ h*sE+h*dE,  h*sN+h*dN,  h*dZ],
+          [ h*sE-h*dE,  h*sN-h*dN, -h*dZ],
+          [-h*sE-h*dE, -h*sN-h*dN, -h*dZ],
+          [-h*sE+h*dE, -h*sN+h*dN,  h*dZ]]
+    .map(([de,dn,dz])=>{ const p=utmALatLon(este+de, norte+dn, zona); return [p.lat, p.lon, z0+dz]; });
+}
+function v3dPosicionesPlano(corners){
+  return Cesium.Cartesian3.fromDegreesArrayHeights(corners.flatMap(c=>[c[1],c[0],c[2]]));
+}
+
+// ---- Puntos, notas, líneas y actitudes del proyecto sobre el relieve ----
+const V3D_LADO_ACTITUD=80;      // m: tamaño del cuadrado que dibuja una actitud medida
+
+// Altura a la que colgar algo en (lat,lon): la COTA medida manda sobre el DEM, porque es el dato
+// del geólogo; el DEM es el respaldo y el elipsoide el último recurso.
+function v3dAlturaDe(lat, lon, cota){
+  const c=parseFloat(cota);
+  if(!isNaN(c)) return c;
+  const z=v3dElevSync(lat,lon);
+  if(z!=null) return z;
+  if(v3dViewer){ const g=v3dViewer.scene.globe.getHeight(Cesium.Cartographic.fromDegrees(lon,lat)); if(g!=null) return g; }
+  return 0;
+}
+
+async function v3dPintarProyecto(){
+  if(!v3dViewer || !curProyecto) return;
+  v3dEntsProy.forEach(e=>{ try{ v3dViewer.entities.remove(e); }catch(_){} });
+  v3dEntsProy=[];
+  // Cada entidad en su propio try/catch: una geometría degenerada que Cesium no pueda triangular
+  // no puede llevarse por delante al resto del proyecto (ni al render loop).
+  const add=o=>{ try{ const e=v3dViewer.entities.add(o); v3dEntsProy.push(e); return e; }
+                 catch(err){ console.warn('Vista 3D:',err); return null; } };
+  const etiqueta=txt=>({text:String(txt), font:'12px sans-serif', fillColor:Cesium.Color.WHITE,
+    outlineColor:Cesium.Color.BLACK, outlineWidth:3, style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+    pixelOffset:new Cesium.Cartesian2(0,-18), disableDepthTestDistance:Number.POSITIVE_INFINITY,
+    translucencyByDistance:new Cesium.NearFarScalar(4000,1,30000,0)});
+
+  // --- puntos de control (misma colección activa que el mapa 2D) ---
+  const puntos=await childrenOf(storeActivo(), curProyecto.id);
+  for(const p of puntos){
+    const lat=parseFloat(p[inLat]), lon=parseFloat(p[inLon]);
+    if(isNaN(lat)||isNaN(lon)) continue;
+    const z=v3dAlturaDe(lat,lon,p.COTA);
+    const e=add({ position:Cesium.Cartesian3.fromDegrees(lon,lat,z),
+      point:{pixelSize:11, color:Cesium.Color.fromCssColorString('#16a34a'),
+             outlineColor:Cesium.Color.WHITE, outlineWidth:2,
+             disableDepthTestDistance:Number.POSITIVE_INFINITY},
+      label:p.ID_PUNTO_CONTROL?etiqueta(p.ID_PUNTO_CONTROL):undefined });
+    if(e) e._v3dPunto=p.id;
+    // --- actitudes medidas en ese punto: un cuadrado con el rumbo/manteo real ---
+    for(const store of ['estructural','contacto']){
+      const campos=PLANO_CAMPOS[store];
+      for(const reg of await childrenOf(store,p.id)){
+        const ru=parseFloat(reg[campos.rumbo]), ma=parseFloat(reg[campos.manteo]);
+        if(isNaN(ru)||isNaN(ma)) continue;
+        const pl=add({ polygon:{
+          hierarchy:new Cesium.PolygonHierarchy(v3dPosicionesPlano(v3dCornersPlano(lat,lon,z,ru,ma,V3D_LADO_ACTITUD))),
+          perPositionHeight:true,
+          material:Cesium.Color.fromCssColorString(store==='contacto'?'#d97706':'#2563eb').withAlpha(.55),
+          outline:true, outlineColor:Cesium.Color.WHITE }});
+        if(pl){ pl._v3dPunto=p.id; pl._v3dPlano={store, id:reg.id, ptId:p.id,
+          ptNombre:p.ID_PUNTO_CONTROL||'punto', lat, lon, z0:z, rumbo:ru, manteo:ma}; }
+      }
+    }
+  }
+
+  // --- notas de campo ---
+  for(const n of await childrenOf('nota', curProyecto.id)){
+    const lat=parseFloat(n.LATITUD), lon=parseFloat(n.LONGITUD);
+    if(isNaN(lat)||isNaN(lon)) continue;
+    add({ position:Cesium.Cartesian3.fromDegrees(lon,lat,v3dAlturaDe(lat,lon,null)),
+      point:{pixelSize:10, color:Cesium.Color.fromCssColorString(NOTA_CATEGORIA_COLOR[n.CATEGORIA_NOTA]||'#666666'),
+             outlineColor:Cesium.Color.WHITE, outlineWidth:2,
+             disableDepthTestDistance:Number.POSITIVE_INFINITY},
+      label:n.TEXTO?etiqueta('📝 '+String(n.TEXTO).slice(0,28)):undefined });
+  }
+
+  // --- líneas geológicas (contactos/fallas), con el mismo color que en 2D ---
+  // clampToGround necesita soporte de GroundPolyline; donde no lo hay (GPUs viejas) se cuelga
+  // la línea del DEM vértice a vértice, que a esta escala se ve igual.
+  const pegaAlSuelo=Cesium.GroundPolylinePrimitive.isSupported(v3dViewer.scene);
+  for(const ln of await childrenOf(storeLineaActivo(), curProyecto.id)){
+    if(!ln.geom || ln.geom.length<2) continue;
+    const est=estiloLinea(ln);
+    const pos=pegaAlSuelo
+      ? Cesium.Cartesian3.fromDegreesArray(ln.geom.flatMap(([la,lo])=>[lo,la]))
+      : Cesium.Cartesian3.fromDegreesArrayHeights(ln.geom.flatMap(([la,lo])=>[lo,la,v3dAlturaDe(la,lo,null)]));
+    add({ polyline:{ positions:pos, width:4, clampToGround:pegaAlSuelo,
+      material:Cesium.Color.fromCssColorString(est.color) }});
+  }
+}
+
+// ---- Plano editable: ajustar un rumbo/manteo sobre el terreno real ----
+// Idea tomada del "move plane" de Move y del Trazador, con una diferencia deliberada: acá el
+// plano está ANCLADO a su punto de control (ahí lo midió el geólogo), así que no hay gizmo de
+// traslación. Solo se ajusta la orientación: rumbo y manteo.
+const V3D_LADO_EDIT=400;         // m: lado del plano mientras se edita (se ve y se agarra bien)
+let v3dPlano=null;               // {store,id,ptId,ptNombre,lat,lon,z0,rumbo,manteo,rumbo0,manteo0}
+let v3dArrastre=null;            // 'rumbo' | 'manteo' | null
+let v3dEnts={plano:null, gRumbo:null, gManteo:null, gCentro:null, ejeRumbo:null, ejeManteo:null};
+
+function v3dPosGizmos(p){
+  const {rumboDir,buzDir}=v3dDirPlano(p.rumbo,p.manteo);
+  const half=V3D_LADO_EDIT/2;
+  const {este,norte,zona}=latLonAUtm(p.lat,p.lon);
+  const pr=utmALatLon(este+half*rumboDir[0], norte+half*rumboDir[1], zona);
+  const pm=utmALatLon(este+half*buzDir[0],   norte+half*buzDir[1],   zona);
+  return { centro:Cesium.Cartesian3.fromDegrees(p.lon,p.lat,p.z0),
+           rumbo: Cesium.Cartesian3.fromDegrees(pr.lon,pr.lat,p.z0),
+           manteo:Cesium.Cartesian3.fromDegrees(pm.lon,pm.lat,p.z0+half*buzDir[2]) };
+}
+
+// Las geometrías se declaran con CallbackProperty para que Cesium las reevalúe cada cuadro:
+// durante el arrastre solo cambian dos números, no hay que crear y destruir entidades.
+function v3dDibujarPlanoEditable(){
+  if(!v3dViewer) return;
+  const cb=f=>new Cesium.CallbackProperty(f,false);
+  v3dEnts.plano=v3dViewer.entities.add({ polygon:{
+    hierarchy:cb(()=>new Cesium.PolygonHierarchy(v3dPosicionesPlano(
+      v3dCornersPlano(v3dPlano.lat,v3dPlano.lon,v3dPlano.z0,v3dPlano.rumbo,v3dPlano.manteo,V3D_LADO_EDIT)))),
+    perPositionHeight:true, material:Cesium.Color.fromCssColorString('#2563eb').withAlpha(.45) }});
+  v3dEnts.ejeRumbo=v3dViewer.entities.add({ polyline:{
+    positions:cb(()=>{const g=v3dPosGizmos(v3dPlano); return [g.centro,g.rumbo];}),
+    width:3, material:Cesium.Color.fromCssColorString('#dc2626') }});
+  v3dEnts.ejeManteo=v3dViewer.entities.add({ polyline:{
+    positions:cb(()=>{const g=v3dPosGizmos(v3dPlano); return [g.centro,g.manteo];}),
+    width:3, material:Cesium.Color.fromCssColorString('#2563eb') }});
+  v3dEnts.gCentro=v3dViewer.entities.add({ position:cb(()=>v3dPosGizmos(v3dPlano).centro),
+    point:{pixelSize:10, color:Cesium.Color.WHITE, outlineColor:Cesium.Color.BLACK, outlineWidth:2,
+           disableDepthTestDistance:Number.POSITIVE_INFINITY} });
+  v3dEnts.gRumbo=v3dViewer.entities.add({ position:cb(()=>v3dPosGizmos(v3dPlano).rumbo),
+    point:{pixelSize:16, color:Cesium.Color.fromCssColorString('#dc2626'),
+           outlineColor:Cesium.Color.WHITE, outlineWidth:2,
+           disableDepthTestDistance:Number.POSITIVE_INFINITY} });
+  v3dEnts.gManteo=v3dViewer.entities.add({ position:cb(()=>v3dPosGizmos(v3dPlano).manteo),
+    point:{pixelSize:16, color:Cesium.Color.fromCssColorString('#2563eb'),
+           outlineColor:Cesium.Color.WHITE, outlineWidth:2,
+           disableDepthTestDistance:Number.POSITIVE_INFINITY} });
+}
+
+function v3dSoltarPlano(){
+  if(v3dViewer) Object.keys(v3dEnts).forEach(k=>{
+    if(v3dEnts[k]){ try{ v3dViewer.entities.remove(v3dEnts[k]); }catch(e){} v3dEnts[k]=null; } });
+  v3dPlano=null; v3dArrastre=null;
+  v3dPintarLado();
+}
+
+function v3dSeleccionarPlano(info){
+  if(v3dPlano && (v3dPlano.rumbo!==v3dPlano.rumbo0 || v3dPlano.manteo!==v3dPlano.manteo0) &&
+     !confirm('El plano que estabas ajustando tiene cambios sin guardar. ¿Soltarlo?')) return;
+  v3dSoltarPlano();
+  v3dPlano={...info, rumbo0:info.rumbo, manteo0:info.manteo};
+  v3dDibujarPlanoEditable();
+  v3dPintarLado();
+}
+
+function v3dAjustar(campo, delta){
+  if(!v3dPlano) return;
+  if(campo==='rumbo') v3dPlano.rumbo=v3dMod360(v3dPlano.rumbo+delta);
+  else v3dPlano.manteo=Math.max(0, Math.min(89, v3dPlano.manteo+delta));
+  v3dPintarLado();
+}
+
+// Arrastre de los gizmos. Se engancha al mismo v3dHandler que los clics.
+function v3dInstalarGizmos(){
+  if(!v3dViewer || !v3dHandler) return;
+  const ctl=v3dViewer.scene.screenSpaceCameraController;
+  v3dHandler.setInputAction(ev=>{
+    if(!v3dPlano) return;
+    const p=v3dViewer.scene.pick(ev.position), id=p&&p.id;
+    if(id===v3dEnts.gRumbo) v3dArrastre='rumbo';
+    else if(id===v3dEnts.gManteo) v3dArrastre='manteo';
+    else return;
+    ctl.enableRotate=ctl.enableTranslate=ctl.enableTilt=false;
+  }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+  v3dHandler.setInputAction(()=>{
+    if(!v3dArrastre) return;
+    v3dArrastre=null;
+    ctl.enableRotate=ctl.enableTranslate=ctl.enableTilt=true;
+    v3dPintarLado();
+  }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
+  v3dHandler.setInputAction(mov=>{
+    if(!v3dArrastre || !v3dPlano) return;
+    const ray=v3dViewer.camera.getPickRay(mov.endPosition);
+    if(!ray) return;
+    const p=v3dPlano;
+    const centro=Cesium.Cartesian3.fromDegrees(p.lon,p.lat,p.z0);
+    const {east,north,up}=v3dDirENU(p.lat,p.lon);
+    // Con el rayo del mouse casi paralelo al plano de intersección (mirando el plano de canto)
+    // la intersección es numéricamente inestable: un cambio mínimo del rayo mueve el corte
+    // enormemente y el ángulo salta. 0.05 ≈ 3°: por debajo se ignora el movimiento.
+    const estable=n=>Math.abs(Cesium.Cartesian3.dot(ray.direction,n))>0.05;
+
+    if(v3dArrastre==='rumbo'){
+      if(!estable(up)) return;                       // el rumbo es un concepto horizontal
+      const inter=Cesium.IntersectionTests.rayPlane(ray, Cesium.Plane.fromPointNormal(centro,up));
+      if(!Cesium.defined(inter)) return;
+      const c=Cesium.Cartographic.fromCartesian(inter);
+      const a=latLonAUtm(p.lat,p.lon);
+      const b=latLonAUtm(Cesium.Math.toDegrees(c.latitude), Cesium.Math.toDegrees(c.longitude), a.zona);
+      const dE=b.este-a.este, dN=b.norte-a.norte;
+      if(Math.abs(dE)<1e-6 && Math.abs(dN)<1e-6) return;   // justo sobre el eje: indefinido
+      p.rumbo=Math.round(v3dMod360(Math.atan2(dE,dN)*R2D));
+      return;
+    }
+    // manteo: el plano de intersección es VERTICAL y contiene la dirección de buzamiento, así
+    // que su normal es la dirección de RUMBO. Y la dirección horizontal de proyección es la de
+    // buzamiento PURA (az_buz como vector horizontal), NO el buzDir de v3dDirPlano: ese ya
+    // lleva el factor cos(manteo) del manteo actual, y un punto construido con él queda fuera
+    // del plano justo a half*cos(manteo). Es el error más fácil de reintroducir aquí.
+    const ru=p.rumbo*D2R, az=v3dAzBuz(p.rumbo)*D2R;
+    const dirRumbo=v3dDirHorizECEF([Math.sin(ru),Math.cos(ru)], east, north);
+    const dirBuzH =v3dDirHorizECEF([Math.sin(az),Math.cos(az)], east, north);
+    if(!estable(dirRumbo)) return;
+    const inter=Cesium.IntersectionTests.rayPlane(ray, Cesium.Plane.fromPointNormal(centro,dirRumbo));
+    if(!Cesium.defined(inter)) return;
+    const dif=Cesium.Cartesian3.subtract(inter,centro,new Cesium.Cartesian3());
+    const dh=Cesium.Cartesian3.dot(dif,dirBuzH), dv=Cesium.Cartesian3.dot(dif,up);
+    if(Math.abs(dh)<1e-6 && Math.abs(dv)<1e-6) return;
+    p.manteo=Math.max(0, Math.min(89, Math.round(Math.atan2(-dv,dh)*R2D)));
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+}
+
+function v3dDirENU(lat,lon){
+  const m=Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(lon,lat));
+  return { east: Cesium.Matrix4.getColumn(m,0,new Cesium.Cartesian3()),
+           north:Cesium.Matrix4.getColumn(m,1,new Cesium.Cartesian3()),
+           up:   Cesium.Matrix4.getColumn(m,2,new Cesium.Cartesian3()) };
+}
+// [dE,dN] horizontal en metros → vector unitario ECEF (para armar normales de plano)
+function v3dDirHorizECEF(dirEN, east, north){
+  const v=Cesium.Cartesian3.add(
+    Cesium.Cartesian3.multiplyByScalar(east, dirEN[0], new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(north,dirEN[1], new Cesium.Cartesian3()),
+    new Cesium.Cartesian3());
+  return Cesium.Cartesian3.normalize(v,v);
+}
+
+// Guardar el ajuste. Por defecto NO se pisa lo medido en terreno: se agrega una medición nueva,
+// que es lo que realmente es un ajuste hecho mirando el DEM (una interpretación).
+async function v3dGuardarPlano(reemplazar){
+  if(!v3dPlano) return;
+  // El overlay cuelga de document.body, fuera de #app, así que updateFormReadonly() no lo
+  // alcanza: el bloqueo de Gabinete hay que comprobarlo a mano.
+  if(bloqueoGabineteActivo()) return;
+  const p=v3dPlano, campos=PLANO_CAMPOS[p.store];
+  const reg=await get(p.store,p.id);
+  if(!reg){ toast('⚠️ Ese dato ya no existe'); v3dSoltarPlano(); return; }
+  if(reemplazar){
+    if(!confirm('Vas a REEMPLAZAR el rumbo/manteo medido en terreno.\n\n'+
+      p.ptNombre+' · '+p.store+'\n'+p.rumbo0+'° / '+p.manteo0+'°   →   '+p.rumbo+'° / '+p.manteo+'°\n\n¿Continuar?')) return;
+    // La procedencia se escribe una sola vez: tras dos ediciones seguidas el "original" sigue
+    // siendo el de terreno, no el ajuste anterior.
+    if(!reg._v3dOriginal) reg._v3dOriginal={rumbo:p.rumbo0, manteo:p.manteo0, fecha:new Date().toISOString()};
+    reg[campos.rumbo]=p.rumbo; reg[campos.manteo]=p.manteo;
+    await put(p.store,reg);
+    toast('Rumbo/manteo reemplazados');
+  }else{
+    // Copia del registro original: así la medición nueva conserva tipo de estructura,
+    // descripción y demás, y solo cambian los ángulos.
+    const nuevo={...reg, id:uid(), ...ahora()};
+    delete nuevo._v3dOriginal;
+    nuevo[campos.rumbo]=p.rumbo; nuevo[campos.manteo]=p.manteo;
+    if(campos.conf) nuevo[campos.conf]='BAJA';
+    nuevo._v3dOrigen={de:p.id, fecha:new Date().toISOString()};
+    await put(p.store,nuevo);
+    // El plano pasa a apuntar a la medición nueva: lo medido en terreno queda intacto en su
+    // registro y los ajustes que sigan haciéndose refinan la interpretación, no el dato.
+    p.id=nuevo.id;
+    toast('Guardada como medición nueva');
+  }
+  p.rumbo0=p.rumbo; p.manteo0=p.manteo;
+  await v3dPintarProyecto();
+  v3dPintarLado();
+}
+
+// Panel lateral: estado del relieve y del motor 3D. Lo repintan las acciones que lo cambian.
+let v3dLadoSeq=0;
+async function v3dPintarLado(){
+  if(!v3dLado) return;
+  // Token de repintado: el panel consulta la caché de Cesium (async) a mitad de camino, y dos
+  // repintados solapados (ej. activar el DEM mientras uno estaba en vuelo) duplicaban la mitad
+  // de abajo. Gana el último que empezó.
+  const lado=v3dLado, seq=++v3dLadoSeq;
+  lado.textContent='';
+  // --- plano seleccionado: lo primero, porque es lo que el geólogo está mirando ---
+  if(v3dPlano){
+    const p=v3dPlano, cambiado=(p.rumbo!==p.rumbo0||p.manteo!==p.manteo0);
+    lado.append(el('div',{},el('b',{},'📐 '+p.ptNombre),' · ',p.store));
+    lado.append(el('div',{style:'font-size:15px'},
+      el('b',{},p.rumbo+'° / '+p.manteo+'°'),
+      cambiado?el('span',{class:'muted',style:'color:#e8b84b'},'  (medido '+p.rumbo0+'/'+p.manteo0+')'):''));
+    const fila=(txt,campo,paso)=>el('div',{class:'v3d-fila'},
+      el('span',{style:'width:56px'},txt),
+      el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo,-paso)},'−'+paso),
+      el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo,-1)},'−1'),
+      el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo, 1)},'+1'),
+      el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo, paso)},'+'+paso));
+    // Los botones son el camino principal en terreno: los eventos de arrastre de Cesium son de
+    // mouse, y con el dedo (y con guantes) el gizmo es inmanejable.
+    lado.append(fila('Rumbo','rumbo',5), fila('Manteo','manteo',5));
+    lado.append(el('button',{class:'btn',onclick:()=>v3dGuardarPlano(false)},'➕ Guardar como medición nueva'));
+    lado.append(el('button',{class:'btn sec',onclick:()=>v3dGuardarPlano(true)},'✏️ Reemplazar la medición'));
+    lado.append(el('button',{class:'btn sec',onclick:v3dSoltarPlano},'✕ Soltar el plano'));
+    lado.append(el('hr',{style:'border:0;border-top:1px solid #33404c;width:100%'}));
+  }else{
+    lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},
+      'Toca un plano de actitud (los cuadrados azules) para ajustarlo sobre el terreno.'));
+  }
+  lado.append(el('div',{},el('b',{},'Relieve: '),
+    v3dDEM ? (v3dDEM.nombre||'DEM cargado') : 'sin datos (globo liso)'));
+  if(!v3dDEM){
+    lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},
+      'El globo se ve liso porque todavía no hay elevaciones cargadas.'));
+  }
+  lado.append(el('button',{class:'btn',onclick:v3dBajarDEMArea},'⬇️ Relieve del área visible'));
+  lado.append(el('button',{class:'btn sec',onclick:v3dPedirGeoTIFF},'📂 Relieve propio (GeoTIFF)'));
+  if(v3dViewer){
+    const g=v3dViewer.scene.globe;
+    lado.append(el('label',{class:'v3d-fila',style:'cursor:pointer'},
+      el('input',{type:'checkbox',...(g.enableLighting?{checked:'checked'}:{}),
+        onchange:e=>{ g.enableLighting=e.target.checked; }}),
+      el('span',{},'☀️ Sombreado solar'),
+      el('span',{class:'muted',style:'color:#9fb0c0;flex-basis:100%'},
+        'Realza el relieve. Si la escena se oscurece al cambiar el terreno, apágalo y vuelve a encenderlo.')));
+  }
+  const lista=v3dListaDEM();
+  if(lista.length){
+    lado.append(el('div',{class:'muted',style:'color:#9fb0c0;margin-top:4px'},'Áreas guardadas:'));
+    lista.slice(0,5).forEach(d=>{
+      lado.append(el('div',{class:'v3d-fila'},
+        el('button',{class:'btn sec',style:'flex:1;text-align:left',
+          onclick:()=>v3dRecuperarDEM(d)}, '⛰️ '+(d.nombre||d.id)+' · '+d.fecha),
+        el('button',{class:'btn sec',title:'Olvidar esta área',
+          onclick:()=>{ v3dBorrarDefDEM(d.id); v3dPintarLado(); }},'✕')));
+    });
+  }
+  lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},
+    v3dTilesIdx && v3dTilesIdx.size
+      ? '🛰️ '+v3dTilesIdx.size+' teselas satelitales guardadas: esas se ven sin señal.'
+      : '🛰️ Sin teselas guardadas. Usa "⬇️ Tiles" en el mapa para llevarlas a terreno.'));
+  const guardado=await v3dCesiumGuardado();
+  if(v3dLado!==lado || v3dLadoSeq!==seq) return;   // se cerró o se repintó mientras consultábamos
+  lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},
+    guardado ? '✓ Motor 3D guardado: la Vista 3D funciona sin señal.'
+             : '⚠️ Motor 3D aun no guardado para terreno.'));
+  if(guardado) lado.append(el('button',{class:'btn sec',onclick:v3dBorrarCesium},'🗑️ Borrar motor 3D'));
+}
+
+async function v3dAbrir(){
+  if(v3dOv) return;                                  // guarda contra el doble toque
+  v3dBoundsAlAbrir=(mapaVista&&mapaVista.getBounds())||null;
+  v3dBtnEstado('⏳ 3D', true);
+  const cv=el('div',{class:'v3d-cv'});
+  v3dMsg=el('div',{class:'v3d-msg'},'Cargando el motor 3D…');
+  cv.append(v3dMsg);
+  v3dLado=el('div',{class:'v3d-lado'});
+  v3dOv=el('div',{class:'v3d-ov'},
+    el('div',{class:'v3d-top'},
+      el('b',{},'⛰️ Vista 3D'),
+      el('button',{class:'btn',onclick:()=>v3dCerrar()},'✓ Listo')),
+    el('div',{class:'v3d-cuerpo'}, cv, v3dLado));
+  v3dOnKey=e=>{ if(e.key==='Escape') v3dCerrar(); };
+  document.addEventListener('keydown',v3dOnKey);
+  document.body.append(v3dOv);
+  // El contenedor tiene que estar MEDIDO antes de crear el Viewer (ver la regla dura del CSS).
+  // El plazo de respaldo no es adorno: con la pestaña en segundo plano (el geólogo contesta un
+  // mensaje y vuelve) requestAnimationFrame NO se dispara y la vista quedaba colgada en
+  // "Cargando el motor 3D..." para siempre.
+  await new Promise(r=>{ let listo=false; const fin=()=>{ if(!listo){ listo=true; r(); } };
+    requestAnimationFrame(fin); setTimeout(fin,150); });
+  try{
+    await v3dCargarCesium();
+  }catch(err){
+    console.warn('Vista 3D:',err);
+    if(v3dMsg){ v3dMsg.className='v3d-msg acc';
+      v3dMsg.textContent='No se pudo cargar el motor 3D. Abrelo una vez con conexion y despues funciona en terreno.'; }
+    v3dBtnEstado('⛰️ 3D', false);
+    return;
+  }
+  v3dTilesIdx=await v3dIndiceTilesOffline();
+  if(!v3dOv) return;                                 // el usuario cerro mientras cargaba
+  // Sin señal y sin teselas guardadas, un proveedor de imagen solo produce cientos de errores:
+  // mejor globo de color plano, sobre el que el relieve sombreado se lee perfectamente.
+  const sinImagen=!navigator.onLine && v3dTilesIdx.size===0;
+  try{
+    v3dViewer=new Cesium.Viewer(cv,{
+      terrainProvider: v3dTerrainProvider(),
+      baseLayer: sinImagen ? false : new Cesium.ImageryLayer(v3dImageryEsri()),
+      baseLayerPicker:false, geocoder:false, homeButton:true, sceneModePicker:true,
+      navigationHelpButton:false, animation:false, timeline:false, fullscreenButton:true,
+      // el InfoBox de Cesium es un iframe que en teléfono tapa media pantalla: los clics los
+      // maneja v3dHandler, que sabe abrir la ficha real del punto.
+      infoBox:false, selectionIndicator:false
+    });
+  }catch(err){
+    console.warn('Vista 3D:',err);
+    if(v3dMsg){ v3dMsg.className='v3d-msg acc';
+      v3dMsg.textContent='Este dispositivo no puede mostrar la Vista 3D (sin WebGL).'; }
+    v3dBtnEstado('⛰️ 3D', false);
+    return;
+  }
+  if(sinImagen){
+    v3dViewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#6b7a63');
+    toast('📴 Sin señal y sin teselas guardadas: solo se ve el relieve');
+  }
+  // Sombreado solar APAGADO por omisión, aunque ayude a leer el relieve. Con el reloj en hora
+  // real la vista se pone negra de tarde y de noche -- justo cuando el geólogo revisa la jornada
+  // --, y encendido mientras el terreno se reteja Cesium deja el globo a oscuras de forma
+  // errática (ilumina con las normales del terreno anterior). Encenderlo a mano, con la escena
+  // ya cargada, funciona bien: por eso queda como interruptor del panel y no como valor inicial.
+  // El reloj se congela a media mañana para que, al encenderlo, el sol esté siempre donde sirve:
+  // acá el sol es una luz de dibujo, no un dato.
+  const medioDia=new Date(); medioDia.setUTCHours(14,30,0,0);
+  v3dViewer.clock.currentTime=Cesium.JulianDate.fromDate(medioDia);
+  v3dViewer.clock.shouldAnimate=false;
+  v3dViewer.scene.globe.enableLighting=false;
+  // Ajustes de telefono: un canvas a 3x de densidad no aporta nada en 3D y funde la bateria.
+  v3dViewer.resolutionScale=Math.min(1, 1/(window.devicePixelRatio||1));
+  v3dViewer.scene.globe.tileCacheSize=100;
+  const c=v3dBoundsAlAbrir&&v3dBoundsAlAbrir.getCenter();
+  if(c) v3dViewer.camera.setView({
+    destination:Cesium.Cartesian3.fromDegrees(c.lng, c.lat-0.03, 5000),
+    orientation:{heading:0, pitch:Cesium.Math.toRadians(-35), roll:0}
+  });
+  if(v3dMsg){ v3dMsg.remove(); v3dMsg=null; }
+  v3dHandler=new Cesium.ScreenSpaceEventHandler(v3dViewer.scene.canvas);
+  v3dHandler.setInputAction(mov=>{
+    const p=v3dViewer.scene.pick(mov.position);
+    const ent=p&&p.id;
+    if(!ent) return;
+    if(ent._v3dPlano){ v3dSeleccionarPlano(ent._v3dPlano); return; }
+    // Abrir la ficha obliga a cerrar la vista: si el usuario prefiere quedarse (ajuste sin
+    // guardar), v3dCerrar devuelve false y no se navega a ninguna parte.
+    if(ent._v3dPunto){ const id=ent._v3dPunto; if(v3dCerrar()){ curPunto=null; vista={n:'punto',id}; render(); } }
+  }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  v3dInstalarGizmos();
+  await v3dPintarProyecto();
+  v3dPintarLado();
+  v3dBtnEstado('⛰️ 3D', true);
+}
+
+// Devuelve false si el usuario decidió quedarse (hay un ajuste sin guardar).
+function v3dCerrar(){
+  if(v3dPlano && (v3dPlano.rumbo!==v3dPlano.rumbo0 || v3dPlano.manteo!==v3dPlano.manteo0) &&
+     !confirm('Hay un plano ajustado sin guardar. ¿Salir igual?')) return false;
+  if(v3dOnKey){ document.removeEventListener('keydown',v3dOnKey); v3dOnKey=null; }
+  if(v3dHandler){ try{ v3dHandler.destroy(); }catch(e){} v3dHandler=null; }
+  if(v3dViewer){
+    try{
+      // devolver los controles de camara por si se cierra a mitad de un arrastre de gizmo
+      const ctl=v3dViewer.scene.screenSpaceCameraController;
+      ctl.enableRotate=ctl.enableTranslate=ctl.enableTilt=true;
+      v3dViewer.entities.removeAll();
+      v3dViewer.destroy();
+    }catch(e){ console.warn('Vista 3D:',e); }
+    v3dViewer=null;
+  }
+  if(v3dOv){ v3dOv.remove(); v3dOv=null; }
+  v3dMsg=null; v3dLado=null; v3dEntsProy=[]; v3dPlano=null; v3dArrastre=null;
+  v3dEnts={plano:null, gRumbo:null, gManteo:null, gCentro:null, ejeRumbo:null, ejeManteo:null};
+  v3dBtnEstado('⛰️ 3D', false);
+  // A proposito NO se sueltan v3dDEM ni el <script> de Cesium ya cargado: reabrir es instantaneo
+  // y el DEM cuesta una descarga. Lo que si se destruye es el Viewer, porque el overlay sale del
+  // DOM al cerrar y un canvas de Cesium desprendido queda roto para siempre.
+  if(mapaVista) setTimeout(()=>{ try{ mapaVista.invalidateSize(); }catch(e){} },120);
+  return true;
+}
+
 // ============================ Clinómetro (plano + lineación) ============================
 // Mide rumbo/manteo (y trend/plunge de una línea) con los sensores del teléfono.
 // Muestrea 3 s, calcula el vector normal al plano (eje Z del teléfono) y el eje mayor (eje Y)
@@ -7778,6 +8743,10 @@ async function renderMapa(app){
     el('button',{class:'btn sec mini',onclick:descargarTilesConZoom},'⬇️ Tiles'),
     el('button',{class:'btn sec mini',id:'btnCartasSG',onclick:cgToggle},'🗺️ Cartas SG'),
     el('button',{class:'btn sec mini',id:'btnMisMapas',onclick:mpAbrir},'🖼️ Mis mapas'),
+    // Sin v3dReponer() análogo a cgReponer/mpReponer/agReponer a propósito: la Vista 3D no es
+    // una capa del mapa que haya que reenganchar cuando initMapaVista reconstruye el Leaflet,
+    // es un overlay que se crea y se destruye entero en cada apertura.
+    el('button',{class:'btn sec mini',id:'btnVista3D',onclick:v3dAbrir},'⛰️ 3D'),
     el('button',{class:'btn sec mini',id:'btnArticulos',onclick:agToggle},'📚 Artículos'),
     el('button',{class:'btn sec mini',onclick:()=>nav({n:'home'})},'⌂'));
   setTimeout(()=>initMapaVista(conC),80);

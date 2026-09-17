@@ -45,6 +45,10 @@ const STORES_TODOS = ['proyecto','punto','punto_gabinete','linea','linea_gabinet
 const PROPIAS = [/^geonotas-v\d+$/, /^geoterreno-cdc-v\d+$/];
 // Nombres de cachés ajenas que el purgado NUNCA debe capturar.
 const AJENAS = ['geonotas-light-10', 'geonotas-light-9', 'geoterreno-cdc-light-v8', 'transformers-cache', 'andean-articulos'];
+// Cachés que SÍ son de esta app pero que el purgado por versión tampoco debe tocar: se llenan
+// una vez con conexión (el motor 3D pesa ~15 MB, el relieve son teselas) y borrarlas al subir de
+// versión dejaría la Vista 3D inservible justo en terreno.
+const NO_PURGABLES = ['geonotas-cesium', 'geonotas-dem'];
 
 const $out = document.getElementById('out'), $res = document.getElementById('resumen');
 let pasaron = 0, fallaron = 0;
@@ -1189,6 +1193,112 @@ async function correr(){
       eq(a.getAttribute('href'), 'https://andeangeology.cl/a?x=1&y=2', 'la URL se rompió al escapar');
       return 'sin inyección, con aviso de confianza y enlaces seguros';
     });
+    // ---- Vista 3D (v127) ----
+    await prueba('El SW cachea Cesium aparte y nadie purga esa caché ni la del relieve', async () => {
+      const sw = await (await fetch('sw.js?smoke=' + Date.now())).text();
+      ok(/cesium\.com/.test(sw), 'el service worker ya no tiene la rama que guarda Cesium');
+      // Las mismas expresiones que revisa la prueba de purgado: ninguna puede capturar las
+      // cachés del 3D, o subir de versión dejaría al geólogo sin motor 3D y sin relieve.
+      const patrones = [...sw.matchAll(/\/\^([^/]+)\$\//g)].map(m => m[1]);
+      const capturadas = NO_PURGABLES.filter(c => patrones.some(p => new RegExp('^' + p + '$').test(c)));
+      eq(capturadas, [], 'el purgado por versión captura las cachés del 3D');
+      const assets = (sw.match(/const ASSETS=\[[\s\S]*?\];/) || [''])[0];
+      ok(!/cesium/i.test(assets), 'Cesium entró a ASSETS: el install bajaría ~15 MB en cada dispositivo');
+      return patrones.length + ' patrones; ' + NO_PURGABLES.length + ' cachés del 3D a salvo';
+    });
+
+    await prueba('Terrarium: un PNG de valor conocido decodifica a la elevación esperada', async () => {
+      // La fórmula es h = R*256 + G + B/256 - 32768: un off-by-one en el canal rojo son 256 m
+      // de error y el relieve igual "se ve bien", así que esto se mide, no se mira.
+      const png = (r,g,b) => new Promise(res => {
+        const c = w.document.createElement('canvas'); c.width = c.height = 2;
+        const x = c.getContext('2d'); x.fillStyle = 'rgb('+r+','+g+','+b+')'; x.fillRect(0,0,2,2);
+        c.toBlob(res, 'image/png');
+      });
+      const cien = await w.v3dDecodificarTerrarium(await png(128,100,0));
+      eq(cien.datos[0], 100, '(128,100,0) debe dar 100 m');
+      eq([...cien.datos].filter(v => v !== 100).length, 0, 'la tesela no quedó uniforme');
+      eq((await w.v3dDecodificarTerrarium(await png(128,0,0))).datos[0], 0, '(128,0,0) es el nivel del mar');
+      eq((await w.v3dDecodificarTerrarium(await png(129,0,0))).datos[0], 256, 'un paso en R son 256 m');
+      return 'fórmula Terrarium exacta en 3 valores de control';
+    });
+
+    await prueba('La clave de tesela satelital del 3D coincide con la de leaflet.offline', async () => {
+      // El 3D lee las teselas que el geólogo bajó con "⬇️ Tiles"; si el orden {z}/{y}/{x} se
+      // invierte, la clave no calza y el satelital sale "casi bien" pero corrido.
+      const div = w.document.createElement('div');
+      div.style.cssText = 'width:400px;height:400px'; w.document.body.append(div);
+      const m = w.L.map(div, {center:[-33.4,-70.6], zoom:13});
+      // ESRI_URL es `const` y no se ve desde aquí; la plantilla se recupera de la propia
+      // función que arma la clave, que es justo lo que se quiere contrastar.
+      const capa = w.L.tileLayer.offline(w.v3dUrlEsri('{z}','{y}','{x}'), {subdomains:'abc'});
+      capa.addTo(m);
+      const teselas = w.LeafletOffline.getTileUrls(capa, m.getPixelBounds(), 13);
+      ok(teselas.length, 'no se enumeró ninguna tesela');
+      const malas = teselas.filter(t => w.v3dUrlEsri(13, t.y, t.x) !== t.key);
+      m.remove(); div.remove();
+      eq(malas.length, 0, 'la clave del 3D no coincide con la que guarda leaflet.offline');
+      return teselas.length + ' claves idénticas';
+    });
+
+    await prueba('v3dElevSync no revienta en los polos ni inventa altura fuera del DEM', async () => {
+      // Una excepción dentro del callback del terrain provider detiene el render loop de Cesium
+      // para siempre (escena en negro permanente): este lookup no puede lanzar nunca.
+      eq(w.v3dElevSync(-33.4,-70.6), null, 'sin DEM activo debe devolver null');
+      // DEM sintético de 2x2 px en Mercator sobre un cuadrado conocido
+      const a = w.v3dAMercator(-33.0,-71.0), b = w.v3dAMercator(-33.2,-70.8);
+      const dem = {datos:new Int16Array([10,20,30,40]), width:2, height:2, crs:3857,
+                   bbox:{minX:a.X, maxX:b.X, minY:b.Y, maxY:a.Y}, nombre:'smoke'};
+      eq(w.v3dElevSync(-33.05,-70.95, dem), 10, 'la esquina noroeste del DEM es el primer píxel');
+      eq(w.v3dElevSync(-33.15,-70.85, dem), 40, 'la esquina sureste del DEM es el último píxel');
+      eq(w.v3dElevSync(-20,-70, dem), null, 'fuera del DEM debe devolver null');
+      eq(w.v3dElevSync(90,0, dem), null, 'el polo norte no existe en Mercator: null, no excepción');
+      eq(w.v3dElevSync(-90,180, dem), null, 'el polo sur tampoco');
+      eq(w.v3dElevSync(NaN,NaN, dem), null, 'coordenadas no finitas: null, no excepción');
+      return 'lookup correcto y null en los 4 casos límite, sin lanzar';
+    });
+
+    await prueba('Un relieve propio en GeoTIFF UTM 19S queda donde corresponde', async () => {
+      // Reusa el recuadro de prueba de "Mis mapas" (cerca de Curicó), que está en EPSG:32719:
+      // si la zona UTM se dedujera de la longitud en vez de tomarse del EPSG, el DEM caería
+      // cientos de kilómetros al este.
+      const f = new w.File([await (await fetch('smoke-geotiff-utm19s.tif')).arrayBuffer()],
+                           'smoke-geotiff-utm19s.tif', {type:'image/tiff'});
+      const dem = await w.v3dDEMdesdeGeoTIFF(f);
+      eq(dem.crs, 32719, 'no reconoció el EPSG del GeoTIFF');
+      eq(dem.zonaUTM, 19, 'no dedujo el huso 19 desde el EPSG');
+      const cLat = (RASTER.south + RASTER.north)/2, cLon = (RASTER.west + RASTER.east)/2;
+      ok(w.v3dElevSync(cLat, cLon, dem) != null, 'el centro del recuadro quedó fuera del DEM');
+      ok(w.v3dElevSync(RASTER.north + 0.5, cLon, dem) == null, '55 km al norte no puede haber dato');
+      ok(w.v3dElevSync(cLat, RASTER.west - 0.5, dem) == null, '45 km al oeste no puede haber dato');
+      return 'EPSG:32719 ubicado en su recuadro real';
+    });
+
+    await prueba('El plano 3D respeta el rumbo/manteo al construir sus esquinas', async () => {
+      // Manteo 0 = plano horizontal: las 4 esquinas a la misma cota. Y el eje de rumbo tiene que
+      // apuntar al rumbo pedido, no a la dirección de buzamiento.
+      const horiz = w.v3dCornersPlano(-33.0,-70.6, 1000, 90, 0, 400);
+      eq(horiz.filter(c => Math.abs(c[2]-1000) > 0.5).length, 0, 'con manteo 0 el plano no quedó horizontal');
+      const inclin = w.v3dCornersPlano(-33.0,-70.6, 1000, 90, 45, 400);
+      const dz = inclin.map(c => c[2]-1000).sort((x,y)=>x-y);
+      ok(Math.abs(dz[0] + dz[3]) < 0.5, 'el plano inclinado no quedó centrado en su punto');
+      ok(Math.abs(dz[3] - 200*Math.sin(45*Math.PI/180)) < 2,
+         'con manteo 45 el desnivel de media diagonal no es el esperado');
+      eq(w.v3dAzBuz(90), 180, 'la dirección de buzamiento es rumbo + 90 (mano derecha)');
+      eq(w.v3dMod360(-10), 350, 'mod360 negativo');
+      return 'geometría del plano coherente en horizontal e inclinado';
+    });
+
+    await prueba('Los campos internos de la Vista 3D no entran a los exports', async () => {
+      // _v3dOriginal (procedencia de un rumbo reemplazado) y _v3dOrigen (de qué medición nació
+      // una interpretación) son de la app, no del modelo: no pueden salir en un CSV entregable.
+      for (const store of ['estructural','contacto']) {
+        const nombres = w.campos(store).map(c => c.nombre);
+        eq(nombres.filter(n => /^_/.test(n)), [], 'el store ' + store + ' expone campos internos');
+      }
+      return 'estructural y contacto sin campos con guion bajo';
+    });
+
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.
