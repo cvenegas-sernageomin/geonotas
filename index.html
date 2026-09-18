@@ -3593,7 +3593,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v129';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v130';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -3652,6 +3652,10 @@ const STORE_ESQUEMA = {punto_gabinete:'punto', linea_gabinete:'linea'};
 const COLECCION_DE  = {punto:'Terreno', punto_gabinete:'Gabinete', linea:'Terreno', linea_gabinete:'Gabinete'};
 // Todos los stores con datos: STORES mas los hermanos que no cuelgan del punto.
 const STORES_TODOS = STORES.concat(['linea','nota']);
+// Stores que existen en la base pero NO son fichas del modelo canónico (sin campos(), sin
+// exportar a CSV/GeoPackage): 'planoproy' es la única por ahora. Separado de STORES_TODOS a
+// propósito -- ese arreglo alimenta tablasExport()/campos(), que 'planoproy' no tiene.
+const STORES_EXTRA = ['planoproy'];
 function tblDe(store){const s=STORE_ESQUEMA[store]||store;
   return s==='linea'?LINEA_TBL:s==='nota'?NOTA_TBL:STORE2TBL[s];}
 function campos(store){return (MODELO.tablas[tblDe(store)]||{}).campos||[];}
@@ -3678,7 +3682,7 @@ async function idsPuntosProyecto(proyectoId){
 // punto (_parent o _punto en idsPuntos); 'proyecto' es su propio id.
 function esDeProyecto(store,r,proyectoId,idsPuntos){
   if(store==='proyecto') return r.id===proyectoId;
-  if(store==='punto'||store==='punto_gabinete'||store==='linea'||store==='linea_gabinete'||store==='nota')
+  if(store==='punto'||store==='punto_gabinete'||store==='linea'||store==='linea_gabinete'||store==='nota'||store==='planoproy')
     return r._parent===proyectoId;
   if(store==='fotomapa') return idsPuntos.has(r._punto);
   return idsPuntos.has(r._parent);
@@ -3686,7 +3690,7 @@ function esDeProyecto(store,r,proyectoId,idsPuntos){
 function nombreArchivoProyecto(proyecto){return (proyecto&&proyecto.NOMBRE_PROYECTO||'proyecto').replace(/[\\/:*?"<>|]+/g,'_');}
 
 // ============================ IndexedDB ============================
-const DB='captura-terreno', VER=14;   // v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios). Ninguno es del modelo canónico.
+const DB='captura-terreno', VER=15;   // v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico). Ninguno es del modelo canónico.
 let db;
 function openDB(){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -3701,7 +3705,12 @@ function openDB(){return new Promise((res,rej)=>{
   r.onupgradeneeded=()=>{const d=r.result;
     if(tTimeout){clearTimeout(tTimeout);tTimeout=null;}
     const yaTeniaAflora=d.objectStoreNames.contains('aflora');
-    STORES.concat(['fotomapa','linea','nota']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
+    // 'planoproy' (v15): planos proyectados (rumbo/manteo + traza contra el DEM) que el geólogo
+    // arma para proyectar un estrato sobre las laderas. Cuelga del proyecto (_parent=proyectoId,
+    // como 'linea'/'nota'), así que SÍ lleva índice 'parent' -- pero no es una ficha CDC 2016:
+    // no entra en STORE2TBL/STORES/HIJAS ni en MODELO.tablas, para que no quede mezclado con la
+    // gdb geológica. Ver STORES_EXTRA.
+    STORES.concat(['fotomapa','linea','nota','planoproy']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
       if(s!=='proyecto')os.createIndex('parent','_parent',{unique:false});}});
     // 'cartageo': caché de Cartas Geológicas SERNAGEOMIN descargadas para uso offline en
     // terreno. NO es del modelo canónico (no pasa por STORE2TBL/campos(), no entra en
@@ -3957,6 +3966,7 @@ async function buildBackupBlob(coleccion = 'terreno') {
   backup[puntoStore] = await all(puntoStore);
   backup[lineaStore] = await all(lineaStore);
   backup.nota = await all('nota');   // las notas cuelgan del proyecto, no de la colección
+  backup.planoproy = await all('planoproy');   // planos proyectados: tampoco de la colección, cuelgan del proyecto
 
   // Las tablas hijas (ver HIJAS) son stores COMPARTIDOS por las dos colecciones (cuelgan del punto
   // por _parent, no del store del punto). Sacarlas con all() metia las hijas de gabinete
@@ -4016,6 +4026,7 @@ async function importBackup(file, destinoColeccion = null) {
           punto_gabinete: esGabinete ? 'punto_gabinete' : 'punto',
           linea_gabinete: esGabinete ? 'linea_gabinete' : 'linea',
           nota: 'nota',
+          planoproy: 'planoproy',
           litologia: 'litologia',
           aflora: 'aflora',
           estructural: 'estructural',
@@ -7289,6 +7300,81 @@ function v3dPosicionesPlano(corners){
   return Cesium.Cartesian3.fromDegreesArrayHeights(corners.flatMap(c=>[c[1],c[0],c[2]]));
 }
 
+// ---- Traza de un plano proyectado: dónde ese plano corta el relieve real ----
+// Portado de trazador-planos-web (zPlano/grillaMuestreo/extraerTraza), que resuelve esto en JS
+// puro sin Cesium: por eso se puede probar con un DEM sintético en smoke.html sin viewer.
+// Método: se arma una grilla alineada al rumbo (eje i a lo largo, eje j perpendicular) con
+// elevación del DEM en cada nodo, y para cada columna i se busca el CRUCE DE SIGNO de
+// (elevación del terreno − elevación del plano) entre nodos j vecinos, interpolando el punto
+// exacto. Es robusto: da una línea continua aunque la grilla sea gruesa.
+function v3dZPlano(z0, rumbo, manteo, dE, dN){
+  const az=v3dAzBuz(rumbo)*D2R, dip=manteo*D2R;
+  return z0 - Math.tan(dip)*(Math.sin(az)*dE + Math.cos(az)*dN);
+}
+// Grilla en el marco rotado al rumbo: paso adaptativo para no superar maxPuntos (2500, igual
+// que el original) ni siquiera con un largo de 10 km por lado -- es lo que evita que la busqueda
+// cuelgue un telefono.
+function v3dGrillaMuestreo(lat0, lon0, rumbo, largoAdelante, largoAtras, maxPuntos){
+  maxPuntos = maxPuntos || 2500;
+  const {este:E0, norte:N0, zona} = latLonAUtm(lat0, lon0);
+  const ruRad = rumbo*D2R;
+  const ancho = Math.min((largoAdelante+largoAtras)*0.3, 1000);
+  let paso=30;
+  while(paso<2000){
+    const nLongP=Math.ceil(largoAdelante/paso)+Math.ceil(largoAtras/paso)+1;
+    const nPerpP=2*Math.ceil(ancho/paso)+1;
+    if(nLongP*nPerpP<=maxPuntos) break;
+    paso+=30;
+  }
+  const nAdelante=Math.ceil(largoAdelante/paso), nAtras=Math.ceil(largoAtras/paso);
+  const mitadPerp=Math.ceil(ancho/paso);
+  const nLong=nAdelante+nAtras+1, nPerp=2*mitadPerp+1;
+  const points=new Array(nLong*nPerp);
+  let k=0;
+  for(let i=-nAtras;i<=nAdelante;i++)
+    for(let j=-mitadPerp;j<=mitadPerp;j++){
+      const dE=i*paso*Math.sin(ruRad)-j*paso*Math.cos(ruRad);
+      const dN=i*paso*Math.cos(ruRad)+j*paso*Math.sin(ruRad);
+      const p=utmALatLon(E0+dE, N0+dN, zona);
+      points[k++]={lat:p.lat, lon:p.lon, dE, dN};
+    }
+  return {points, nLong, nPerp, paso};
+}
+// Recorre la grilla ya elevada buscando, por cada columna a lo largo del rumbo, el cruce de
+// signo de (elevacion_terreno - elevacion_del_plano) e interpola el punto exacto. Salta celdas
+// sin dato (borde del DEM, v3dElevSync devuelve null) en vez de dejar pasar NaN, que produciria
+// saltos falsos en la traza.
+function v3dExtraerTraza(grilla, nLong, nPerp, z0, rumbo, manteo){
+  const ruRad=rumbo*D2R;
+  const at=(i,j)=>grilla[i*nPerp+j];
+  const diff=p=>p.elevation - v3dZPlano(z0,rumbo,manteo,p.dE,p.dN);
+  const lerp=(a,b,t,k)=>a[k]+t*(b[k]-a[k]);
+  const pts=[];
+  for(let i=0;i<nLong;i++)
+    for(let j=0;j<nPerp-1;j++){
+      const a=at(i,j), b=at(i,j+1);
+      if(a.elevation==null||b.elevation==null) continue;
+      const da=diff(a), db=diff(b);
+      if(da===0){ pts.push({lat:a.lat,lon:a.lon,dE:a.dE,dN:a.dN}); continue; }
+      if(da*db<0){ const t=da/(da-db);
+        pts.push({lat:lerp(a,b,t,'lat'), lon:lerp(a,b,t,'lon'), dE:lerp(a,b,t,'dE'), dN:lerp(a,b,t,'dN')}); }
+    }
+  // ordenar a lo largo del rumbo (proyección escalar sobre la dirección de rumbo)
+  pts.sort((u,v)=>(u.dE*Math.sin(ruRad)+u.dN*Math.cos(ruRad))-(v.dE*Math.sin(ruRad)+v.dN*Math.cos(ruRad)));
+  return pts.map(p=>({lat:p.lat, lon:p.lon}));   // sin elevación: se pega al terreno al dibujar
+}
+// Orquestador: único punto que toca v3dDEM (o un DEM inyectado, para pruebas). plano trae
+// {lat,lon,z0,RUMBO,MANTEO,LARGO_ADELANTE,LARGO_ATRAS} -- los mismos nombres que el store
+// 'planoproy'. Devuelve null si no hay relieve cargado, o un arreglo (puede ser vacío si el
+// plano no corta el terreno en el área muestreada).
+function v3dCalcularTraza(plano, dem){
+  const d = dem || v3dDEM;
+  if(!d) return null;
+  const g = v3dGrillaMuestreo(plano.lat, plano.lon, plano.RUMBO, plano.LARGO_ADELANTE, plano.LARGO_ATRAS);
+  const elev = g.points.map(p=>({...p, elevation:v3dElevSync(p.lat, p.lon, d)}));
+  return v3dExtraerTraza(elev, g.nLong, g.nPerp, plano.z0, plano.RUMBO, plano.MANTEO);
+}
+
 // ---- Puntos, notas, líneas y actitudes del proyecto sobre el relieve ----
 const V3D_LADO_ACTITUD=80;      // m: tamaño del cuadrado que dibuja una actitud medida
 
@@ -7369,6 +7455,25 @@ async function v3dPintarProyecto(){
     add({ polyline:{ positions:pos, width:4, clampToGround:pegaAlSuelo,
       material:Cesium.Color.fromCssColorString(est.color) }});
   }
+
+  // --- planos proyectados: footprint chico (solo orientación, NO a escala real -- un
+  // rectángulo literal de varios km encima de un terreno no plano confunde más de lo que
+  // ayuda) + su traza pegada al terreno, que es la geometría que de verdad importa ---
+  for(const pl of await childrenOf('planoproy', curProyecto.id)){
+    const ent=add({ polygon:{
+      hierarchy:new Cesium.PolygonHierarchy(v3dPosicionesPlano(
+        v3dCornersPlano(pl.lat,pl.lon,pl.z0,pl.RUMBO,pl.MANTEO,V3D_LADO_ACTITUD*3))),
+      perPositionHeight:true, material:Cesium.Color.fromCssColorString('#7c3aed').withAlpha(.35),
+      outline:true, outlineColor:Cesium.Color.WHITE }});
+    if(ent) ent._v3dPlanoProy=pl.id;
+    if(pl.traza && pl.traza.length>1){
+      const pos = pegaAlSuelo
+        ? Cesium.Cartesian3.fromDegreesArray(pl.traza.flatMap(p=>[p.lon,p.lat]))
+        : Cesium.Cartesian3.fromDegreesArrayHeights(pl.traza.flatMap(p=>[p.lon,p.lat,v3dAlturaDe(p.lat,p.lon,null)]));
+      add({ polyline:{ positions:pos, width:5, clampToGround:pegaAlSuelo,
+        material:Cesium.Color.fromCssColorString('#7c3aed') }});
+    }
+  }
 }
 
 // ---- Plano editable: ajustar un rumbo/manteo sobre el terreno real ----
@@ -7376,9 +7481,16 @@ async function v3dPintarProyecto(){
 // plano está ANCLADO a su punto de control (ahí lo midió el geólogo), así que no hay gizmo de
 // traslación. Solo se ajusta la orientación: rumbo y manteo.
 const V3D_LADO_EDIT=400;         // m: lado del plano mientras se edita (se ve y se agarra bien)
-let v3dPlano=null;               // {store,id,ptId,ptNombre,lat,lon,z0,rumbo,manteo,rumbo0,manteo0}
+// v3dPlano tiene dos "kind": 'medicion' edita in-place una ficha existente (estructural/contacto,
+// como siempre) y 'proyectado' es un borrador de la interpretación libre en memoria, que solo se
+// escribe al store 'planoproy' -- nunca a estructural/contacto -- al guardar.
+// {kind:'medicion',   store,id,ptId,ptNombre, lat,lon,z0, rumbo,manteo, rumbo0,manteo0}
+// {kind:'proyectado', id|null, nombre, lat,lon,z0, rumbo,manteo, rumbo0,manteo0,
+//                      largoAdelante,largoAtras, traza,trazaFecha,trazaDEM,_trazaParams, origen}
+let v3dPlano=null;
 let v3dArrastre=null;            // 'rumbo' | 'manteo' | null
-let v3dEnts={plano:null, gRumbo:null, gManteo:null, gCentro:null, ejeRumbo:null, ejeManteo:null};
+let v3dColocando=false;          // true: el próximo clic en el terreno arma un plano proyectado nuevo
+let v3dEnts={plano:null, gRumbo:null, gManteo:null, gCentro:null, ejeRumbo:null, ejeManteo:null, trazaTmp:null};
 
 function v3dPosGizmos(p){
   const {rumboDir,buzDir}=v3dDirPlano(p.rumbo,p.manteo);
@@ -7422,7 +7534,7 @@ function v3dDibujarPlanoEditable(){
 function v3dSoltarPlano(){
   if(v3dViewer) Object.keys(v3dEnts).forEach(k=>{
     if(v3dEnts[k]){ try{ v3dViewer.entities.remove(v3dEnts[k]); }catch(e){} v3dEnts[k]=null; } });
-  v3dPlano=null; v3dArrastre=null;
+  v3dPlano=null; v3dArrastre=null; v3dColocando=false;
   v3dPintarLado();
 }
 
@@ -7430,9 +7542,117 @@ function v3dSeleccionarPlano(info){
   if(v3dPlano && (v3dPlano.rumbo!==v3dPlano.rumbo0 || v3dPlano.manteo!==v3dPlano.manteo0) &&
      !confirm('El plano que estabas ajustando tiene cambios sin guardar. ¿Soltarlo?')) return;
   v3dSoltarPlano();
-  v3dPlano={...info, rumbo0:info.rumbo, manteo0:info.manteo};
+  v3dPlano={kind:'medicion', ...info, rumbo0:info.rumbo, manteo0:info.manteo};
   v3dDibujarPlanoEditable();
   v3dPintarLado();
+}
+
+// Dibuja (o redibuja) la traza YA CALCULADA de un plano proyectado como una polilínea temporal
+// pegada al terreno, mientras se está editando. Se recalcula a mano (botón), no en cada
+// cuadro de arrastre: la búsqueda en grilla es demasiado cara para eso.
+function v3dDibujarTrazaTmp(){
+  if(!v3dViewer) return;
+  if(v3dEnts.trazaTmp){ try{ v3dViewer.entities.remove(v3dEnts.trazaTmp); }catch(e){} v3dEnts.trazaTmp=null; }
+  if(!v3dPlano || v3dPlano.kind!=='proyectado' || !v3dPlano.traza || v3dPlano.traza.length<2) return;
+  const pegaAlSuelo=Cesium.GroundPolylinePrimitive.isSupported(v3dViewer.scene);
+  const pos = pegaAlSuelo
+    ? Cesium.Cartesian3.fromDegreesArray(v3dPlano.traza.flatMap(p=>[p.lon,p.lat]))
+    : Cesium.Cartesian3.fromDegreesArrayHeights(v3dPlano.traza.flatMap(p=>[p.lon,p.lat,v3dAlturaDe(p.lat,p.lon,null)]));
+  v3dEnts.trazaTmp=v3dViewer.entities.add({ polyline:{ positions:pos, width:5, clampToGround:pegaAlSuelo,
+    material:Cesium.Color.fromCssColorString('#7c3aed') }});
+}
+
+// ---- Plano proyectado: crear desde cero, calcular su traza, guardar/eliminar ----
+// Reusa integramente la mecanica de arrastre de gizmos (v3dDibujarPlanoEditable/v3dPosGizmos/
+// v3dInstalarGizmos/v3dAjustar): todas leen solo lat/lon/z0/rumbo/manteo de v3dPlano y no les
+// importa el 'kind'. Lo unico especifico de 'proyectado' vive aqui y en v3dPintarLado().
+function v3dNuevoPlanoProyectado(){
+  if(v3dPlano && (v3dPlano.rumbo!==v3dPlano.rumbo0 || v3dPlano.manteo!==v3dPlano.manteo0) &&
+     !confirm('El plano que estabas ajustando tiene cambios sin guardar. ¿Soltarlo?')) return;
+  v3dSoltarPlano();
+  v3dColocando=true;
+  toast('👆 Toca el terreno para ubicar el plano');
+  v3dPintarLado();
+}
+async function v3dAbrirPlanoProy(id){
+  if(v3dPlano && (v3dPlano.rumbo!==v3dPlano.rumbo0 || v3dPlano.manteo!==v3dPlano.manteo0) &&
+     !confirm('El plano que estabas ajustando tiene cambios sin guardar. ¿Soltarlo?')) return;
+  const reg=await get('planoproy',id);
+  if(!reg){ toast('⚠️ Ese plano ya no existe'); return; }
+  v3dSoltarPlano();
+  v3dPlano={kind:'proyectado', id:reg.id, nombre:reg.NOMBRE||'',
+    lat:reg.lat, lon:reg.lon, z0:reg.z0, rumbo:reg.RUMBO, manteo:reg.MANTEO,
+    rumbo0:reg.RUMBO, manteo0:reg.MANTEO,
+    largoAdelante:reg.LARGO_ADELANTE, largoAtras:reg.LARGO_ATRAS,
+    traza:reg.traza||null, trazaFecha:reg.trazaFecha||null, trazaDEM:reg.trazaDEM||null,
+    _trazaParams: reg.traza ? {rumbo:reg.RUMBO,manteo:reg.MANTEO,largoAdelante:reg.LARGO_ADELANTE,largoAtras:reg.LARGO_ATRAS} : null,
+    origen:reg._origen||null };
+  v3dDibujarPlanoEditable();
+  v3dDibujarTrazaTmp();
+  v3dPintarLado();
+}
+async function v3dCalcularTrazaUI(){
+  const p=v3dPlano;
+  if(!p || p.kind!=='proyectado') return;
+  if(!v3dDEM){ toast('⚠️ Descarga o carga un relieve primero (⬇️ Relieve del área visible)'); return; }
+  const traza=v3dCalcularTraza({lat:p.lat, lon:p.lon, z0:p.z0, RUMBO:p.rumbo, MANTEO:p.manteo,
+    LARGO_ADELANTE:p.largoAdelante, LARGO_ATRAS:p.largoAtras});
+  p.traza=traza; p.trazaFecha=new Date().toISOString(); p.trazaDEM=v3dDEM.nombre;
+  p._trazaParams={rumbo:p.rumbo, manteo:p.manteo, largoAdelante:p.largoAdelante, largoAtras:p.largoAtras};
+  v3dDibujarTrazaTmp();
+  toast(traza && traza.length>1 ? ('✓ Traza calculada: '+traza.length+' puntos')
+                                 : '⚠️ El plano no corta el terreno en el área muestreada');
+  v3dPintarLado();
+}
+async function v3dGuardarPlanoProy(){
+  const p=v3dPlano;
+  if(!p || p.kind!=='proyectado') return;
+  if(bloqueoGabineteActivo()) return;
+  const reg={ id:p.id||uid(), _parent:curProyecto.id,
+    NOMBRE:p.nombre||'', lat:p.lat, lon:p.lon, z0:p.z0, RUMBO:p.rumbo, MANTEO:p.manteo,
+    LARGO_ADELANTE:p.largoAdelante, LARGO_ATRAS:p.largoAtras,
+    traza:p.traza||null, trazaFecha:p.trazaFecha||null, trazaDEM:p.trazaDEM||null,
+    _origen:p.origen||null, ...ahora() };
+  await put('planoproy', reg);
+  p.id=reg.id; p.rumbo0=p.rumbo; p.manteo0=p.manteo;
+  toast('💾 Plano proyectado guardado');
+  await v3dPintarProyecto();
+  v3dPintarLado();
+}
+async function v3dEliminarPlanoProy(){
+  const p=v3dPlano;
+  if(!p || p.kind!=='proyectado' || !p.id) return;
+  if(!confirm('¿Eliminar este plano proyectado? No afecta ninguna medición de terreno.')) return;
+  await del('planoproy', p.id);
+  v3dSoltarPlano();
+  await v3dPintarProyecto();
+}
+// Promueve una medición ya tomada (estructural/contacto) a un plano proyectado INDEPENDIENTE:
+// solo LEE reg -- a diferencia del 'reemplazar' de v3dGuardarPlano, ningún camino de aquí en
+// adelante vuelve a escribir en 'estructural'/'contacto'. _origen es metadata de una sola
+// escritura, solo para mostrar "proviene de…"; no hay seguimiento en vivo del dato de campo.
+// El proyecto se toma de punto._parent (no de la global curProyecto) para que la función sea
+// pura respecto de sus argumentos y se pueda probar sin navegar la UI.
+async function promoverAPlanoProyectado(store, reg, punto){
+  const campos=PLANO_CAMPOS[store];
+  const rumbo=parseFloat(reg[campos.rumbo]), manteo=parseFloat(reg[campos.manteo]);
+  if(isNaN(rumbo)||isNaN(manteo)){ toast('⚠️ Esta ficha no tiene rumbo/manteo aún'); return; }
+  const lat=parseFloat(punto&&punto[inLat]), lon=parseFloat(punto&&punto[inLon]);
+  if(isNaN(lat)||isNaN(lon)){ toast('⚠️ El punto no tiene coordenadas'); return; }
+  const zDem=v3dDEM?v3dElevSync(lat,lon):null;
+  const z0 = zDem!=null ? zDem : (parseFloat(punto.COTA)||0);
+  const nuevo={ id:uid(), _parent:punto._parent,
+    NOMBRE:(punto.ID_PUNTO_CONTROL||'punto')+' · '+(HIJAS.find(h=>h.store===store)||{titulo:store}).titulo,
+    lat, lon, z0, RUMBO:rumbo, MANTEO:manteo, LARGO_ADELANTE:2000, LARGO_ATRAS:2000,
+    traza:null, trazaFecha:null, trazaDEM:null, _origen:{store, id:reg.id}, ...ahora() };
+  if(v3dDEM){
+    nuevo.traza=v3dCalcularTraza(nuevo);
+    nuevo.trazaFecha=new Date().toISOString();
+    nuevo.trazaDEM=v3dDEM.nombre;
+  }
+  await put('planoproy', nuevo);
+  toast(v3dDEM ? '✓ Plano proyectado creado y traza calculada'
+               : '✓ Plano proyectado creado — abre Vista 3D con relieve para calcular su traza');
 }
 
 function v3dAjustar(campo, delta){
@@ -7584,26 +7804,85 @@ async function v3dPintarLado(){
   // --- plano seleccionado: lo primero, porque es lo que el geólogo está mirando ---
   if(v3dPlano){
     const p=v3dPlano, cambiado=(p.rumbo!==p.rumbo0||p.manteo!==p.manteo0);
-    lado.append(el('div',{},el('b',{},'📐 '+p.ptNombre),' · ',p.store));
-    lado.append(el('div',{style:'font-size:15px'},
-      el('b',{},p.rumbo+'° / '+p.manteo+'°'),
-      cambiado?el('span',{class:'muted',style:'color:#e8b84b'},'  (medido '+p.rumbo0+'/'+p.manteo0+')'):''));
     const fila=(txt,campo,paso)=>el('div',{class:'v3d-fila'},
       el('span',{style:'width:56px'},txt),
       el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo,-paso)},'−'+paso),
       el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo,-1)},'−1'),
       el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo, 1)},'+1'),
       el('button',{class:'btn sec',onclick:()=>v3dAjustar(campo, paso)},'+'+paso));
-    // Los botones son el camino principal en terreno: los eventos de arrastre de Cesium son de
-    // mouse, y con el dedo (y con guantes) el gizmo es inmanejable.
-    lado.append(fila('Rumbo','rumbo',5), fila('Manteo','manteo',5));
-    lado.append(el('button',{class:'btn',onclick:()=>v3dGuardarPlano(false)},'➕ Guardar como medición nueva'));
-    lado.append(el('button',{class:'btn sec',onclick:()=>v3dGuardarPlano(true)},'✏️ Reemplazar la medición'));
-    lado.append(el('button',{class:'btn sec',onclick:v3dSoltarPlano},'✕ Soltar el plano'));
+    if(p.kind==='proyectado'){
+      const desactualizada = p.traza && p._trazaParams && (
+        p._trazaParams.rumbo!==p.rumbo || p._trazaParams.manteo!==p.manteo ||
+        p._trazaParams.largoAdelante!==p.largoAdelante || p._trazaParams.largoAtras!==p.largoAtras);
+      lado.append(el('div',{},el('b',{},'📐 Plano proyectado'),
+        p.origen?el('span',{class:'muted'},' · desde '+p.origen.store):''));
+      lado.append(el('div',{class:'v3d-fila'}, el('span',{style:'width:56px'},'Nombre'),
+        el('input',{type:'text',value:p.nombre||'',placeholder:'ej. Techo Fm. Abanico',
+          oninput:e=>{p.nombre=e.target.value;}, style:'flex:1;min-width:0'})));
+      lado.append(el('div',{style:'font-size:15px'},
+        el('b',{},p.rumbo+'° / '+p.manteo+'°'),
+        cambiado?el('span',{class:'muted',style:'color:#e8b84b'},'  (guardado '+p.rumbo0+'/'+p.manteo0+')'):''));
+      lado.append(fila('Rumbo','rumbo',5), fila('Manteo','manteo',5));
+      const filaLargo=(txt,campo)=>el('div',{class:'v3d-fila'},
+        el('span',{style:'width:100px'},txt),
+        el('input',{type:'number',min:0,max:10000,step:100,value:p[campo],
+          oninput:e=>{p[campo]=Math.max(0,Math.min(10000,parseFloat(e.target.value)||0));}, style:'width:90px'}),
+        el('span',{class:'muted'},'m'));
+      lado.append(filaLargo('Largo adelante','largoAdelante'), filaLargo('Largo atrás','largoAtras'));
+      lado.append(el('button',{class:'btn',onclick:v3dCalcularTrazaUI},'📐 Calcular traza'));
+      if(p.traza && p.traza.length>1){
+        lado.append(el('div',{class:'muted',style:desactualizada?'color:#e8b84b':'color:#9fb0c0'},
+          (desactualizada?'⚠️ Traza desactualizada — recalcula. ':'✓ ')+p.traza.length+' puntos'
+          +(p.trazaDEM?' · relieve: '+p.trazaDEM:'')));
+      }else if(p.traza){
+        lado.append(el('div',{class:'muted',style:'color:#e8b84b'},'⚠️ El plano no corta el terreno en el área muestreada.'));
+      }else if(!v3dDEM){
+        lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},'Sin relieve cargado: descarga o carga un DEM para calcular la traza.'));
+      }
+      lado.append(el('button',{class:'btn',onclick:v3dGuardarPlanoProy},'💾 Guardar plano proyectado'));
+      if(p.id) lado.append(el('button',{class:'btn sec',onclick:v3dEliminarPlanoProy},'🗑️ Eliminar'));
+      lado.append(el('button',{class:'btn sec',onclick:v3dSoltarPlano},'✕ Soltar'));
+    }else{
+      lado.append(el('div',{},el('b',{},'📐 '+p.ptNombre),' · ',p.store));
+      lado.append(el('div',{style:'font-size:15px'},
+        el('b',{},p.rumbo+'° / '+p.manteo+'°'),
+        cambiado?el('span',{class:'muted',style:'color:#e8b84b'},'  (medido '+p.rumbo0+'/'+p.manteo0+')'):''));
+      // Los botones son el camino principal en terreno: los eventos de arrastre de Cesium son de
+      // mouse, y con el dedo (y con guantes) el gizmo es inmanejable.
+      lado.append(fila('Rumbo','rumbo',5), fila('Manteo','manteo',5));
+      lado.append(el('button',{class:'btn',onclick:()=>v3dGuardarPlano(false)},'➕ Guardar como medición nueva'));
+      lado.append(el('button',{class:'btn sec',onclick:()=>v3dGuardarPlano(true)},'✏️ Reemplazar la medición'));
+      lado.append(el('button',{class:'btn sec',onclick:v3dSoltarPlano},'✕ Soltar el plano'));
+    }
+    lado.append(el('hr',{style:'border:0;border-top:1px solid #33404c;width:100%'}));
+  }else if(v3dColocando){
+    lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},'👆 Toca el terreno para ubicar el plano proyectado…'));
+    lado.append(el('button',{class:'btn sec',onclick:()=>{v3dColocando=false; v3dPintarLado();}},'Cancelar'));
     lado.append(el('hr',{style:'border:0;border-top:1px solid #33404c;width:100%'}));
   }else{
     lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},
       'Toca un plano de actitud (los cuadrados azules) para ajustarlo sobre el terreno.'));
+  }
+  // --- planos proyectados: crear uno nuevo y listar los guardados del proyecto ---
+  if(!v3dPlano && !v3dColocando){
+    lado.append(el('div',{},el('b',{},'📐 Planos proyectados')));
+    lado.append(el('button',{class:'btn sec',onclick:v3dNuevoPlanoProyectado},'➕ Nuevo plano proyectado'));
+    if(curProyecto){
+      const planos=await childrenOf('planoproy', curProyecto.id);
+      if(v3dLado!==lado || v3dLadoSeq!==seq) return;   // se cerró/repintó mientras consultábamos
+      if(planos.length){
+        lado.append(el('div',{class:'muted',style:'color:#9fb0c0;margin-top:4px'},'Guardados:'));
+        planos.forEach(pl=>{
+          lado.append(el('div',{class:'v3d-fila'},
+            el('button',{class:'btn sec',style:'flex:1;text-align:left',onclick:()=>v3dAbrirPlanoProy(pl.id)},
+              '📐 '+(pl.NOMBRE||'(sin nombre)')+' · '+pl.RUMBO+'°/'+pl.MANTEO+'°'),
+            el('button',{class:'btn sec',title:'Eliminar',onclick:async()=>{
+              if(!confirm('¿Eliminar este plano proyectado?')) return;
+              await del('planoproy',pl.id); await v3dPintarProyecto(); v3dPintarLado(); }},'✕')));
+        });
+      }
+    }
+    lado.append(el('hr',{style:'border:0;border-top:1px solid #33404c;width:100%'}));
   }
   lado.append(el('div',{},el('b',{},'Relieve: '),
     v3dDEM ? (v3dDEM.nombre||'DEM cargado') : 'sin datos (globo liso)'));
@@ -7726,8 +8005,25 @@ async function v3dAbrir(){
   v3dHandler.setInputAction(mov=>{
     const p=v3dViewer.scene.pick(mov.position);
     const ent=p&&p.id;
+    if(v3dColocando){
+      if(ent) return;   // un clic sobre una entidad no cuenta como "ubicar el plano"
+      const ray=v3dViewer.camera.getPickRay(mov.position);
+      const inter=ray && v3dViewer.scene.globe.pick(ray, v3dViewer.scene);
+      if(!inter) return;
+      const carto=Cesium.Cartographic.fromCartesian(inter);
+      const lat=Cesium.Math.toDegrees(carto.latitude), lon=Cesium.Math.toDegrees(carto.longitude);
+      const zDem=v3dElevSync(lat,lon);
+      v3dColocando=false;
+      v3dPlano={kind:'proyectado', id:null, nombre:'', lat, lon, z0:(zDem!=null?zDem:carto.height),
+        rumbo:0, manteo:30, rumbo0:0, manteo0:30, largoAdelante:2000, largoAtras:2000,
+        traza:null, trazaFecha:null, trazaDEM:null, _trazaParams:null, origen:null};
+      v3dDibujarPlanoEditable();
+      v3dPintarLado();
+      return;
+    }
     if(!ent) return;
     if(ent._v3dPlano){ v3dSeleccionarPlano(ent._v3dPlano); return; }
+    if(ent._v3dPlanoProy){ v3dAbrirPlanoProy(ent._v3dPlanoProy); return; }
     // Abrir la ficha obliga a cerrar la vista: si el usuario prefiere quedarse (ajuste sin
     // guardar), v3dCerrar devuelve false y no se navega a ninguna parte.
     if(ent._v3dPunto){ const id=ent._v3dPunto; if(v3dCerrar()){ curPunto=null; vista={n:'punto',id}; render(); } }
@@ -7755,8 +8051,8 @@ function v3dCerrar(){
     v3dViewer=null;
   }
   if(v3dOv){ v3dOv.remove(); v3dOv=null; }
-  v3dMsg=null; v3dLado=null; v3dEntsProy=[]; v3dPlano=null; v3dArrastre=null;
-  v3dEnts={plano:null, gRumbo:null, gManteo:null, gCentro:null, ejeRumbo:null, ejeManteo:null};
+  v3dMsg=null; v3dLado=null; v3dEntsProy=[]; v3dPlano=null; v3dArrastre=null; v3dColocando=false;
+  v3dEnts={plano:null, gRumbo:null, gManteo:null, gCentro:null, ejeRumbo:null, ejeManteo:null, trazaTmp:null};
   v3dBtnEstado('⛰️ 3D', false);
   // A proposito NO se sueltan v3dDEM ni el <script> de Cesium ya cargado: reabrir es instantaneo
   // y el DEM cuesta una descarga. Lo que si se destruye es el Viewer, porque el overlay sale del
@@ -8465,6 +8761,11 @@ function bloqueHijo(h,reg,i,litos){
     const barra=barraMedicion(h.store,f);
     if(barra){
       const map=PLANO_CAMPOS[h.store];
+      // Plano proyectado: crea un registro INDEPENDIENTE en 'planoproy' (fuera de la gdb) con el
+      // rumbo/manteo ya guardados en esta ficha. Solo lee reg -- nunca vuelve a escribir aquí.
+      barra.append(el('button',{type:'button',class:'btn sec mini',
+        onclick:()=>promoverAPlanoProyectado(h.store, Object.assign({},reg,f.getData()), curPunto)},
+        '📐 Proyectar como plano'));
       const anchor=f.node.querySelector('[name="'+map.rumbo+'"]');
       const fld=anchor&&anchor.closest('.fld');
       if(fld) fld.parentNode.insertBefore(barra, fld);   // justo antes de los números (rumbo/manteo/…)
@@ -8747,7 +9048,7 @@ async function borrarProyecto(proyectoId){
   for(const store of ['punto','punto_gabinete']){
     for(const p of await childrenOf(store,proyectoId)){await borrarPuntoEn(store,p.id);puntos++;}
   }
-  for(const store of ['linea','linea_gabinete','nota']){
+  for(const store of ['linea','linea_gabinete','nota','planoproy']){
     for(const r of await childrenOf(store,proyectoId)){await del(store,r.id);lineas+=(store==='linea'||store==='linea_gabinete')?1:0;notas+=(store==='nota')?1:0;}
   }
   await del('proyecto',proyectoId);
@@ -9090,6 +9391,20 @@ async function initMapaVista(puntos){
       formLinea(L2, async()=>{await put(storeLineaActivo(),L2);initMapaVista(_puntosMapa);},
                     async()=>{await del(storeLineaActivo(),L2.id);initMapaVista(_puntosMapa);}); });
   }
+  // --- trazas de planos proyectados: geometría independiente de la gdb (store 'planoproy'),
+  // pensada para proyectar un estrato sobre las laderas sin tener que abrir la Vista 3D. Se
+  // dibuja SIEMPRE (sin toggle), mismo costo que 'linea'/'nota' -- ver estilo propio (punteado
+  // morado) para no confundirla con una línea geológica de contacto. Solo se pinta la última
+  // traza calculada (en Vista 3D); el footprint del plano no tiene sentido aplanado en 2D.
+  const planosProy=await childrenOf('planoproy',curProyecto.id);
+  for(const pl of planosProy){
+    if(!pl.traza||pl.traza.length<2)continue;
+    const coords=pl.traza.map(p=>[p.lat,p.lon]);
+    const pline=L.polyline(coords,{color:'#7c3aed',weight:3,dashArray:'6,6',opacity:.9}).addTo(mapaVista);
+    pline.on('click',ev=>{ if(dibujando)return; L.DomEvent.stop(ev);
+      formPlanoProy(pl, async()=>{await put('planoproy',pl);initMapaVista(_puntosMapa);},
+                        async()=>{await del('planoproy',pl.id);initMapaVista(_puntosMapa);}); });
+  }
   // --- notas de campo del proyecto (avisos para futuras campañas: sin colección terreno/gabinete) ---
   const notas=await childrenOf('nota',curProyecto.id);
   for(const n of notas){
@@ -9325,6 +9640,42 @@ function formNota(nota,onSave,onDelete){
   if(onDelete)bar2.append(el('button',{class:'btn del',onclick:()=>{if(confirm('¿Eliminar esta nota?')){ov.remove();onDelete();}}},'Eliminar'));
   bar2.append(el('button',{class:'btn sec',onclick:()=>ov.remove()},'Cancelar'));
   box.append(bar2);ov.append(box);document.body.append(ov);
+}
+
+// Editor 2D de un plano proyectado. Bespoke (sin formulario()/MODELO) a propósito: 'planoproy'
+// no es una ficha del modelo canónico. Cambiar rumbo/manteo/largo aquí invalida la traza
+// guardada (se calculó con los valores anteriores) -- recalcularla requiere el DEM, que solo
+// vive en la Vista 3D, así que se limpia y se avisa en vez de dejar una traza que ya no vale.
+function formPlanoProy(pl,onSave,onDelete){
+  const ov=el('div',{class:'fmov',onclick:e=>{if(e.target===ov)ov.remove();}});
+  const box=el('div',{class:'card',style:'max-width:420px;width:92vw'});
+  box.append(el('h2',{},'📐 Plano proyectado'));
+  if(pl._origen) box.append(el('div',{class:'muted',style:'font-size:11px'},'Proviene de una ficha: '+pl._origen.store));
+  const campo=(txt,name,val,tipo)=>el('div',{class:'fld'},el('label',{},txt),el('input',{type:tipo||'text',name,value:val}));
+  box.append(campo('Nombre','NOMBRE',pl.NOMBRE||''));
+  box.append(campo('Rumbo (°)','RUMBO',pl.RUMBO,'number'));
+  box.append(campo('Manteo (°)','MANTEO',pl.MANTEO,'number'));
+  box.append(campo('Largo adelante (m)','LARGO_ADELANTE',pl.LARGO_ADELANTE,'number'));
+  box.append(campo('Largo atrás (m)','LARGO_ATRAS',pl.LARGO_ATRAS,'number'));
+  box.append(el('div',{class:'muted',style:'font-size:11px'},
+    pl.traza&&pl.traza.length>1 ? ('✓ Traza calculada: '+pl.traza.length+' puntos'+(pl.trazaDEM?' · '+pl.trazaDEM:''))
+                                 : 'Sin traza calculada aún.'));
+  box.append(el('div',{class:'muted',style:'font-size:11px'},'Abre Vista 3D (⛰️ 3D) para calcular o recalcular la traza sobre el relieve.'));
+  const bar=el('div',{class:'btnbar'});
+  bar.append(el('button',{class:'btn',onclick:()=>{
+    const g=name=>box.querySelector('[name="'+name+'"]').value;
+    const rumboNuevo=parseFloat(g('RUMBO'))||0, manteoNuevo=Math.max(0,Math.min(89,parseFloat(g('MANTEO'))||0)),
+          adelNuevo=Math.max(0,parseFloat(g('LARGO_ADELANTE'))||0), atrasNuevo=Math.max(0,parseFloat(g('LARGO_ATRAS'))||0);
+    if(rumboNuevo!==pl.RUMBO||manteoNuevo!==pl.MANTEO||adelNuevo!==pl.LARGO_ADELANTE||atrasNuevo!==pl.LARGO_ATRAS){
+      pl.traza=null; pl.trazaFecha=null; pl.trazaDEM=null;   // los parámetros cambiaron: la traza vieja ya no vale
+    }
+    pl.NOMBRE=g('NOMBRE'); pl.RUMBO=rumboNuevo; pl.MANTEO=manteoNuevo;
+    pl.LARGO_ADELANTE=adelNuevo; pl.LARGO_ATRAS=atrasNuevo;
+    ov.remove(); onSave();
+  }},'Guardar'));
+  bar.append(el('button',{class:'btn del',onclick:()=>{if(confirm('¿Eliminar este plano proyectado? No afecta ninguna medición de terreno.')){ov.remove();onDelete();}}},'Eliminar'));
+  bar.append(el('button',{class:'btn sec',onclick:()=>ov.remove()},'Cancelar'));
+  box.append(bar);ov.append(box);document.body.append(ov);
 }
 
 function iconoPunto(estr,mus){
@@ -9593,6 +9944,25 @@ async function exportKMZ(proyectoId){
   };
   lineasKml=carpeta('✏️ Líneas · Terreno', await placemarksLinea('linea'))
            +carpeta('✏️ Líneas · Gabinete', await placemarksLinea('linea_gabinete'));
+  // planos proyectados -> LineString de la traza (el footprint del plano NO se exporta todavía:
+  // esta app aún no escribe ningún <Polygon> en ningún export, ni KMZ ni GeoPackage -- queda
+  // como una fase separada, a futuro, que no bloquea esta).
+  let nPlanoProy=0;
+  const placemarksPlanoProy=async()=>{
+    let s='';
+    let planos=await all('planoproy');
+    if(proyectoId)planos=planos.filter(p=>p._parent===proyectoId);
+    for(const pl of planos){
+      if(!pl.traza||pl.traza.length<2)continue; nPlanoProy++;
+      const coords=pl.traza.map(p=>p.lon+','+p.lat+',0').join(' ');
+      s+='<Placemark><name>'+esc(pl.NOMBRE||'Plano proyectado')+'</name>'
+        +'<description>'+esc('Rumbo/Manteo '+pl.RUMBO+'°/'+pl.MANTEO+'°'+(pl._origen?' · desde '+pl._origen.store:''))+'</description>'
+        +'<Style><LineStyle><color>ffcc3a7c</color><width>3</width></LineStyle></Style>'
+        +'<LineString><tessellate>1</tessellate><coordinates>'+coords+'</coordinates></LineString></Placemark>\n';
+    }
+    return s;
+  };
+  const planoProyKml=carpeta('📐 Planos proyectados', await placemarksPlanoProy());
   // notas de campo -> Placemark de punto, foto opcional embebida igual que _satelital
   let notasKml=''; let nNot=0;
   let notas=await all('nota');
@@ -9608,11 +9978,11 @@ async function exportKMZ(proyectoId){
     notasKml+='<Placemark><name>📝 '+esc(nt.CATEGORIA_NOTA||'Nota')+'</name><description>'+desc+'</description>'
       +'<Point><coordinates>'+lon+','+lat+',0</coordinates></Point></Placemark>\n';
   }
-  const kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Captura de terreno</name>\n'+overlays+lineasKml+notasKml+pk+'</Document></kml>';
+  const kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Captura de terreno</name>\n'+overlays+lineasKml+planoProyKml+notasKml+pk+'</Document></kml>';
   files.unshift({name:'doc.kml',data:new TextEncoder().encode(kml)});
   const nombre=proyectoId?'captura_terreno_'+nombreArchivoProyecto(proyectos[0])+'.kmz':'captura_terreno.kmz';
   descargar(nombre,zipStore(files));
-  toast('KMZ exportado ('+n+' puntos'+(nLin?', '+nLin+' líneas':'')+(nNot?', '+nNot+' notas':'')+(nFoto?', '+nFoto+' fotos/esquemas':'')+')');
+  toast('KMZ exportado ('+n+' puntos'+(nLin?', '+nLin+' líneas':'')+(nPlanoProy?', '+nPlanoProy+' planos proyectados':'')+(nNot?', '+nNot+' notas':'')+(nFoto?', '+nFoto+' fotos/esquemas':'')+')');
 }
 
 // -------- ZIP store-only (sin compresión) --------

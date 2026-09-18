@@ -40,6 +40,11 @@ const LAT = 'Coordenadas Geográficas Decimales_Lat';
 const LON = 'Coordenadas Geográficas Decimales_Long';
 const STORES_TODOS = ['proyecto','punto','punto_gabinete','linea','linea_gabinete','litologia',
   'aflora','estructural','contacto','muestreo','foto','esquema','geomorf','fotomapa','nota'];
+// 'planoproy' existe en la base y cuelga del proyecto (tiene índice parent), pero NO es una
+// ficha del modelo canónico (fuera de STORE2TBL/campos()) -- separado a propósito de
+// STORES_TODOS, que alimenta las pruebas de CSV/GeoPackage dirigidas por el modelo.
+const STORES_EXTRA = ['planoproy'];
+const STORES_LIMPIAR = STORES_TODOS.concat(STORES_EXTRA);
 // Cachés que pertenecen a ESTA app (debe coincidir con MIAS en sw.js). Todo lo demás que haya
 // en el origen es ajeno y NO se toca: la light y el modelo de voz viven en el mismo github.io.
 const PROPIAS = [/^geonotas-v\d+$/, /^geoterreno-cdc-v\d+$/];
@@ -94,11 +99,11 @@ const esperarApp = () => new Promise((res, rej) => {
 const mio = r => String(r && r.id || '').startsWith(P);
 async function censo(w){                  // cuántos registros AJENOS hay por store
   const c = {};
-  for (const s of STORES_TODOS) c[s] = (await w.all(s)).filter(r => !mio(r)).length;
+  for (const s of STORES_LIMPIAR) c[s] = (await w.all(s)).filter(r => !mio(r)).length;
   return c;
 }
 async function borrarMios(w){
-  for (const s of STORES_TODOS) for (const r of await w.all(s)) if (mio(r)) await w.del(s, r.id);
+  for (const s of STORES_LIMPIAR) for (const r of await w.all(s)) if (mio(r)) await w.del(s, r.id);
 }
 async function sembrar(w){                // dataset con datos en AMBAS colecciones
   await w.put('proyecto',       {id:P+'pr', ID_PROYECTO:P+'01', NOMBRE_PROYECTO:'Prueba de humo'});
@@ -1357,6 +1362,125 @@ async function correr(){
       return 'estructural y contacto sin campos con guion bajo';
     });
 
+    // ---- Plano proyectado + traza (v130) ----
+    await prueba("El store 'planoproy' existe, tiene índice parent y queda fuera del modelo canónico", async () => {
+      // Es lo que cumple "no quiero que quede almacenada dentro de la gdb": mismo trato que
+      // 'linea'/'nota' para el índice (cuelga del proyecto), pero sin tabla en MODELO ni entrada
+      // en STORE2TBL/HIJAS, igual que 'cartageo'/'mapaprop' (ver esa prueba, más abajo en el archivo).
+      ok(w.tx('planoproy').indexNames.contains('parent'), "'planoproy' no tiene el índice parent");
+      ok(!STORES_TODOS.includes('planoproy'), "'planoproy' se coló en los stores del modelo (dejaría de estar fuera de la gdb)");
+      eq(w.campos('planoproy'), [], "'planoproy' no debería resolver a ninguna tabla del modelo");
+      const reg = {id:P+'pp-1', _parent:P+'pr', NOMBRE:'smoke', lat:-33.0, lon:-70.6, z0:1000,
+        RUMBO:120, MANTEO:35, LARGO_ADELANTE:500, LARGO_ATRAS:500,
+        traza:null, trazaFecha:null, trazaDEM:null, _origen:null};
+      await w.put('planoproy', reg);
+      try {
+        const leido = await w.get('planoproy', P+'pp-1');
+        eq(leido.NOMBRE, 'smoke', 'no se guardó/leyó igual');
+        eq((await w.childrenOf('planoproy', P+'pr')).map(x=>x.id), [P+'pp-1'], 'childrenOf no lo encontró por índice');
+      } finally { await w.del('planoproy', P+'pp-1'); }
+      return 'store propio, con índice, fuera de STORES_TODOS/campos()';
+    });
+
+    await prueba('v3dGrillaMuestreo no supera los 2500 puntos ni con un largo de 10 km por lado', async () => {
+      // El tope existe para no colgar un teléfono con la búsqueda; el paso adaptativo es lo que
+      // lo logra sin recortar el largo pedido. Fácil de romper "simplificando" el paso a futuro.
+      const g = w.v3dGrillaMuestreo(-33.0, -70.6, 45, 10000, 10000);
+      ok(g.nLong*g.nPerp <= 2500, 'la grilla superó el tope de 2500 puntos (' + (g.nLong*g.nPerp) + ')');
+      ok(g.paso >= 30, 'el paso adaptativo no puede bajar del piso de 30 m');
+      return g.nLong + '×' + g.nPerp + ' = ' + (g.nLong*g.nPerp) + ' puntos, paso ' + g.paso + ' m';
+    });
+
+    await prueba('v3dCalcularTraza recupera el corte analítico de un plano contra un DEM sintético inclinado', async () => {
+      // Terreno = plano inclinado con OTRA pendiente (10°) que la del plano geológico (30°),
+      // ambos con rumbo norte-sur (dip hacia el este): el corte teórico es una línea recta
+      // exactamente sobre el meridiano del punto de referencia (dE=0), sin importar el rumbo
+      // recorrido. Si extraerTraza confunde el eje de rumbo con el perpendicular, o el signo del
+      // buzamiento, la traza sale desplazada o gira en la dirección equivocada.
+      const lat0=-33.0, lon0=-70.6, z0=1000, rumbo=0, manteo=30;
+      const {zona} = w.latLonAUtm(lat0, lon0);
+      const {este:E0, norte:N0} = w.latLonAUtm(lat0, lon0, zona);
+      const k = Math.tan(10*Math.PI/180);
+      const mPerPx = 20, mitad = 3000, n = Math.round(2*mitad/mPerPx)+1;
+      const datos = new Int16Array(n*n);
+      for (let fil=0; fil<n; fil++)
+        for (let col=0; col<n; col++){
+          const dE = -mitad + col*mPerPx;
+          datos[fil*n+col] = Math.round(z0 - k*dE);
+        }
+      const dem = {datos, width:n, height:n, crs:32719, zonaUTM:zona, nombre:'smoke-inclinado',
+        bbox:{minX:E0-mitad, maxX:E0+mitad, minY:N0-mitad, maxY:N0+mitad}};
+      const traza = w.v3dCalcularTraza({lat:lat0, lon:lon0, z0, RUMBO:rumbo, MANTEO:manteo,
+        LARGO_ADELANTE:1500, LARGO_ATRAS:1500}, dem);
+      ok(traza && traza.length > 5, 'no se encontraron suficientes puntos de cruce');
+      for (const p of traza) {
+        const u = w.latLonAUtm(p.lat, p.lon, zona);
+        ok(Math.abs(u.este - E0) < mPerPx*1.5,
+           'un punto de la traza se alejó del meridiano esperado (' + (u.este-E0).toFixed(1) + ' m)');
+      }
+      return traza.length + ' puntos, todos a menos de 1.5 px del corte analítico esperado';
+    });
+
+    await prueba('v3dCalcularTraza no revienta sin DEM y salta los bordes sin dato', async () => {
+      eq(w.v3dCalcularTraza({lat:-33.0,lon:-70.6,z0:1000,RUMBO:0,MANTEO:30,LARGO_ADELANTE:500,LARGO_ATRAS:500}, null), null,
+         'sin DEM debe devolver null, no lanzar ni inventar una traza');
+      return 'null explícito sin relieve cargado';
+    });
+
+    await prueba('Proyectar como plano desde una medición no altera el registro de origen', async () => {
+      // La garantía central del diseño: promoverAPlanoProyectado SOLO lee la ficha. A diferencia
+      // del "Reemplazar la medición" del editor de gizmos (que sí reescribe estructural/contacto),
+      // ningún camino de 'planoproy' puede volver a escribir en la ficha de origen.
+      await sembrar(w);
+      const punto = await w.get('punto', P+'pt-T');
+      const origen = {id:P+'es-1', _parent:P+'pt-T', AZIMUT:120, MANTEO_BUZAMIENTO:35, GRADO_CONFIANZA_ESTRUCTURA:'ALTA'};
+      await w.put('estructural', origen);
+      try {
+        const antesJSON = JSON.stringify(await w.get('estructural', P+'es-1'));
+        await w.promoverAPlanoProyectado('estructural', origen, punto);
+        const despuesJSON = JSON.stringify(await w.get('estructural', P+'es-1'));
+        eq(despuesJSON, antesJSON, 'promover a plano proyectado modificó el registro de origen');
+        const creados = (await w.childrenOf('planoproy', P+'pr'));
+        eq(creados.length, 1, 'no se creó exactamente un plano proyectado');
+        const pl = creados[0];
+        eq(pl.RUMBO, 120, 'rumbo no coincide con la medición de origen');
+        eq(pl.MANTEO, 35, 'manteo no coincide con la medición de origen');
+        eq(pl._origen, {store:'estructural', id:P+'es-1'}, 'la procedencia no quedó registrada');
+        await w.del('planoproy', pl.id);
+      } finally { await w.del('estructural', P+'es-1'); }
+      return 'plano proyectado creado como copia independiente; la ficha de origen quedó intacta';
+    });
+
+    await prueba('El respaldo conserva los planos proyectados', async () => {
+      await sembrar(w);
+      await w.put('planoproy', {id:P+'pp-2', _parent:P+'pr', NOMBRE:'smoke', lat:-33.0, lon:-70.6, z0:1000,
+        RUMBO:10, MANTEO:20, LARGO_ADELANTE:1000, LARGO_ATRAS:1000,
+        traza:[{lat:-33.01,lon:-70.6},{lat:-32.99,lon:-70.6}], trazaFecha:null, trazaDEM:null, _origen:null});
+      try {
+        const j = JSON.parse(await (await w.buildBackupBlob('terreno')).text());
+        ok(Array.isArray(j.planoproy), "el respaldo no trae la clave 'planoproy' como arreglo");
+        ok(j.planoproy.some(x => x.id === P+'pp-2'), 'el plano proyectado sembrado no viajó en el respaldo');
+      } finally { await w.del('planoproy', P+'pp-2'); }
+      return "'planoproy' viaja en el respaldo, como 'linea'/'nota'";
+    });
+
+    await prueba('El KMZ exportado incluye la traza de los planos proyectados', async () => {
+      await sembrar(w);
+      await w.put('planoproy', {id:P+'pp-3', _parent:P+'pr', NOMBRE:'Traza de prueba', lat:-33.0, lon:-70.6, z0:1000,
+        RUMBO:10, MANTEO:20, LARGO_ADELANTE:1000, LARGO_ATRAS:1000,
+        traza:[{lat:-33.01,lon:-70.60},{lat:-33.00,lon:-70.60},{lat:-32.99,lon:-70.60}],
+        trazaFecha:null, trazaDEM:null, _origen:null});
+      try {
+        const cap = await capturar(w, () => w.exportKMZ(P+'pr'));
+        const zip = await new w.JSZip().loadAsync(await cap.blob.arrayBuffer());
+        const kml = await zip.file('doc.kml').async('text');
+        ok(kml.includes('📐 Planos proyectados'), 'falta la carpeta de planos proyectados en el KML');
+        ok(kml.includes('Traza de prueba'), 'falta el nombre del plano proyectado en el KML');
+        ok(kml.includes('-70.6,-33.01,0'), 'faltan las coordenadas de la traza en el KML');
+      } finally { await w.del('planoproy', P+'pp-3'); }
+      return 'carpeta, nombre y coordenadas de la traza presentes en el KMZ';
+    });
+
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.
@@ -1381,7 +1505,7 @@ async function correr(){
   } finally {
     await borrarMios(w);
     await prueba('No quedó basura ni se tocaron datos ajenos', async () => {
-      for (const s of STORES_TODOS) eq((await w.all(s)).filter(mio).length, 0, 'quedaron registros smoke- en ' + s);
+      for (const s of STORES_LIMPIAR) eq((await w.all(s)).filter(mio).length, 0, 'quedaron registros smoke- en ' + s);
       const despues = await censo(w);
       eq(despues, antes, 'cambió la cantidad de registros ajenos');
       const total = Object.values(despues).reduce((a,b)=>a+b, 0);
