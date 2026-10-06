@@ -1481,6 +1481,132 @@ async function correr(){
       return 'carpeta, nombre y coordenadas de la traza presentes en el KMZ';
     });
 
+    // ---- v131: simbología KML, esquema desde foto del punto, GPS sin forzar zoom ----
+    const KML_ESTILOS = '<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+      + '<Style id="rojo"><LineStyle><color>ff0000ff</color><width>4</width></LineStyle></Style>'
+      + '<Style id="azulN"><LineStyle><color>80ff0000</color></LineStyle></Style>'
+      + '<StyleMap id="mapa"><Pair><key>normal</key><styleUrl>#azulN</styleUrl></Pair><Pair><key>highlight</key><styleUrl>#rojo</styleUrl></Pair></StyleMap>'
+      + '<Style id="pin"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/pushpin/grn-pushpin.png</href></Icon></IconStyle></Style>'
+      + '<Placemark><name>L-rojo</name><styleUrl>#rojo</styleUrl><LineString><coordinates>-70.6,-33.0 -70.61,-33.01</coordinates></LineString></Placemark>'
+      + '<Placemark><name>L-map</name><styleUrl>#mapa</styleUrl><LineString><coordinates>-70.6,-33.0 -70.62,-33.02</coordinates></LineString></Placemark>'
+      + '<Placemark><name>P-pin</name><styleUrl>#pin</styleUrl><Point><coordinates>-70.6,-33.0</coordinates></Point></Placemark>'
+      + '<Placemark><name>P-tinte</name><Style><IconStyle><color>ff00ffff</color></IconStyle></Style><Point><coordinates>-70.61,-33.0</coordinates></Point></Placemark>'
+      + '<Placemark><name>L-sin</name><LineString><coordinates>-70.6,-33.0 -70.63,-33.03</coordinates></LineString></Placemark>'
+      + '</Document></kml>';
+
+    await prueba('El KML importado conserva su simbología (Style, StyleMap, color de ícono)', async () => {
+      const g = w.parseKmlTexto(KML_ESTILOS, 'KML importado', 'smoke');
+      const por = n => g.find(x => x.nombre === n);
+      eq(por('L-rojo').estilo, {linea:'#ff0000', lineaOp:1, ancho:4}, 'Style por styleUrl (aabbggrr → #rrggbb)');
+      eq(por('L-map').estilo.linea, '#0000ff', 'StyleMap: debe usar el par "normal", no el "highlight"');
+      ok(Math.abs(por('L-map').estilo.lineaOp - 128/255) < 1e-9, 'la opacidad del canal alfa no se leyó');
+      eq(por('P-pin').estilo, {punto:'#22a33a'}, 'el color del ícono grn-pushpin no se dedujo del nombre');
+      eq(por('P-tinte').estilo, {punto:'#ffff00'}, 'el tinte del IconStyle propio del Placemark no se leyó');
+      eq(por('L-sin').estilo, null, 'un Placemark sin estilo no debe inventar uno');
+      // el mapa usa el color del KML mientras la línea no tenga clase geológica
+      const conK = {geom:[], _estiloKml:{linea:'#ff0000', ancho:4, lineaOp:1}};
+      eq(w.estiloLinea(conK).color, '#ff0000', 'el mapa no usó el color del KML');
+      eq(w.estiloLinea(Object.assign({}, conK, {CLASE_LINEA:'Contacto'})).color === '#ff0000', false,
+         'una línea ya clasificada debe usar la simbología de la app');
+      eq(w.estiloLinea({_estiloKml:{linea:'red"/><script>'}}).color, '#666666', 'un color no hexadecimal debe descartarse');
+      ok(w.iconoPunto([], [], '#22a33a').options.html.includes('#22a33a'), 'el ícono del punto no tomó el color del KML');
+      ok(!w.iconoPunto([], [], '"><script>').options.html.includes('script'), 'el ícono aceptó un color inseguro');
+      return '5 placemarks: Style, StyleMap normal, pushpin por nombre, tinte inline, sin estilo';
+    });
+
+    await prueba('Importado → guardado → KMZ exportado mantiene los colores del KML', async () => {
+      await sembrar(w);
+      const g = w.parseKmlTexto(KML_ESTILOS, 'KML importado', 'smoke').filter(x => ['L-rojo','P-pin'].includes(x.nombre));
+      const antesL = new Set((await w.all('linea_gabinete')).map(x => x.id));
+      const antesP = new Set((await w.all('punto_gabinete')).map(x => x.id));
+      const r = await w.insertarGeometrias(g, P+'pr');
+      const nuevasL = (await w.all('linea_gabinete')).filter(x => !antesL.has(x.id));
+      const nuevosP = (await w.all('punto_gabinete')).filter(x => !antesP.has(x.id));
+      try {
+        eq([r.puntosInsertados, r.lineasInsertadas], [1, 1], 'no se insertaron 1 punto y 1 línea');
+        eq(nuevasL[0]._estiloKml.linea, '#ff0000', 'la línea no guardó su estilo');
+        eq(nuevosP[0]._estiloKml.punto, '#22a33a', 'el punto no guardó su estilo');
+        const cap = await capturar(w, () => w.exportKMZ(P+'pr'));
+        const zip = await new w.JSZip().loadAsync(await cap.blob.arrayBuffer());
+        const kml = await zip.file('doc.kml').async('text');
+        ok(kml.includes('<color>ff0000ff</color>'), 'la línea no salió roja en el KMZ');
+        ok(kml.includes('<IconStyle><color>ff3aa322</color></IconStyle>'), 'el punto no salió verde en el KMZ');
+        ok(!kml.includes('_estiloKml'), 'el campo interno se filtró al KML');
+      } finally {
+        for (const x of nuevasL) await w.del('linea_gabinete', x.id);
+        for (const x of nuevosP) await w.del('punto_gabinete', x.id);
+      }
+      return 'estilo guardado en el registro y devuelto al KMZ, sin filtrar el campo interno';
+    });
+
+    await prueba('Esquema: "📎 Del punto" pone de fondo una foto del mismo punto y fija su ID', async () => {
+      await sembrar(w);
+      await w.put('foto', {id:P+'ef1', _parent:P+'pt-T', ID_FOTOGRAFIA:'F-77', _img:'data:image/png;base64,'+IMG1x1});
+      const reg = {id:P+'ee1', _parent:P+'pt-T', OBSERVACION:'smoke'};
+      await w.put('esquema', reg);
+      let ov = null;
+      try {
+        ov = await w.abrirEsquema(reg);
+        const btn = [...ov.querySelectorAll('button')].find(b => b.textContent.includes('Del punto'));
+        ok(btn, 'no aparece el botón "📎 Del punto" en el lienzo');
+        btn.click();
+        let miniatura = null;
+        for (let i = 0; i < 40 && !miniatura; i++) {
+          await new Promise(r => setTimeout(r, 25));
+          miniatura = [...w.document.querySelectorAll('button')].find(b => b.textContent.includes('F-77'));
+        }
+        ok(miniatura, 'el selector no lista la foto del punto');
+        miniatura.click();
+        for (let i = 0; i < 40 && !reg._fondo; i++) await new Promise(r => setTimeout(r, 25));
+        eq(reg._fondo, 'data:image/png;base64,'+IMG1x1, 'la foto no quedó de fondo');
+        eq(reg.ID_FOTOGRAFIA_ASOCIADA, 'F-77', 'no se fijó ID_FOTOGRAFIA_ASOCIADA');
+        eq((await w.get('esquema', P+'ee1')).ID_FOTOGRAFIA_ASOCIADA, 'F-77', 'el ID no se guardó en la base');
+      } finally {
+        if (ov) { const listo = [...ov.querySelectorAll('button')].find(b => b.textContent.includes('Listo'));
+          if (listo) { listo.click(); await new Promise(r => setTimeout(r, 50)); } ov.remove(); }
+        await w.del('foto', P+'ef1'); await w.del('esquema', P+'ee1');
+      }
+      return 'foto listada, puesta de fondo y asociada por su ID';
+    });
+
+    await prueba('GPS en vivo: solo el primer fix fija el zoom; alejarse se respeta; arrastrar pausa', async () => {
+      const div = w.document.createElement('div');
+      div.style.cssText = 'position:fixed;left:0;top:0;width:400px;height:300px';
+      w.document.body.append(div);
+      const geoOrig = Object.getOwnPropertyDescriptor(w.navigator, 'geolocation');
+      let cb = null;
+      Object.defineProperty(w.navigator, 'geolocation', {configurable:true,
+        value:{watchPosition:(ok)=>{cb=ok;return 7;}, clearWatch:()=>{}}});
+      const mapaPrevio = w.eval('mapaVista');
+      try {
+        w.__div = div;
+        w.eval('mapaVista = L.map(window.__div, {zoomAnimation:false, fadeAnimation:false}).setView([-33,-70],8)');
+        const m = w.eval('mapaVista');
+        const fix = (la, lo) => cb({coords:{latitude:la, longitude:lo, accuracy:10}});
+        w.toggleGPSLive(null);
+        fix(-33.4, -70.6);
+        eq(m.getZoom(), 17, 'el primer fix debe acercar a z17');
+        m.setZoom(10, {animate:false});
+        fix(-33.41, -70.61);
+        eq(m.getZoom(), 10, 'un fix posterior volvió a forzar el zoom');
+        ok(Math.abs(m.getCenter().lat + 33.41) < 1e-3, 'con seguimiento activo debe recentrar');
+        m.fire('dragstart');
+        fix(-33.6, -70.9);
+        ok(Math.abs(m.getCenter().lat + 33.41) < 1e-3, 'tras arrastrar, el seguimiento debe quedar pausado');
+        w.toggleGPSLive(null);   // pausado → recentra (panTo animado: esperar a que termine)
+        for (let i = 0; i < 40 && Math.abs(m.getCenter().lat + 33.6) >= 1e-3; i++) await new Promise(r => setTimeout(r, 50));
+        ok(Math.abs(m.getCenter().lat + 33.6) < 1e-3, 'tocar 📡 en pausa debe recentrar en la última posición');
+        eq(m.getZoom(), 10, 'recentrar no debe cambiar el zoom');
+      } finally {
+        w.pararGPSLive();
+        try { w.eval('mapaVista').remove(); } catch(e) {}
+        w.__mp = mapaPrevio; w.eval('mapaVista = window.__mp'); delete w.__mp; delete w.__div;
+        if (geoOrig) Object.defineProperty(w.navigator, 'geolocation', geoOrig); else delete w.navigator.geolocation;
+        div.remove();
+      }
+      return 'z17 solo al inicio, zoom del usuario respetado, pausa al arrastrar y recentrado';
+    });
+
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.

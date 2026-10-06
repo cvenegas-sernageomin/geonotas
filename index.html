@@ -3593,7 +3593,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v130';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v131';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4238,9 +4238,11 @@ function parseKmlTexto(texto, fuente, capa) {
   }
 
   const geometrias = [];
+  const estiloDe = kmlLectorEstilos(xmlDoc);
 
   const placemarks = xmlDoc.querySelectorAll('Placemark');
   for (const pm of placemarks) {
+    const estilo = estiloDe(pm);
     const nombre = pm.querySelector('name')?.textContent || 'Sin nombre';
     const description = pm.querySelector('description')?.textContent || '';
     // Un KML no trae tabla de atributos, pero <name> y <description> cumplen ese papel: se
@@ -4258,24 +4260,81 @@ function parseKmlTexto(texto, fuente, capa) {
 
     for (const pointNode of pm.querySelectorAll('Point')) {
       const c = aLatLon(pointNode.querySelector('coordinates')?.textContent || '');
-      if (c.length) geometrias.push({tipo:'punto', lat:c[0][0], lon:c[0][1], nombre, descripcion:description, fuente, props, capa});
+      if (c.length) geometrias.push({tipo:'punto', lat:c[0][0], lon:c[0][1], nombre, descripcion:description, fuente, props, capa, estilo});
     }
 
     for (const lineNode of pm.querySelectorAll('LineString')) {
       const c = aLatLon(lineNode.querySelector('coordinates')?.textContent || '');
-      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente, props, capa});
+      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente, props, capa, estilo});
     }
 
     // Un poligono entra como el CONTORNO de cada anillo (exterior e interiores): la app no
     // tiene tipo poligono, y para un geologo el borde de una unidad es un contacto.
     for (const anillo of pm.querySelectorAll('Polygon LinearRing')) {
       const c = aLatLon(anillo.querySelector('coordinates')?.textContent || '');
-      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente, props, capa});
+      if (c.length >= 2) geometrias.push({tipo:'linea', geom:c, nombre, descripcion:description, fuente, props, capa, estilo});
     }
   }
 
   return geometrias;
 }
+
+// Simbologia original del KML: sin esto todo lo importado salia con el estilo por defecto de la
+// app (lineas grises, puntos rojos) aunque el archivo trajera un color por rasgo. Se resuelve
+// <styleUrl> -> <Style> o <StyleMap> (par "normal") y el <Style> propio del Placemark encima.
+// Devuelve {linea, lineaOp, ancho, punto} con colores '#rrggbb' validados, o null.
+const KML_ICONO_COLOR = {ltblu:'#58b6f0', ylw:'#f5d000', yellow:'#f5d000', red:'#e02020', grn:'#22a33a',
+  green:'#22a33a', blu:'#2a6fdb', blue:'#2a6fdb', wht:'#ffffff', white:'#ffffff', pink:'#ff6fb5',
+  purple:'#8a3fd1', orange:'#ff8c1a'};
+// KML escribe el color como aabbggrr (alfa primero y los canales al reves que en CSS)
+function kmlColorAHex(txt){
+  const c = String(txt||'').trim().replace(/^#/, '');
+  if (!/^[0-9a-f]{8}$/i.test(c)) return null;
+  return {hex: ('#'+c.slice(6,8)+c.slice(4,6)+c.slice(2,4)).toLowerCase(), op: parseInt(c.slice(0,2),16)/255};
+}
+function kmlLectorEstilos(xmlDoc){
+  const porId = {};
+  xmlDoc.querySelectorAll('Style[id], StyleMap[id]').forEach(n => { porId[n.getAttribute('id')] = n; });
+  const hijo = (n, tag) => Array.from(n.children).find(c => c.localName === tag);
+  const deStyle = st => {
+    const out = {};
+    const ls = st.querySelector('LineStyle'), ps = st.querySelector('PolyStyle'), is = st.querySelector('IconStyle');
+    const cl = ls && kmlColorAHex(ls.querySelector('color')?.textContent);
+    if (cl) { out.linea = cl.hex; out.lineaOp = cl.op; }
+    else { const cp = ps && kmlColorAHex(ps.querySelector('color')?.textContent); if (cp) { out.linea = cp.hex; out.lineaOp = 1; } }
+    const w = ls && parseFloat(ls.querySelector('width')?.textContent);
+    if (w > 0) out.ancho = w;
+    if (is) {
+      // El color del IconStyle TIÑE el icono; blanco (el valor por omision) no tiñe nada, y
+      // entonces el color sale del nombre del icono (red-pushpin.png, ylw-circle.png, ...).
+      const ci = kmlColorAHex(is.querySelector('color')?.textContent);
+      const href = (is.querySelector('Icon href')?.textContent || '').toLowerCase();
+      const m = href.match(/(ltblu|ylw|yellow|red|grn|green|blu|blue|wht|white|pink|purple|orange)[-_.]/);
+      if (ci && ci.hex !== '#ffffff') out.punto = ci.hex;
+      else if (m) out.punto = KML_ICONO_COLOR[m[1]];
+      else if (ci) out.punto = ci.hex;
+    }
+    return out;
+  };
+  const resolver = (url, prof) => {
+    if (!url || prof > 4) return {};
+    const n = porId[String(url).trim().split('#').pop()];
+    if (!n) return {};
+    if (n.localName === 'Style') return deStyle(n);
+    const par = Array.from(n.querySelectorAll('Pair')).find(p => (p.querySelector('key')?.textContent || '').trim() === 'normal');
+    if (!par) return {};
+    const st = hijo(par, 'Style');
+    return Object.assign(resolver(hijo(par, 'styleUrl')?.textContent, prof + 1), st ? deStyle(st) : {});
+  };
+  return pm => {
+    const su = hijo(pm, 'styleUrl'), st = hijo(pm, 'Style');
+    const e = Object.assign(resolver(su && su.textContent, 0), st ? deStyle(st) : {});
+    return Object.keys(e).length ? e : null;
+  };
+}
+// Solo colores '#rrggbb': el estilo vive en el registro y un respaldo JSON editado a mano no
+// debe poder inyectar nada en el SVG del icono ni en el KML exportado.
+const hexSeguro = c => /^#[0-9a-f]{6}$/i.test(c||'') ? c : null;
 
 // Inserta lo leido del archivo (KMZ, KML o shapefile) como registros CANONICOS colgando del
 // proyecto indicado.
@@ -4310,7 +4369,7 @@ async function insertarGeometrias(geometrias, proyectoId, mapeo) {
         await put(RM_GAB_STORE, Object.assign({
           id: uid(), _parent: proyectoId,
           FUENTE_COORDENADAS: g.fuente || 'KMZ importado',
-        }, f, legado, campos, {
+        }, g.estilo ? {_estiloKml: g.estilo} : {}, f, legado, campos, {
           // las coordenadas las manda la geometria, no la tabla de atributos
           [inLat]: g.lat.toFixed(6), [inLon]: g.lon.toFixed(6),
         }));
@@ -4319,7 +4378,7 @@ async function insertarGeometrias(geometrias, proyectoId, mapeo) {
         const legado = hayReglas ? {} : {NOTA: [g.nombre, g.descripcion].filter(Boolean).join(' — ')};
         await put(LINE_GAB_STORE, Object.assign({
           id: uid(), _parent: proyectoId,
-        }, legado, campos, {geom: g.geom}));
+        }, g.estilo ? {_estiloKml: g.estilo} : {}, legado, campos, {geom: g.geom}));
         lineasInsertadas++;
       }
     } catch (err) {
@@ -8949,6 +9008,7 @@ async function abrirEsquema(reg, alCerrar){
         repintar(); sucio=true; await guardar();
       }},'↩ Deshacer'));
       fila2.append(entradasFoto(ponerFondo,'blue',['📷 Foto','🖼️']));
+      if(reg._parent) fila2.append(el('button',{class:'btn blue',title:'Usar de fondo una foto ya tomada en este punto',onclick:elegirFotoPunto},'📎 Del punto'));
       if(reg._fondo) fila2.append(el('button',{class:'btn sec',title:'Quitar la foto de fondo',onclick:async()=>{
         reg._fondo=null; fondo=null; repintar(); sucio=true; await guardar(); pintarFila2(); toast('Foto de fondo quitada');
       }},'🚫'));
@@ -8960,12 +9020,43 @@ async function abrirEsquema(reg, alCerrar){
     };
     async function ponerFondo(file){
       const img=await cargarImagen(file,1280,.72);
-      reg._fondo=img.dataUrl;
+      await fijarFondo(img.dataUrl,img.w,img.h);
+      toast('Foto de fondo agregada');
+    }
+    async function fijarFondo(dataUrl,w,h){
+      reg._fondo=dataUrl;
       // Si aun no hay trazos, el lienzo ADOPTA la proporcion de la foto (se aprovecha entera).
       // Si ya los hay, el lienzo no se toca y la foto entra en contain, para no mover el dibujo.
-      if(!reg._trazos.length){ reg._w=img.w; reg._h=img.h; cv.width=reg._w; cv.height=reg._h; }
+      if(!reg._trazos.length){ reg._w=w; reg._h=h; cv.width=reg._w; cv.height=reg._h; }
       fondo=await esquemaCargarFondo(reg);
-      repintar(); sucio=true; await guardar(); pintarFila2(); toast('Foto de fondo agregada');
+      repintar(); sucio=true; await guardar(); pintarFila2();
+    }
+    // Las fotos del MISMO punto (store 'foto', hijas del punto igual que el esquema): antes había
+    // que volver a sacarla de la galería y escribir su ID a mano en ID_FOTOGRAFIA_ASOCIADA.
+    async function elegirFotoPunto(){
+      const fotos=(await childrenOf('foto',reg._parent)).filter(f=>typeof f._img==='string'&&f._img.startsWith('data:image/'));
+      if(!fotos.length){ toast('Este punto todavía no tiene fotos'); return; }
+      const sel=el('div',{style:'position:fixed;inset:0;z-index:4100;background:rgba(0,0,0,.82);display:flex;flex-direction:column;padding:12px;gap:10px'});
+      const grilla=el('div',{style:'flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;align-content:start'});
+      fotos.forEach((f,i)=>{
+        const rot=(f.ID_FOTOGRAFIA||('Foto '+(i+1)))+(f.ORIENTACION_FOTO?' · '+f.ORIENTACION_FOTO+'°':'');
+        grilla.append(el('button',{style:'background:#1e262e;border:2px solid '+(f.ID_FOTOGRAFIA&&f.ID_FOTOGRAFIA===reg.ID_FOTOGRAFIA_ASOCIADA?'#12a4ff':'#3a4652')+';border-radius:8px;padding:4px;color:#e6eaee;font-size:12px;cursor:pointer',
+          onclick:async()=>{
+            const im=new Image();
+            const ok=await new Promise(r=>{im.onload=()=>r(true);im.onerror=()=>r(false);im.src=f._img;});
+            if(!ok){ toast('No se pudo leer esa foto'); return; }
+            sel.remove();
+            if(f.ID_FOTOGRAFIA) reg.ID_FOTOGRAFIA_ASOCIADA=f.ID_FOTOGRAFIA;
+            await fijarFondo(f._img,im.naturalWidth,im.naturalHeight);
+            toast('Fondo: '+(f.ID_FOTOGRAFIA||'foto del punto'));
+          }},
+          el('img',{src:f._img,style:'width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;display:block'}),
+          el('div',{style:'margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},rot)));
+      });
+      sel.append(el('div',{style:'display:flex;align-items:center;gap:10px;color:#fff'},
+        el('b',{style:'flex:1'},'Fotos de este punto'),
+        el('button',{class:'btn sec',onclick:()=>sel.remove()},'✕')), grilla);
+      document.body.append(sel);
     }
     pintarFila2();
     ov.append(tools, fila2);
@@ -9018,6 +9109,10 @@ function bloqueEsquema(reg){
   const mini=el('div',{class:'sk-mini'});
   const abrir=async()=>{ Object.assign(reg,f.getData()); await put('esquema',reg); await abrirEsquema(reg,pintarMini); };
   const pintarMini=()=>{ mini.innerHTML='';
+    // el lienzo puede haber fijado ID_FOTOGRAFIA_ASOCIADA ("📎 Del punto"): reflejarlo en el
+    // formulario, o el próximo 'change' lo pisaría con el valor viejo del input
+    const inFoto=f.node.querySelector('[name="ID_FOTOGRAFIA_ASOCIADA"]');
+    if(inFoto && reg.ID_FOTOGRAFIA_ASOCIADA!=null && inFoto.value!==reg.ID_FOTOGRAFIA_ASOCIADA) inFoto.value=reg.ID_FOTOGRAFIA_ASOCIADA;
     mini.append(reg._img ? el('img',{src:reg._img,alt:'esquema',onclick:abrir})
                          : el('div',{class:'sk-vacio',onclick:abrir},'Sin dibujo todavia — toca para abrir el lienzo'));
   };
@@ -9377,7 +9472,7 @@ async function initMapaVista(puntos){
     const lat=parseFloat(p['Coordenadas Geográficas Decimales_Lat']), lon=parseFloat(p['Coordenadas Geográficas Decimales_Long']);
     if(isNaN(lat)||isNaN(lon))continue;
     const estr=await childrenOf('estructural',p.id), mus=await childrenOf('muestreo',p.id);
-    const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus)}).addTo(mapaVista);
+    const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus,p._estiloKml&&p._estiloKml.punto)}).addTo(mapaVista);
     if(p.ID_PUNTO_CONTROL)m.bindTooltip(p.ID_PUNTO_CONTROL,{permanent:true,direction:'bottom',offset:[0,18],className:'ptlabel'});
     m.on('click',()=>{curPunto=null;vista={n:'punto',id:p.id};render();});
     pts.push([lat,lon]);
@@ -9498,7 +9593,15 @@ function svgEstructura(e,cx,cy){
 // Siempre 6 dígitos hex: toKmlColor() del export KMZ trocea de a 2 y con #abc produce basura.
 const LINEA_CLASE_COLOR={'Contacto':'#1a1a1a','Estructura tectónica':'#c0392b','Cuerpo tabular':'#8e44ad','Geomorfología':'#16739e','Otro':'#666666'};
 const LINEA_DASH={'Observado':null,'Inferido':'10,7','Cubierto':'2,7'};
-function estiloLinea(l){return {color:LINEA_CLASE_COLOR[l.CLASE_LINEA]||'#666666', weight:3.5, opacity:.95, dashArray:LINEA_DASH[l.CERTEZA_LINEA]||null};}
+// Una línea importada de KMZ conserva su color original MIENTRAS no tenga CLASE_LINEA: en
+// cuanto el geólogo la clasifica, manda la simbología geológica de la app.
+function colorKmlLinea(l){ return !l.CLASE_LINEA && l._estiloKml ? hexSeguro(l._estiloKml.linea) : null; }
+function estiloLinea(l){
+  const ck=colorKmlLinea(l);
+  if(ck){ const k=l._estiloKml, w=parseFloat(k.ancho), op=parseFloat(k.lineaOp);
+    return {color:ck, weight:w>0?Math.min(8,Math.max(2,w)):3.5, opacity:op>=0?Math.max(.35,op):.95, dashArray:LINEA_DASH[l.CERTEZA_LINEA]||null}; }
+  return {color:LINEA_CLASE_COLOR[l.CLASE_LINEA]||'#666666', weight:3.5, opacity:.95, dashArray:LINEA_DASH[l.CERTEZA_LINEA]||null};
+}
 // Categoría es dominio abierto (el usuario puede agregar valores sobre la marcha): el
 // fallback '#666666' cubre cualquier categoría nueva sin color predefinido.
 const NOTA_CATEGORIA_COLOR={'Acceso':'#b9761f','Peligro':'#c0392b','Hallazgo':'#16739e','Otro':'#666666'};
@@ -9514,25 +9617,50 @@ let agregandoPunto=false, coordsPendientes=null;
 let agregandoNota=false;
 let midiendo=false;   // modo medir distancia: reusa _verts/_tmpLine/_tmpMk de dibujando (nunca activos a la vez)
 // ---- GPS en vivo (vista mapa): watchPosition con recentrado continuo, para navegar en auto ----
-let gpsWatchId=null, gpsDot=null, gpsAcc=null;
+// El zoom lo decide el geólogo: solo la PRIMERA lectura acerca a z17 (si venía de más lejos que
+// z15). Antes cada lectura forzaba z17 bajo z15, así que alejarse para ver el contexto duraba
+// hasta el siguiente fix (~1 s). Arrastrar el mapa pausa el recentrado (el punto azul se sigue
+// moviendo); tocar 📡 con el seguimiento pausado recentra en vez de apagar.
+let gpsWatchId=null, gpsDot=null, gpsAcc=null, gpsSiguiendo=true, gpsPrimerFix=true, gpsUltimo=null, gpsBtn=null;
+function gpsPintarBtn(){
+  if(!gpsBtn) return;
+  if(gpsWatchId==null){ gpsBtn.textContent='📡 GPS'; gpsBtn.className='btn sec mini'; }
+  else if(gpsSiguiendo){ gpsBtn.textContent='📡 GPS ●'; gpsBtn.className='btn blue mini'; }
+  else { gpsBtn.textContent='📡 Centrar'; gpsBtn.className='btn sec mini'; }
+}
+function gpsPausar(){ if(gpsWatchId!=null && gpsSiguiendo){ gpsSiguiendo=false; gpsPintarBtn(); } }
 function toggleGPSLive(btn){
-  if(gpsWatchId!=null){ pararGPSLive(); if(btn){btn.textContent='📡 GPS';btn.className='btn sec mini';} return; }
+  if(btn) gpsBtn=btn;
+  if(gpsWatchId!=null && !gpsSiguiendo){
+    gpsSiguiendo=true; gpsPintarBtn();
+    if(gpsUltimo && mapaVista) mapaVista.panTo(gpsUltimo,{animate:false});
+    return;
+  }
+  if(gpsWatchId!=null){ pararGPSLive(); gpsPintarBtn(); return; }
   if(!navigator.geolocation){toast('Sin geolocalización');return;}
-  toast('Siguiendo GPS…');
-  if(btn){btn.textContent='📡 GPS ●';btn.className='btn blue mini';}
+  toast('Siguiendo GPS… (arrastra el mapa para pausar)');
+  gpsSiguiendo=true; gpsPrimerFix=true;
+  if(mapaVista){ mapaVista.off('dragstart',gpsPausar); mapaVista.on('dragstart',gpsPausar); }
   gpsWatchId=navigator.geolocation.watchPosition(p=>{
     if(!mapaVista)return;
     const ll=[p.coords.latitude,p.coords.longitude];
+    gpsUltimo=ll;
     if(!gpsDot||!mapaVista.hasLayer(gpsDot)){
       gpsAcc=L.circle(ll,{radius:p.coords.accuracy,color:'#12a4ff',weight:1,fillOpacity:.12}).addTo(mapaVista);
       gpsDot=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#12a4ff',fillOpacity:1}).addTo(mapaVista);
+      // initMapaVista() rehace el mapa al editar una línea o nota: re-engancha la pausa al nuevo
+      mapaVista.off('dragstart',gpsPausar); mapaVista.on('dragstart',gpsPausar);
     } else {
       gpsDot.setLatLng(ll); gpsAcc.setLatLng(ll).setRadius(p.coords.accuracy);
     }
-    mapaVista.setView(ll, mapaVista.getZoom()<15?17:mapaVista.getZoom());
+    if(gpsPrimerFix){ gpsPrimerFix=false; mapaVista.setView(ll, mapaVista.getZoom()<15?17:mapaVista.getZoom()); }
+    else if(gpsSiguiendo) mapaVista.panTo(ll,{animate:false});
   }, e=>toast('GPS: '+e.message), {enableHighAccuracy:true, maximumAge:0, timeout:20000});
+  gpsPintarBtn();
 }
 function pararGPSLive(){
+  if(mapaVista) mapaVista.off('dragstart',gpsPausar);
+  gpsSiguiendo=true; gpsUltimo=null;
   if(gpsWatchId!=null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
   if(mapaVista){ if(gpsDot)try{mapaVista.removeLayer(gpsDot);}catch(e){} if(gpsAcc)try{mapaVista.removeLayer(gpsAcc);}catch(e){} }
   gpsDot=null; gpsAcc=null;
@@ -9678,10 +9806,13 @@ function formPlanoProy(pl,onSave,onDelete){
   box.append(bar);ov.append(box);document.body.append(ov);
 }
 
-function iconoPunto(estr,mus){
+function iconoPunto(estr,mus,colorKml){
   const cx=30,cy=30;let inner='';
   (estr||[]).forEach(e=>inner+=svgEstructura(e,cx,cy));       // símbolos estructurales orientados
-  inner+='<circle cx="30" cy="30" r="4.2" fill="#c0392b" stroke="#fff" stroke-width="1.6"/>';   // estación
+  // estación; un punto importado de KMZ usa el color de su icono original, un poco más grande
+  const ck=hexSeguro(colorKml);
+  inner+= ck ? '<circle cx="30" cy="30" r="5.5" fill="'+ck+'" stroke="#222" stroke-width="1.4"/>'
+             : '<circle cx="30" cy="30" r="4.2" fill="#c0392b" stroke="#fff" stroke-width="1.6"/>';
   if(mus&&mus.length)inner+='<g transform="translate(45,15)"><polygon points="0,-6 6,5 -6,5" fill="#2166a8" stroke="#fff" stroke-width="1.2"/><text x="0" y="2.5" font-size="7" fill="#fff" text-anchor="middle" font-weight="bold">'+mus.length+'</text></g>';
   const svg='<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">'+inner+'</svg>';
   return L.divIcon({className:'estsym',html:svg,iconSize:[60,60],iconAnchor:[30,30]});
@@ -9896,8 +10027,11 @@ async function exportKMZ(proyectoId){
         satImg='<br><img src="'+fn+'" style="max-width:340px"/>';}
       const galeria=await kmzGaleriaPunto(p,files); nFoto+=galeria.n;
       const desc='<![CDATA['+'<b>'+esc(p.ID_PUNTO_CONTROL||'')+'</b><br>'+litos.map(l=>'• '+esc(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA)||'')).join('<br>')+satImg+galeria.html+']]>';
+      // punto importado de KMZ: devuelve el color de su icono original (KML = aabbggrr)
+      const ck=hexSeguro(p._estiloKml&&p._estiloKml.punto);
+      const estPt=ck?'<Style><IconStyle><color>ff'+ck.slice(5,7)+ck.slice(3,5)+ck.slice(1,3)+'</color></IconStyle></Style>':'';
       s+='<Placemark><name>'+esc(p.ID_PUNTO_CONTROL||p.id)+'</name><description>'+desc+'</description>'
-        +'<ExtendedData>'+ed+'</ExtendedData>'
+        +estPt+'<ExtendedData>'+ed+'</ExtendedData>'
         +'<Point><coordinates>'+lon+','+lat+',0</coordinates></Point></Placemark>\n';
     }
     return s;
@@ -9937,7 +10071,7 @@ async function exportKMZ(proyectoId){
       const coords=l.geom.map(c=>c[1]+','+c[0]+',0').join(' ');
       s+='<Placemark><name>'+esc(rotuloLinea(l))+'</name><description>'+esc(l.NOTA||'')+'</description>'
         +'<ExtendedData><Data name="COLECCION"><value>'+esc(COLECCION_DE[store])+'</value></Data></ExtendedData>'
-        +'<Style><LineStyle><color>'+toKmlColor(LINEA_CLASE_COLOR[l.CLASE_LINEA])+'</color><width>3</width></LineStyle></Style>'
+        +'<Style><LineStyle><color>'+toKmlColor(colorKmlLinea(l)||LINEA_CLASE_COLOR[l.CLASE_LINEA])+'</color><width>3</width></LineStyle></Style>'
         +'<LineString><tessellate>1</tessellate><coordinates>'+coords+'</coordinates></LineString></Placemark>\n';
     }
     return s;
