@@ -40,6 +40,9 @@ Instalable en celular; funciona sin conexión tras la primera carga.
 - **⛰ Sombreado y ∠ Pendiente** (v137): capas del selector calculadas en el teléfono desde las
   teselas Terrarium (Horn, luz del NO; pendiente en clases 15/25/35/45° con leyenda), z9–13
   nativas. Usan la caché del relieve del 3D si existe (sin señal) pero no la hacen crecer.
+- **Auditoría v138**: la base se reabre sola si otra instancia (la light u otra pestaña) cerró la
+  conexión; el botón 📡 de manteo usa beta y gamma (apoyado de costado ya no da 0°); se pide
+  almacenamiento persistente al arrancar para que el navegador no desaloje la campaña.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas

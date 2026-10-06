@@ -3603,7 +3603,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v137';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v138';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -3880,7 +3880,7 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
     }
   };
   r.onsuccess=()=>{db=r.result;
-    db.onversionchange=()=>{try{db.close();}catch(e){}};   // libera para que otra instancia pueda actualizar
+    db.onversionchange=soltarDB;   // libera para que otra instancia pueda actualizar
     finish(res,db);};
   // Base MAS NUEVA que este codigo: las dos PWAs (completa y light) comparten 'captura-terreno'
   // en el mismo origen y sus service workers se actualizan por separado. Si la otra ya subio
@@ -3893,7 +3893,7 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
       if(ev&&ev.preventDefault) ev.preventDefault();
       const r2=indexedDB.open(nombre);
       r2.onsuccess=()=>{db=r2.result;
-        db.onversionchange=()=>{try{db.close();}catch(x){}};
+        db.onversionchange=soltarDB;
         console.warn('IndexedDB: la base esta en v'+db.version+' y este codigo en v'+ver+'; se abre sin migrar');
         finish(res,db);};
       r2.onerror=()=>finish(rej,r2.error||e);
@@ -3908,16 +3908,29 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
 function cargarImagen(file,max,q){return new Promise(res=>{const img=new Image();const rd=new FileReader();
   rd.onload=()=>{img.onload=()=>{let w=img.width,h=img.height;const s=Math.min(1,max/Math.max(w,h));w=Math.round(w*s);h=Math.round(h*s);
     const cv=el('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);res({dataUrl:cv.toDataURL('image/jpeg',q),w,h});};img.src=rd.result;};rd.readAsDataURL(file);});}
+// Otra instancia (la light, u otra pestaña con una version nueva) pide subir VER: se suelta la
+// conexion para no bloquearla. Hasta la auditoria de v138 esa conexion cerrada quedaba en 'db'
+// y TODO put() posterior moria con InvalidStateError: con la light abierta de fondo, abrir una
+// completa que subia VER dejaba la light sin poder guardar nada hasta cerrarla. Ahora 'db' queda
+// en null y conDB() la reabre en el siguiente acceso (si la base quedo mas nueva, openDB() ya
+// sabe abrirla sin migrar).
+function soltarDB(){ try{ if(db) db.close(); }catch(e){} db=null; }
+let _reabriendo=null;
+async function conDB(){
+  if(db) return db;
+  if(!_reabriendo) _reabriendo=openDB().finally(()=>{_reabriendo=null;});
+  return _reabriendo;
+}
 function tx(store,mode='readonly'){return db.transaction(store,mode).objectStore(store);}
 // put/del rechazan tambien si la TRANSACCION aborta, no solo si falla el request: al quedarse
 // sin espacio (QuotaExceededError) Chrome puede abortar la transaccion entera y, sin este
 // segundo camino, la promesa quedaba colgada para siempre y la foto "se guardaba" en silencio.
-function put(store,obj){return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.put(obj);
+async function put(store,obj){await conDB();return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.put(obj);
   r.onsuccess=()=>res(obj);r.onerror=()=>rej(r.error);os.transaction.onabort=()=>rej(os.transaction.error||r.error||new Error('transacción abortada'));});}
-function del(store,id){return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.delete(id);
+async function del(store,id){await conDB();return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.delete(id);
   r.onsuccess=()=>res();r.onerror=()=>rej(r.error);os.transaction.onabort=()=>rej(os.transaction.error||r.error||new Error('transacción abortada'));});}
-function all(store){return new Promise((res,rej)=>{const r=tx(store).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
-function get(store,id){return new Promise((res,rej)=>{const r=tx(store).get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function all(store){await conDB();return new Promise((res,rej)=>{const r=tx(store).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function get(store,id){await conDB();return new Promise((res,rej)=>{const r=tx(store).get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
 // Hijos de un padre por el INDICE 'parent' que openDB() crea en todos los stores salvo
 // 'proyecto'. Hasta v128 esto hacia getAll() del store ENTERO y filtraba en memoria: el mapa
 // del proyecto, la libreta PDF y el KMZ llaman childrenOf por CADA punto (estructural,
@@ -3930,6 +3943,7 @@ function get(store,id){return new Promise((res,rej)=>{const r=tx(store).get(id);
 // index.getAll(undefined) devolveria el store completo, no "los sin padre".
 async function childrenOf(store,parentId){
   if(parentId==null) return [];
+  await conDB();
   const os=tx(store);
   if(!os.indexNames.contains('parent')) return (await all(store)).filter(x=>x._parent===parentId);
   return new Promise((res,rej)=>{const r=os.index('parent').getAll(parentId);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
@@ -8915,6 +8929,15 @@ function headingFromEvent(e){
   if(e.alpha!=null)return (360-e.alpha)%360;                                     // Android orientación absoluta
   return null;
 }
+// Inclinación del teléfono apoyado sobre el plano = ángulo entre la normal a la pantalla y la
+// vertical: cos(manteo) = cos(beta)·cos(gamma) (tercera componente del eje Z en ejesMundo).
+// Hasta v137 se usaba solo |beta|: con el teléfono apoyado de costado (eje largo a lo largo
+// del rumbo, la posición natural) la inclinación caía en gamma y el manteo salía ~0°.
+function manteoDeSensor(beta,gamma){
+  if(beta==null) return null;
+  const c=Math.cos(beta*D2R)*Math.cos((gamma||0)*D2R);
+  return Math.acos(Math.min(1,Math.abs(c)))*R2D;
+}
 function circularMean(ds){if(!ds.length)return null;const r=ds.map(d=>d*Math.PI/180);
   const x=r.reduce((s,v)=>s+Math.cos(v),0)/r.length,y=r.reduce((s,v)=>s+Math.sin(v),0)/r.length;
   return (Math.round(Math.atan2(y,x)*180/Math.PI)+360)%360;}
@@ -8923,7 +8946,7 @@ function medirSensor(modo){ // modo: 'brujula'(azimut 0-360) | 'dip'(inclinació
     if(!(await ensureOrientPerm())){res(null);return;}
     const hs=[],bs=[];
     const evt = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' : 'deviceorientation';
-    const on=e=>{const h=headingFromEvent(e);if(h!=null)hs.push(h);if(e.beta!=null)bs.push(Math.abs(e.beta));
+    const on=e=>{const h=headingFromEvent(e);if(h!=null)hs.push(h);const m=manteoDeSensor(e.beta,e.gamma);if(m!=null)bs.push(m);
       if((modo==='brujula'?hs.length:bs.length)>=6){window.removeEventListener(evt,on);fin();}};
     const fin=()=>{window.removeEventListener(evt,on);
       if(modo==='brujula')res(hs.length?circularMean(hs):null);
@@ -12738,6 +12761,11 @@ window.addEventListener('unhandledrejection',e=>{
     return pantallaError('No se pudo abrir la base de datos', m);
   }
   try{ render(); }catch(e){ pantallaError('Error al dibujar', String(e&&e.message||e)); }
+  // La campaña entera vive en IndexedDB del navegador. Sin almacenamiento persistente el
+  // navegador puede borrarla sola bajo presión de espacio (o, en Safari, tras días sin abrir la
+  // app). Hasta v137 solo se pedía al bajar una zona offline. Se pide al arrancar; si el
+  // navegador lo niega no pasa nada visible (es la misma situación de antes).
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persisted().then(p=>p||navigator.storage.persist()).catch(()=>{}); }catch(e){}
   if('serviceWorker' in navigator){
     // auto-actualiza: cuando el nuevo SW toma control, recarga una vez para tomar la última versión
     let recargando=false;

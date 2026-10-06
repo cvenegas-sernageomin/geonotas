@@ -1784,6 +1784,32 @@ async function correr(){
       return 'grilla y polígono dibujados, sin errores del renderer';
     });
 
+    // ---- v138: auditoría ----
+    await prueba('Si otra instancia cierra la base, el siguiente guardado la reabre', async () => {
+      w.soltarDB();                                    // lo mismo que hace onversionchange
+      const id = P + 'reabre-1';
+      await w.put('nota', {id, _parent: P + 'pr', TEXTO: 'tras versionchange'});
+      try {
+        eq((await w.get('nota', id)).TEXTO, 'tras versionchange', 'el registro no se guardó tras soltar la conexión');
+        w.soltarDB();
+        eq((await w.childrenOf('nota', P + 'pr')).some(n => n.id === id), true, 'childrenOf tras soltar la conexión');
+        w.soltarDB();
+        await Promise.all([w.all('proyecto'), w.all('punto'), w.get('nota', id)]);   // varias a la vez: una sola reapertura
+      } finally { await w.del('nota', id); }
+      return 'put/get/childrenOf/all reabren la conexión cerrada';
+    });
+
+    await prueba('Manteo del botón de sensor: usa beta y gamma, no solo beta', async () => {
+      const m = (b, g) => Math.round(w.manteoDeSensor(b, g));
+      eq(m(0, 0), 0, 'teléfono horizontal');
+      eq(m(35, 0), 35, 'inclinado hacia adelante');
+      eq(m(0, 35), 35, 'inclinado de costado (antes daba 0)');
+      eq(m(-30, 0), 30, 'beta negativo');
+      eq(m(30, 30), 41, 'combinado: acos(cos30·cos30) = 41,4°');
+      eq(w.manteoDeSensor(null, 10), null, 'sin sensor');
+      return 'costado, adelante y combinado';
+    });
+
     // ---- v137: sombreado y pendiente ----
     await prueba('Relieve: pendiente y sombreado de Horn sobre DEM sintéticos', async () => {
       const W = 256, celda = 10;
