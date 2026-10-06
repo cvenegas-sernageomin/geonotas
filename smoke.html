@@ -53,7 +53,7 @@ const AJENAS = ['geonotas-light-10', 'geonotas-light-9', 'geoterreno-cdc-light-v
 // Cachés que SÍ son de esta app pero que el purgado por versión tampoco debe tocar: se llenan
 // una vez con conexión (el motor 3D pesa ~15 MB, el relieve son teselas) y borrarlas al subir de
 // versión dejaría la Vista 3D inservible justo en terreno.
-const NO_PURGABLES = ['geonotas-cesium', 'geonotas-dem'];
+const NO_PURGABLES = ['geonotas-cesium', 'geonotas-dem', 'geonotas-zonas'];   // + mapas offline (v132)
 
 const $out = document.getElementById('out'), $res = document.getElementById('resumen');
 let pasaron = 0, fallaron = 0;
@@ -1209,7 +1209,7 @@ async function correr(){
       eq(capturadas, [], 'el purgado por versión captura las cachés del 3D');
       const assets = (sw.match(/const ASSETS=\[[\s\S]*?\];/) || [''])[0];
       ok(!/cesium/i.test(assets), 'Cesium entró a ASSETS: el install bajaría ~15 MB en cada dispositivo');
-      return patrones.length + ' patrones; ' + NO_PURGABLES.length + ' cachés del 3D a salvo';
+      return patrones.length + ' patrones; ' + NO_PURGABLES.length + ' cachés del 3D y de mapas offline a salvo';
     });
 
     await prueba('Terrarium: un PNG de valor conocido decodifica a la elevación esperada', async () => {
@@ -1605,6 +1605,82 @@ async function correr(){
         div.remove();
       }
       return 'z17 solo al inicio, zoom del usuario respetado, pausa al arrastrar y recentrado';
+    });
+
+
+    // ---- v132: mapas offline por zonas (PMTiles) ----
+    // PNG real (rojo) para que el sobre-zoom pueda decodificarlo y recortarlo.
+    const pngRojo = async () => { const cv = w.document.createElement('canvas'); cv.width = cv.height = 256;
+      const cx = cv.getContext('2d'); cx.fillStyle = '#cc3333'; cx.fillRect(0, 0, 256, 256);
+      return new Promise(r => cv.toBlob(r, 'image/png')); };
+
+    await prueba('PMTiles: ids iguales a la librería oficial y escritura/lectura ida y vuelta', async () => {
+      // Valores sacados de la librería oficial (python pmtiles, zxy_to_tileid).
+      eq([w.pmZxyAId(0,0,0), w.pmZxyAId(1,0,1), w.pmZxyAId(2,0,0), w.pmZxyAId(3,5,2), w.pmZxyAId(12,3423,1763)],
+         [0, 2, 5, 76, 19078479], 'ids de tesela (curva de Hilbert)');
+      const tiles = [];
+      for (let x = 0; x < 40; x++) for (let y = 0; y < 40; y++) tiles.push({id: w.pmZxyAId(12, 1000+x, 2000+y), blob: new w.Blob([x+','+y])});
+      const arc = await w.pmAbrir(await w.pmEscribir(tiles, {tipo:3, minz:12, maxz:12, bounds:[-71,-34,-70,-33], meta:{name:P+'pm'}}));
+      eq(await (await w.pmTesela(arc, 12, 1017, 2033)).text(), '17,33', 'tesela leída');
+      eq(await w.pmTesela(arc, 12, 999, 2000), null, 'una tesela fuera del archivo debe dar null');
+      eq((await w.pmMetadata(arc)).name, P+'pm', 'metadata');
+      eq(arc.H.n, 1600, 'cantidad de teselas en el header');
+      // Directorio hoja (run_length 0) y offsets no contiguos: lo que aparece en archivos grandes.
+      const ents = [{id:5,run:1,len:10,off:0},{id:9,run:1,len:7,off:10},{id:12,run:0,len:30,off:100}];
+      eq(w.pmParsearDir(w.pmSerializarDir(ents)), ents, 'directorio serializar → parsear');
+      return '1600 teselas ida y vuelta; ids = librería oficial';
+    });
+
+    await prueba('Zona offline: bajar → .pmtiles en caché → leer, sobre-zoom, reimportar y borrar', async () => {
+      const png = await pngRojo(), fetchOrig = w.fetch; let pedidas = 0;
+      // Red simulada: nada sale a Esri desde la prueba.
+      w.fetch = async (url, o) => { if (/arcgisonline/.test(url)) { pedidas++; return new w.Response(png, {status:200}); } return fetchOrig(url, o); };
+      const base = w.eval('BASES[0].nombre'), bounds = [-70.66, -33.46, -70.64, -33.44];
+      let zn, zn2;
+      try {
+        const esperado = w.zonasContar(bounds, 13, 15);
+        zn = await w.zonasDescargar({nombre:P+'zona', base, bounds, minz:13, maxz:15});
+        eq(zn.n, esperado, 'teselas guardadas'); eq(pedidas, esperado, 'teselas pedidas a la red');
+        ok(w.zonasLista().some(z => z.id === zn.id), 'la zona no quedó en el índice');
+        ok(await (await w.caches.open('geonotas-zonas')).match(w.zonasUrl(zn.id)), 'el .pmtiles no quedó en la caché');
+        const r = w.zonasRango(bounds, 15);
+        const t = await w.zonasLeerTesela(w.zonasDeBase(base, 15, r.x0, r.y0), 15, r.x0, r.y0);
+        ok(t && t.size === png.size, 'la tesela leída no es la que se bajó');
+        eq(w.zonasDeBase(base, 16, r.x0*2, r.y0*2).length, 0, 'z16 no debe figurar como cubierto');
+        const sz = w.zonasSobrezoomDeBase(base, 17, r.x0*4+1, r.y0*4+2);
+        ok(sz.length, 'z17 debería resolverse por sobre-zoom');
+        const bz = await w.zonasLeerSobrezoom(sz, 17, r.x0*4+1, r.y0*4+2);
+        const im = await w.createImageBitmap(bz), cv = w.document.createElement('canvas'); cv.width = cv.height = 256;
+        const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0);
+        const px = cx.getImageData(128, 128, 1, 1).data;
+        ok(px[0] > 180 && px[1] < 90 && px[2] < 90, 'el sobre-zoom no trae la imagen de la zona: ' + Array.from(px).join(','));
+        // Exportar → importar: el archivo de Geonotas vuelve como zona de su misma capa base.
+        const archivo = await (await (await w.caches.open('geonotas-zonas')).match(w.zonasUrl(zn.id))).blob();
+        zn2 = await w.zonasImportar(new w.File([archivo], P+'zona.pmtiles'));
+        eq(zn2.base, base, 'al reimportar debe volver a su capa base'); eq(zn2.n, zn.n, 'teselas al reimportar');
+      } finally {
+        w.fetch = fetchOrig;
+        for (const z of [zn, zn2]) if (z) await w.zonasBorrar(z.id);
+      }
+      ok(!w.zonasLista().some(z => String(z.nombre).startsWith(P)), 'quedaron zonas smoke- en el índice');
+      ok(!(await (await w.caches.open('geonotas-zonas')).match(w.zonasUrl(zn.id))), 'borrar no sacó el archivo de la caché');
+      return zn.n + ' teselas z13–15, sobre-zoom a z17, reimportada y borrada';
+    });
+
+    await prueba('Importar .mbtiles: las filas TMS (y invertida) quedan en su tesela', async () => {
+      if (!w.initSqlJs) await w.cargarLib('vendor/sql-wasm.js');
+      const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
+      const db = new SQL.Database();
+      db.run('CREATE TABLE metadata(name text, value text); CREATE TABLE tiles(zoom_level integer, tile_column integer, tile_row integer, tile_data blob)');
+      db.run("INSERT INTO metadata VALUES('name', ?), ('format', 'png')", [P+'mb']);
+      const png = new Uint8Array(await (await pngRojo()).arrayBuffer());
+      db.run('INSERT INTO tiles VALUES(3, 5, 5, ?)', [png]);   // XYZ (3,5,2) → fila TMS 2^3-1-2 = 5
+      const f = new w.File([db.export()], P+'mb.mbtiles'); db.close();
+      const r = await w.zonasMbtilesAPmtiles(f), arc = await w.pmAbrir(r.blob);
+      ok(await w.pmTesela(arc, 3, 5, 2), 'la tesela no quedó en (3,5,2)');
+      eq(await w.pmTesela(arc, 3, 5, 5), null, 'la y quedó sin invertir');
+      eq([r.datos.nombre, r.datos.base, r.datos.minz, r.datos.maxz, arc.H.tipo], [P+'mb', null, 3, 3, 2], 'datos de la zona');
+      return 'MBTiles → PMTiles con la y invertida; queda como capa propia';
     });
 
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y

@@ -1,5 +1,5 @@
 // Service worker offline-first (cache estatico)
-const CACHE='geonotas-v131';
+const CACHE='geonotas-v132';
 // Caches que ESTA app puede purgar al activarse. NO se borra "todo lo que no sea CACHE":
 // la Cache API tiene alcance de ORIGEN, no de ruta, y las dos PWAs (completa y light) viven
 // en el mismo cvenegas-sernageomin.github.io. Con el filtro viejo, activar una borraba la
@@ -36,8 +36,10 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;
   const req=e.request;
   // Cross-origin (tiles satelitales/topo de Esri y OpenTopoMap, export de ArcGIS): NO se
-  // cachea aca. Los tiles offline los administra leaflet.offline en IndexedDB con el boton
-  // "Descargar tiles", que ademas deja elegir el area y el zoom. Cachearlos tambien aca
+  // cachea aca. Los mapas offline son ZONAS (v132): un .pmtiles por zona en la cache
+  // 'geonotas-zonas', que la app escribe y lee directo (nunca pasa por fetch) y que NO calza
+  // con MIAS, asi que no se purga al subir de version. Antes de v132 los administraba
+  // leaflet.offline en IndexedDB (esas teselas se siguen mostrando). Cachearlos tambien aca
   // duplicaba el almacenamiento y crecia sin techo: este cache solo se limpia al subir de
   // version, asi que cada tile que el usuario mirara al pasar quedaba guardado para siempre.
   // Lo mismo vale para las teselas de elevacion Terrarium del 3D (s3.amazonaws.com): las

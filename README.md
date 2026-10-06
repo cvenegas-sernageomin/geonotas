@@ -16,6 +16,11 @@ Instalable en celular; funciona sin conexión tras la primera carga.
   TIPO_ESTRUCTURA → tipo de medida).
 - **Mapa satelital** (Esri World Imagery) con pin arrastrable ↔ coordenadas, GPS, descarga de
   **tiles offline**, captura de vista satelital y overlay de **GeoTIFF** propio.
+- **📦 Mapas offline por zonas** (v132): el área visible se baja y queda como **un archivo
+  `.pmtiles`** por zona (Cache API `geonotas-zonas`, no IndexedDB), con sobre-zoom sin señal más
+  allá del zoom bajado. Se exporta (otro teléfono, QGIS) e importa `.pmtiles` o `.mbtiles`
+  (raster; `.mbtiles` hasta 150 MB). Lector/escritor PMTiles v3 propio, contrastado con la
+  librería oficial de Python.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas
@@ -64,4 +69,4 @@ Dos cosas a tener presentes al tocarla:
 - `smoke.html` — prueba de humo (ver arriba); no forma parte de la app ni del `sw.js`.
 
 Datos capturados quedan en el dispositivo (IndexedDB); el mapa satelital requiere internet la
-primera vez (luego los tiles descargados quedan disponibles offline).
+primera vez (luego las zonas 📦 descargadas quedan disponibles offline).
