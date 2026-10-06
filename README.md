@@ -1,5 +1,7 @@
 # PWA Geonotas — Libreta geológica de campo
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23196794.svg)](https://doi.org/10.5281/zenodo.23196794)
+
 PWA offline para captura de datos de **geología básica en terreno** (modelo CDC SERNAGEOMIN).
 Instalable en celular; funciona sin conexión tras la primera carga.
 
@@ -107,4 +109,4 @@ Las cartas geológicas y capas de referencia de SERNAGEOMIN conservan sus condic
 
 Cita sugerida:
 
-> SERNAGEOMIN / Venegas Benavides, C. (2026). PWA Geonotas: libreta geológica de campo [aplicación web]. https://cvenegas-sernageomin.github.io/geonotas/
+> SERNAGEOMIN / Venegas Benavides, C. (2026). PWA Geonotas: libreta geológica de campo [aplicación web]. https://cvenegas-sernageomin.github.io/geonotas/ · DOI: https://doi.org/10.5281/zenodo.23196794
