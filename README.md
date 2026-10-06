@@ -25,6 +25,10 @@ Instalable en celular; funciona sin conexión tras la primera carga.
   (lecturas por rango a una `blob:` URL) y solo se decodifica la ventana y el overview de cada
   tesela. Con un COG o un TIFF con overviews, un 8000×8000 pasó de 188 MB / 30 s a 16,5 MB / 2,8 s.
   Un TIFF chico a franjas se sigue cargando entero.
+- **📈 Perfil topográfico** (v134): desde una línea del proyecto (su ficha) o desde 📏 Medir.
+  Relieve del DEM propio de la Vista 3D o de las teselas Terrarium (las del área bajada en ⛰️ 3D
+  sirven sin señal), con los puntos de control a ≤300 m proyectados y sus actitudes en **manteo
+  aparente**. Exageración vertical automática o ×1/×2/×5; exporta SVG y CSV.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas

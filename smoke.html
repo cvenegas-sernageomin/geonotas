@@ -1702,6 +1702,44 @@ async function correr(){
       return 'MBTiles → PMTiles con la y invertida; queda como capa propia';
     });
 
+    // ---- v134: perfil topográfico ----
+    await prueba('Perfil: manteo aparente según el ángulo entre rumbo y perfil', async () => {
+      const ap = (ru, ma, az) => { const r = w.perfilManteoAparente(ru, ma, az); return [Math.round(r.aparente*10)/10, r.haciaAdelante]; };
+      eq(ap(0, 30, 90), [30, true], 'perfil perpendicular al rumbo, hacia el manteo: manteo real');
+      eq(ap(0, 30, 270), [30, false], 'mismo plano mirado al revés: baja hacia atrás');
+      eq(ap(0, 30, 0)[0], 0, 'perfil paralelo al rumbo: manteo aparente 0');
+      eq(ap(0, 30, 45)[0], 22.2, 'a 45°: atan(tan30·sen45)');
+      eq(ap(350, 60, 80), [60, true], 'regla de la mano derecha cruzando 0°');
+      return 'perpendicular = real, paralelo = 0, 45° = 22,2°';
+    });
+
+    await prueba('Perfil sobre un DEM sintético: cotas exactas, punto proyectado con su actitud', async () => {
+      // DEM en grados: 1000 m + 10 m por columna, 0,001° por píxel → sube de oeste a este.
+      const W = 100, datos = new w.Int16Array(W*W);
+      for (let f = 0; f < W; f++) for (let c = 0; c < W; c++) datos[f*W+c] = 1000 + c*10;
+      const dem = {crs:4326, width:W, height:W, datos, bbox:{minX:-70.7, maxX:-70.6, minY:-33.5, maxY:-33.4}};
+      const geom = [[-33.45, -70.6895], [-33.45, -70.6105]];
+      const pt = {id:P+'pf-pt', ID_PUNTO_CONTROL:'PF-1', [LAT]:-33.451, [LON]:-70.6505};
+      await w.put('estructural', {id:P+'pf-es', _parent:P+'pf-pt', AZIMUT:'0', MANTEO_BUZAMIENTO:'30'});
+      let pf;
+      try { pf = await w.perfilCalcular(geom, {puntos:[pt], dem}); }
+      finally { await w.del('estructural', P+'pf-es'); }
+      ok(pf.muestras.every(m => m.z != null), 'quedaron muestras sin cota dentro del DEM');
+      eq([pf.muestras[0].z, pf.muestras[pf.muestras.length-1].z], [1100, 1890], 'cotas en los extremos');
+      ok(pf.muestras.every((m, i) => i === 0 || m.z >= pf.muestras[i-1].z), 'el perfil debía subir siempre hacia el este');
+      ok(Math.abs(pf.largo - 7340) < 30, 'largo de 0,079° de longitud a 33,45°S: ' + Math.round(pf.largo));
+      eq(pf.proyectados.length, 1, 'el punto a ~110 m debía proyectarse');
+      const p = pf.proyectados[0];
+      ok(Math.abs(p.d - pf.largo/2) < 60 && Math.abs(p.dist - 111) < 5, 'posición del proyectado: d=' + Math.round(p.d) + ' dist=' + Math.round(p.dist));
+      eq([p.z, p.actitudes.length, Math.round(p.actitudes[0].aparente), p.actitudes[0].haciaAdelante], [1490, 1, 30, true], 'cota y actitud del punto');
+      const lejos = await w.perfilCalcular(geom, {puntos:[{...pt, [LAT]:-33.46}], dem});
+      eq(lejos.proyectados.length, 0, 'un punto a 1,1 km no debe proyectarse');
+      const dib = w.perfilSVG(pf, {ve:1, titulo:'prueba'});
+      ok(/<polyline/.test(dib.svg) && /Exag\. vertical ×1</.test(dib.svg) && /PF-1/.test(dib.svg), 'el SVG no trae relieve, exageración o el punto');
+      ok(w.perfilCSV(pf).startsWith('distancia_m,lat,lon,elevacion_m\n0,'), 'cabecera del CSV');
+      return Math.round(pf.largo) + ' m, 1100→1890 m; PF-1 a ' + Math.round(p.dist) + ' m con manteo aparente 30°';
+    });
+
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.
