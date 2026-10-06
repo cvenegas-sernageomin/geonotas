@@ -1,0 +1,31 @@
+{
+  "upload_type": "software",
+  "title": "PWA Geonotas: libreta geológica de campo",
+  "description": "<p>Aplicación web instalable (PWA) y sin conexión para la captura de datos de geología básica en terreno según el modelo CDC de SERNAGEOMIN, con exportación a CSV, KMZ, GeoPackage, GDB y PDF.</p><p>Publicado en https://cvenegas-sernageomin.github.io/geonotas/</p><p>La licencia CC BY-NC 4.0 cubre el trabajo original de los autores. No cubre el material de terceros:</p><ul><li>Las cartas geológicas y capas de referencia de SERNAGEOMIN conservan sus condiciones de uso.</li><li>Las bases cartográficas e imágenes satelitales conservan sus propias licencias.</li><li>Las librerías de terceros incluidas (por ejemplo en vendor/) conservan sus propias licencias.</li></ul>",
+  "creators": [
+    {
+      "name": "Servicio Nacional de Geología y Minería (SERNAGEOMIN)"
+    },
+    {
+      "name": "Venegas Benavides, Carlos",
+      "affiliation": "Servicio Nacional de Geología y Minería (SERNAGEOMIN)"
+    }
+  ],
+  "license": "cc-by-nc-4.0",
+  "access_right": "open",
+  "language": "spa",
+  "keywords": [
+    "geología de campo",
+    "captura de datos",
+    "PWA",
+    "offline",
+    "SERNAGEOMIN"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://cvenegas-sernageomin.github.io/geonotas/",
+      "relation": "isDocumentedBy",
+      "resource_type": "other"
+    }
+  ]
+}

@@ -92,3 +92,15 @@ Dos cosas a tener presentes al tocarla:
 
 Datos capturados quedan en el dispositivo (IndexedDB); el mapa satelital requiere internet la
 primera vez (luego las zonas 📦 descargadas quedan disponibles offline).
+
+## Licencia y cómo citar
+
+© 2026 SERNAGEOMIN / Carlos Venegas Benavides. El trabajo original de este repositorio se distribuye bajo
+**[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.es)**: se puede compartir y adaptar
+**citando la fuente** y **sin fines comerciales**. Ver [`LICENSE`](LICENSE).
+
+Las cartas geológicas y capas de referencia de SERNAGEOMIN conservan sus condiciones de uso. Las bases cartográficas e imágenes satelitales conservan sus propias licencias. Las librerías de terceros incluidas (por ejemplo en `vendor/`) conservan sus propias licencias.
+
+Cita sugerida:
+
+> SERNAGEOMIN / Venegas Benavides, C. (2026). PWA Geonotas: libreta geológica de campo [aplicación web]. https://cvenegas-sernageomin.github.io/geonotas/
