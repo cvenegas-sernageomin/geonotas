@@ -235,6 +235,8 @@
   .mapbox{height:320px;width:100%;border:1px solid var(--bd);border-radius:12px;z-index:0;overflow:hidden}
   .leaflet-control-savetiles a{font-size:15px;line-height:26px}
   input[type=color]{width:72px;height:38px;padding:3px;cursor:pointer}
+  .pend-ley{background:rgba(255,255,255,.88);color:#222;padding:5px 8px;border-radius:7px;font:11px system-ui,sans-serif;line-height:1.5;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .pend-ley i{display:inline-block;width:12px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:2px}
   .vtx-hit{background:transparent}
   .vtx-hit::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box}
   .vtx-edit::after{width:16px;height:16px;background:#fff;border:3px solid #12a4ff;border-radius:3px}
@@ -3601,7 +3603,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v136';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v137';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -5717,6 +5719,7 @@ function capaSatelital(map){
   map.on('baselayerchange',e=>{ if(e.layer._nombreBase) map._baseActual=e.layer._nombreBase; });
   zonasMontarPropias(map);
   grillaUTMMontar(map);
+  relieveMontar(map);
   // v132: el ⬇️/🗑️ de leaflet.offline se reemplazó por el panel de zonas (📦). La capa sigue
   // siendo L.tileLayer.offline para que las teselas bajadas antes de v132 se sigan viendo.
   const Btn=L.Control.extend({options:{position:'topleft'},onAdd(){
@@ -5796,6 +5799,86 @@ function grillaUTMMontar(map){
   let on=false; try{ on=localStorage.getItem(UTM_GRILLA_LS)==='1'; }catch(e){}
   if(on) g.addTo(map);
   map.on('overlayadd overlayremove',e=>{ if(e.layer===g){ try{ localStorage.setItem(UTM_GRILLA_LS,e.type==='overlayadd'?'1':'0'); }catch(x){} } });
+}
+// ---- Sombreado y pendiente del relieve (v137) ----
+// Dos capas activables en el selector, calculadas EN EL TELÉFONO desde las mismas teselas
+// Terrarium del 3D/perfil (sin servidor ni librería): sombreado de Horn con luz del NO (az 315°,
+// altura 45°) y pendiente en clases. Las teselas se leen de la caché 'geonotas-dem' si están
+// (área bajada en ⛰️ 3D → sirve sin señal) y si no de la red, pero SIN guardarlas: con la capa
+// encendida, cada tesela que se mira al pasar iría a la caché y crecería sin techo (el mismo
+// problema que ya se evitó en sw.js con el satelital).
+// Nativas entre z9 y z13 (~16 m/px en Chile central, ya más fino que el SRTM de 30 m); a más
+// zoom Leaflet amplía la z13. Bordes de tesela: el vecino fuera de la tesela se toma del borde.
+const RELIEVE_Z_MIN=9, RELIEVE_Z_MAX=13;
+const RELIEVE_LS='geonotas-relieve';
+const PEND_CLASES=[[15,null],[25,[250,204,21]],[35,[249,115,22]],[45,[220,38,38]],[91,[126,34,206]]];
+async function demTeselaLectura(z,x,y){
+  const url=V3D_TERRARIUM.replace('{z}',z).replace('{x}',x).replace('{y}',y);
+  try{ const hit=await (await caches.open(V3D_DEM_CACHE)).match(url); if(hit) return v3dDecodificarTerrarium(await hit.blob()); }catch(e){}
+  const r=await fetch(url,{mode:'cors'}); if(!r.ok) throw new Error('HTTP '+r.status);
+  return v3dDecodificarTerrarium(await r.blob());
+}
+function reliCelda(z,y){   // metros por píxel en la fila de teselas y (Web Mercator, teselas de 256)
+  const n=2**z, lat=Math.atan(Math.sinh(Math.PI*(1-2*(y+.5)/n)));
+  return 156543.03392*Math.cos(lat)/n;
+}
+// Píxeles RGBA de una tesela. modo 'sombra': negro donde la ladera queda más oscura que un
+// terreno plano y blanco donde queda más iluminada (se ve bien sobre satelital y topo).
+// modo 'pendiente': color por clase, transparente bajo 15°.
+function reliCalcular(t,celda,modo){
+  const W=t.width, H=t.height, d=t.datos, out=new Uint8ClampedArray(W*H*4), SD=V3D_SIN_DATO;
+  const zen=45*Math.PI/180, azR=(360-315+90)*Math.PI/180, plano=Math.cos(zen);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=y*W+x, c0=d[i]; if(c0===SD) continue;
+    const g=(xx,yy)=>{ xx=xx<0?0:xx>=W?W-1:xx; yy=yy<0?0:yy>=H?H-1:yy; const v=d[yy*W+xx]; return v===SD?c0:v; };
+    const a=g(x-1,y-1), b=g(x,y-1), c=g(x+1,y-1), dd=g(x-1,y), f=g(x+1,y), gg=g(x-1,y+1), h=g(x,y+1), ii=g(x+1,y+1);
+    const dzdx=((c+2*f+ii)-(a+2*dd+gg))/(8*celda), dzdy=((gg+2*h+ii)-(a+2*b+c))/(8*celda);
+    const pend=Math.atan(Math.hypot(dzdx,dzdy)), o=i*4;
+    if(modo==='sombra'){
+      const asp=Math.atan2(dzdy,-dzdx);
+      const hs=Math.max(0,Math.cos(zen)*Math.cos(pend)+Math.sin(zen)*Math.sin(pend)*Math.cos(azR-asp));
+      const v=(hs-plano)/plano;
+      if(v<0){ out[o+3]=Math.min(235,-v*255); }
+      else { out[o]=out[o+1]=out[o+2]=255; out[o+3]=Math.min(150,v*170); }
+    } else {
+      const deg=pend*180/Math.PI, cl=PEND_CLASES.find(k=>deg<k[0]);
+      if(cl&&cl[1]){ out[o]=cl[1][0]; out[o+1]=cl[1][1]; out[o+2]=cl[1][2]; out[o+3]=150; }
+    }
+  }
+  return out;
+}
+function reliCapa(modo){
+  const Capa=L.GridLayer.extend({createTile(c,done){
+    const cv=document.createElement('canvas'); cv.width=cv.height=256;
+    demTeselaLectura(c.z,c.x,c.y).then(t=>{
+      if(t.width!==256||t.height!==256) throw new Error('tesela de relieve de tamaño inesperado');
+      cv.getContext('2d').putImageData(new ImageData(reliCalcular(t,reliCelda(c.z,c.y),modo),256,256),0,0);
+      done(null,cv);
+    }).catch(()=>done(null,cv));          // sin relieve: tesela vacía, no error (si no Leaflet la oculta igual)
+    return cv;
+  }});
+  return new Capa({minZoom:RELIEVE_Z_MIN,maxNativeZoom:RELIEVE_Z_MAX,maxZoom:19,zIndex:4,opacity:modo==='sombra'?.85:.8});
+}
+function relieveMontar(map){
+  const capas={sombra:reliCapa('sombra'),pendiente:reliCapa('pendiente')};
+  map._ctrlCapas.addOverlay(capas.sombra,'⛰ Sombreado del relieve');
+  map._ctrlCapas.addOverlay(capas.pendiente,'∠ Pendiente (≥15°)');
+  const Ley=L.Control.extend({options:{position:'bottomright'},onAdd(){
+    const d=L.DomUtil.create('div','pend-ley');
+    d.innerHTML='<b>Pendiente</b>'+[['15–25°','250,204,21'],['25–35°','249,115,22'],['35–45°','220,38,38'],['≥45°','126,34,206']]
+      .map(([t,c])=>'<div><i style="background:rgba('+c+',.75)"></i>'+t+'</div>').join('');
+    return d; }});
+  const ley=new Ley();
+  let on={}; try{ on=JSON.parse(localStorage.getItem(RELIEVE_LS)||'{}')||{}; }catch(e){}
+  const guardar=()=>{ try{ localStorage.setItem(RELIEVE_LS,JSON.stringify(on)); }catch(e){} };
+  map.on('overlayadd overlayremove',e=>{
+    const k=e.layer===capas.sombra?'sombra':e.layer===capas.pendiente?'pendiente':null; if(!k) return;
+    on[k]=e.type==='overlayadd'; guardar();
+    if(k==='pendiente'){ if(on.pendiente) ley.addTo(map); else ley.remove(); }
+  });
+  if(on.sombra) capas.sombra.addTo(map);
+  if(on.pendiente){ capas.pendiente.addTo(map); ley.addTo(map); }
+  map._relieve=capas;
 }
 // ---- Escala del mapa como fracción representativa (1:N), estilo carta topográfica ----
 // El zoom de Leaflet no tiene una "escala" fija: son metros/pixel, que dependen de la latitud

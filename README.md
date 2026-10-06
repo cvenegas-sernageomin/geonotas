@@ -37,6 +37,9 @@ Instalable en celular; funciona sin conexión tras la primera carga.
   perímetro. **✥ Vértices** edita la forma en el mapa (arrastrar, ◦ insertar, doble toque borrar),
   también para líneas. Store `poligono` (DB v16) fuera del modelo CDC: va en el respaldo, el KMZ
   y el GeoPackage (capa `POLIGONO` con `AREA_HA`), no en la GDB.
+- **⛰ Sombreado y ∠ Pendiente** (v137): capas del selector calculadas en el teléfono desde las
+  teselas Terrarium (Horn, luz del NO; pendiente en clases 15/25/35/45° con leyenda), z9–13
+  nativas. Usan la caché del relieve del 3D si existe (sin señal) pero no la hacen crecer.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas

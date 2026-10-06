@@ -1784,6 +1784,30 @@ async function correr(){
       return 'grilla y polígono dibujados, sin errores del renderer';
     });
 
+    // ---- v137: sombreado y pendiente ----
+    await prueba('Relieve: pendiente y sombreado de Horn sobre DEM sintéticos', async () => {
+      const W = 256, celda = 10;
+      const dem = f => { const d = new w.Int16Array(W*W); for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) d[y*W+x] = Math.round(f(x, y)); return {datos:d, width:W, height:W}; };
+      const px = (rgba, x, y) => Array.from(rgba.slice((y*W+x)*4, (y*W+x)*4+4));
+      const plano = dem(() => 1000);
+      eq(px(w.reliCalcular(plano, celda, 'pendiente'), 100, 100)[3], 0, 'terreno plano: sin color de pendiente');
+      eq(px(w.reliCalcular(plano, celda, 'sombra'), 100, 100)[3], 0, 'terreno plano: sin sombra ni brillo');
+      // sube hacia el este con 30°: tan(30°)·10 m = 5,77 m por píxel (redondeo a metro entero en Int16)
+      const este30 = dem(x => 500 + x*Math.tan(Math.PI/6)*celda);
+      eq(px(w.reliCalcular(este30, celda, 'pendiente'), 100, 100).slice(0,3), [249,115,22], '30° cae en la clase 25–35°');
+      const sOeste = px(w.reliCalcular(este30, celda, 'sombra'), 100, 100);
+      ok(sOeste[0] === 255 && sOeste[3] > 0, 'una ladera que mira al oeste, con luz del NO, debe quedar iluminada: ' + sOeste);
+      const oeste30 = dem(x => 3000 - x*Math.tan(Math.PI/6)*celda);
+      const sEste = px(w.reliCalcular(oeste30, celda, 'sombra'), 100, 100);
+      ok(sEste[0] === 0 && sEste[3] > 100, 'una ladera que mira al este debe quedar en sombra: ' + sEste);
+      const empinado = dem(x => x*Math.tan(50*Math.PI/180)*celda);
+      eq(px(w.reliCalcular(empinado, celda, 'pendiente'), 100, 100).slice(0,3), [126,34,206], '50° es la clase ≥45°');
+      const conHueco = dem(() => 1000); conHueco.datos[100*W+100] = -32768;
+      eq(px(w.reliCalcular(conHueco, celda, 'sombra'), 100, 100)[3], 0, 'sin dato: píxel transparente');
+      ok(Math.abs(w.reliCelda(13, 4870) - 16.0) < 0.6, 'celda z13 en Chile central ≈ 16 m: ' + w.reliCelda(13, 4870).toFixed(2));
+      return 'clases de pendiente, luz/sombra según orientación, huecos y tamaño de celda';
+    });
+
     // ---- v136: polígonos ----
     await prueba('Polígono: área geodésica, perímetro y edición de vértices', async () => {
       const cuad = [[0,0],[0,0.01],[0.01,0.01],[0.01,0]];        // 0,01° x 0,01° en el ecuador
