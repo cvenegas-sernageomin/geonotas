@@ -234,6 +234,11 @@
   select:disabled{background:var(--surface2);color:var(--muted)}
   .mapbox{height:320px;width:100%;border:1px solid var(--bd);border-radius:12px;z-index:0;overflow:hidden}
   .leaflet-control-savetiles a{font-size:15px;line-height:26px}
+  input[type=color]{width:72px;height:38px;padding:3px;cursor:pointer}
+  .vtx-hit{background:transparent}
+  .vtx-hit::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box}
+  .vtx-edit::after{width:16px;height:16px;background:#fff;border:3px solid #12a4ff;border-radius:3px}
+  .vtx-mid::after{width:12px;height:12px;background:rgba(18,164,255,.55);border:2px solid #fff;border-radius:50%}
   .utm-rot{font:600 10.5px system-ui,sans-serif;color:#111;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;pointer-events:none}
   .utm-rot.utm-e{transform:translate(-50%,0)} .utm-rot.utm-n{transform:translate(0,-50%)}
   .utm-rot.utm-pie{transform:translate(-50%,0);background:rgba(255,255,255,.75);padding:1px 6px;border-radius:6px;text-shadow:none}
@@ -3596,7 +3601,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v135';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v136';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -3658,7 +3663,7 @@ const STORES_TODOS = STORES.concat(['linea','nota']);
 // Stores que existen en la base pero NO son fichas del modelo canónico (sin campos(), sin
 // exportar a CSV/GeoPackage): 'planoproy' es la única por ahora. Separado de STORES_TODOS a
 // propósito -- ese arreglo alimenta tablasExport()/campos(), que 'planoproy' no tiene.
-const STORES_EXTRA = ['planoproy'];
+const STORES_EXTRA = ['planoproy','poligono'];   // v136: + 'poligono'
 function tblDe(store){const s=STORE_ESQUEMA[store]||store;
   return s==='linea'?LINEA_TBL:s==='nota'?NOTA_TBL:STORE2TBL[s];}
 function campos(store){return (MODELO.tablas[tblDe(store)]||{}).campos||[];}
@@ -3685,7 +3690,7 @@ async function idsPuntosProyecto(proyectoId){
 // punto (_parent o _punto en idsPuntos); 'proyecto' es su propio id.
 function esDeProyecto(store,r,proyectoId,idsPuntos){
   if(store==='proyecto') return r.id===proyectoId;
-  if(store==='punto'||store==='punto_gabinete'||store==='linea'||store==='linea_gabinete'||store==='nota'||store==='planoproy')
+  if(store==='punto'||store==='punto_gabinete'||store==='linea'||store==='linea_gabinete'||store==='nota'||store==='planoproy'||store==='poligono')
     return r._parent===proyectoId;
   if(store==='fotomapa') return idsPuntos.has(r._punto);
   return idsPuntos.has(r._parent);
@@ -3693,11 +3698,11 @@ function esDeProyecto(store,r,proyectoId,idsPuntos){
 function nombreArchivoProyecto(proyecto){return (proyecto&&proyecto.NOMBRE_PROYECTO||'proyecto').replace(/[\\/:*?"<>|]+/g,'_');}
 
 // ============================ IndexedDB ============================
-const DB='captura-terreno', VER=15;   // v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico). Ninguno es del modelo canónico.
+const DB='captura-terreno', VER=16;   // v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
-function openDB(){return new Promise((res,rej)=>{
+function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
-  const r=indexedDB.open(DB,VER);
+  const r=indexedDB.open(nombre,ver);
   // El TIMEOUT de abajo existe para no colgar la app si open() nunca responde (Safari con la
   // base en mal estado). Pero una vez que dispara onupgradeneeded la base YA es nuestra: las
   // migraciones de mas abajo leen y reescriben la litologia completa y en un telefono con una
@@ -3713,7 +3718,9 @@ function openDB(){return new Promise((res,rej)=>{
     // como 'linea'/'nota'), así que SÍ lleva índice 'parent' -- pero no es una ficha CDC 2016:
     // no entra en STORE2TBL/STORES/HIJAS ni en MODELO.tablas, para que no quede mezclado con la
     // gdb geológica. Ver STORES_EXTRA.
-    STORES.concat(['fotomapa','linea','nota','planoproy']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
+    // 'poligono' (v16): polígonos del proyecto (unidades, alteración, zonas de muestreo) -- mismo
+    // trato que 'planoproy': cuelga del proyecto con índice 'parent' y queda fuera del modelo CDC.
+    STORES.concat(['fotomapa','linea','nota','planoproy','poligono']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
       if(s!=='proyecto')os.createIndex('parent','_parent',{unique:false});}});
     // 'cartageo': caché de Cartas Geológicas SERNAGEOMIN descargadas para uso offline en
     // terreno. NO es del modelo canónico (no pasa por STORE2TBL/campos(), no entra en
@@ -3873,7 +3880,25 @@ function openDB(){return new Promise((res,rej)=>{
   r.onsuccess=()=>{db=r.result;
     db.onversionchange=()=>{try{db.close();}catch(e){}};   // libera para que otra instancia pueda actualizar
     finish(res,db);};
-  r.onerror=()=>finish(rej,r.error||new Error('IndexedDB error'));
+  // Base MAS NUEVA que este codigo: las dos PWAs (completa y light) comparten 'captura-terreno'
+  // en el mismo origen y sus service workers se actualizan por separado. Si la otra ya subio
+  // VER, open(DB,VER) muere con VersionError y esta app no abria nunca mas (paso de verdad:
+  // la completa quedo en 15 en v130 y la light siguio pidiendo 14). Una version nueva solo
+  // AGREGA stores, asi que se abre la base tal como esta, sin pedir version ni migrar.
+  r.onerror=ev=>{
+    const e=r.error;
+    if(e&&e.name==='VersionError'){
+      if(ev&&ev.preventDefault) ev.preventDefault();
+      const r2=indexedDB.open(nombre);
+      r2.onsuccess=()=>{db=r2.result;
+        db.onversionchange=()=>{try{db.close();}catch(x){}};
+        console.warn('IndexedDB: la base esta en v'+db.version+' y este codigo en v'+ver+'; se abre sin migrar');
+        finish(res,db);};
+      r2.onerror=()=>finish(rej,r2.error||e);
+      return;
+    }
+    finish(rej,e||new Error('IndexedDB error'));
+  };
   r.onblocked=()=>finish(rej,new Error('BLOCKED'));         // otra pestaña/instancia tiene la BD abierta
   tTimeout=setTimeout(()=>finish(rej,new Error('TIMEOUT')),6000);    // no colgar la app indefinidamente
 });}
@@ -3970,6 +3995,7 @@ async function buildBackupBlob(coleccion = 'terreno') {
   backup[lineaStore] = await all(lineaStore);
   backup.nota = await all('nota');   // las notas cuelgan del proyecto, no de la colección
   backup.planoproy = await all('planoproy');   // planos proyectados: tampoco de la colección, cuelgan del proyecto
+  backup.poligono = await all('poligono');     // polígonos (v136): ídem
 
   // Las tablas hijas (ver HIJAS) son stores COMPARTIDOS por las dos colecciones (cuelgan del punto
   // por _parent, no del store del punto). Sacarlas con all() metia las hijas de gabinete
@@ -4030,6 +4056,7 @@ async function importBackup(file, destinoColeccion = null) {
           linea_gabinete: esGabinete ? 'linea_gabinete' : 'linea',
           nota: 'nota',
           planoproy: 'planoproy',
+          poligono: 'poligono',
           litologia: 'litologia',
           aflora: 'aflora',
           estructural: 'estructural',
@@ -5724,10 +5751,18 @@ function utmGrilla(b,zoom){          // b = [oeste, sur, este, norte]; puro, par
 }
 function utmFmt(v){ return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 const CapaGrillaUTM=L.LayerGroup.extend({
-  onAdd(map){ L.LayerGroup.prototype.onAdd.call(this,map); this._fn=()=>this._pintar(); map.on('moveend zoomend resize',this._fn); this._pintar(); },
-  onRemove(map){ map.off('moveend zoomend resize',this._fn); this.clearLayers(); L.LayerGroup.prototype.onRemove.call(this,map); },
+  // El redibujo va SIEMPRE diferido (setTimeout 0), nunca dentro del mismo 'moveend'/'viewreset'.
+  // Con la grilla encendida, initMapaVista la monta antes de que el mapa tenga vista; si sus
+  // polilíneas entraban durante el primer fitBounds, el renderer SVG compartido aún no tenía
+  // _bounds y quedaba roto para TODAS las capas vectoriales (polígonos, líneas, la edición de
+  // vértices): "Cannot read properties of undefined (reading 'min')". Ver la nota de memoria
+  // "Leaflet: capas antes de la vista".
+  onAdd(map){ L.LayerGroup.prototype.onAdd.call(this,map);
+    this._fn=()=>{ clearTimeout(this._t); this._t=setTimeout(()=>this._pintar(),0); };
+    map.on('moveend zoomend resize',this._fn); map.whenReady(this._fn); },
+  onRemove(map){ clearTimeout(this._t); map.off('moveend zoomend resize',this._fn); this.clearLayers(); L.LayerGroup.prototype.onRemove.call(this,map); },
   _pintar(){
-    const map=this._map; if(!map) return;
+    const map=this._map; if(!map||!map._loaded) return;
     this.clearLayers();
     const bb=map.getBounds(), b=[bb.getWest(),bb.getSouth(),bb.getEast(),bb.getNorth()];
     if(b[3]>0) return;                                   // utmALatLon es solo hemisferio sur
@@ -9715,7 +9750,7 @@ async function borrarProyecto(proyectoId){
   for(const store of ['punto','punto_gabinete']){
     for(const p of await childrenOf(store,proyectoId)){await borrarPuntoEn(store,p.id);puntos++;}
   }
-  for(const store of ['linea','linea_gabinete','nota','planoproy']){
+  for(const store of ['linea','linea_gabinete','nota','planoproy','poligono']){
     for(const r of await childrenOf(store,proyectoId)){await del(store,r.id);lineas+=(store==='linea'||store==='linea_gabinete')?1:0;notas+=(store==='nota')?1:0;}
   }
   await del('proyecto',proyectoId);
@@ -10032,6 +10067,118 @@ async function perfilAbrir(geom,titulo){
     el('button',{class:'btn sec',onclick:cerrar},'Cerrar')));
 }
 
+// ============================ Polígonos del proyecto (v136) ============================
+// Se dibujan con el mismo modo de ✏️ Línea: con 3 o más vértices el banner ofrece "⬠ Polígono".
+// Store 'poligono' fuera del modelo CDC (como 'planoproy'): viaja en el respaldo, en el KMZ y en
+// el GeoPackage, pero NO en la GDB (construirGPKG con {poligonos:false}), que es el entregable
+// del modelo -- mismo criterio que pidió el usuario para los planos proyectados.
+// geom = [[lat,lon],...] sin repetir el primer vértice al final (se cierra al exportar).
+const POLI_TIPOS=['Unidad geológica','Alteración','Zona de muestreo','Depósito / remoción','Otro'];
+const POLI_COLOR={'Unidad geológica':'#e11d48','Alteración':'#d97706','Zona de muestreo':'#2563eb','Depósito / remoción':'#7c3aed','Otro':'#475569'};
+// Área geodésica en m² (fórmula de Chamberlain & Duquette, la misma de Leaflet.draw/Esri para
+// polígonos chicos): error < 0,5 % a la escala de un mapa de terreno.
+function poliArea(geom){
+  const r=Math.PI/180, n=geom.length; if(n<3) return 0;
+  let a=0;
+  for(let i=0;i<n;i++){ const p=geom[i], q=geom[(i+1)%n];
+    a+=(q[1]-p[1])*r*(2+Math.sin(p[0]*r)+Math.sin(q[0]*r)); }
+  return Math.abs(a*PERFIL_R*PERFIL_R/2);
+}
+function poliPerimetro(geom){
+  let d=0; for(let i=0;i<geom.length;i++){ const p=geom[i], q=geom[(i+1)%geom.length];
+    d+=perfilDist({lat:p[0],lon:p[1]},{lat:q[0],lon:q[1]}); } return d;
+}
+function fmtArea(m2){ return m2>=1e6?(m2/1e6).toFixed(2)+' km²':m2>=1e4?(m2/1e4).toFixed(2)+' ha':Math.round(m2)+' m²'; }
+function poliColor(pg){ return /^#[0-9a-f]{6}$/i.test(pg.COLOR||'')?pg.COLOR:(POLI_COLOR[pg.TIPO]||'#475569'); }
+function terminarPoligono(){
+  if(_verts.length<3){ toast('Un polígono necesita al menos 3 vértices'); return; }
+  const pg={id:uid(),_parent:curProyecto.id,geom:_verts.slice(),NOMBRE:'',TIPO:'Unidad geológica',COLOR:'',DESCRIPCION:''};
+  const b=document.getElementById('drawbanner'); if(b) b.remove();
+  dibujando=false; limpiarTemp(); if(mapaVista) mapaVista.getContainer().style.cursor='';
+  formPoligono(pg, async()=>{ await put('poligono',pg); initMapaVista(_puntosMapa); toast('Polígono guardado'); }, null);
+}
+function formPoligono(pg,onSave,onDelete){
+  const ov=el('div',{class:'fmov',onclick:e=>{if(e.target===ov)ov.remove();}});
+  const box=el('div',{class:'card',style:'max-width:440px;width:92vw'});
+  box.append(el('h2',{},'⬠ Polígono'));
+  const nom=el('input',{type:'text',value:pg.NOMBRE||'',placeholder:'Ej.: Fm. Abanico, zona argílica…'});
+  const tipo=el('select'); POLI_TIPOS.forEach(t=>tipo.append(el('option',{value:t},t))); tipo.value=pg.TIPO||POLI_TIPOS[0];
+  const col=el('input',{type:'color',value:poliColor(pg)});
+  let colorTocado=!!pg.COLOR;
+  col.addEventListener('input',()=>{colorTocado=true;});
+  tipo.addEventListener('change',()=>{ if(!colorTocado) col.value=POLI_COLOR[tipo.value]||'#475569'; });
+  const desc=el('textarea',{rows:3},pg.DESCRIPCION||'');
+  box.append(el('div',{class:'fld'},el('label',{},'Nombre'),nom),
+    el('div',{class:'fld'},el('label',{},'Tipo'),tipo),
+    el('div',{class:'fld'},el('label',{},'Color'),col),
+    el('div',{class:'fld'},el('label',{},'Descripción'),desc),
+    el('div',{class:'muted',style:'font-size:11px'},(pg.geom||[]).length+' vértices · área '+fmtArea(poliArea(pg.geom||[]))+' · perímetro '+fmtDistancia(poliPerimetro(pg.geom||[]))));
+  const leer=()=>Object.assign(pg,{NOMBRE:nom.value.trim(),TIPO:tipo.value,COLOR:colorTocado?col.value:'',DESCRIPCION:desc.value.trim()});
+  const bar=el('div',{class:'btnbar'});
+  bar.append(el('button',{class:'btn',onclick:()=>{leer();ov.remove();onSave();}},'Guardar'));
+  bar.append(el('button',{class:'btn blue',onclick:()=>{leer();ov.remove();
+    editarVertices(pg.geom,true,g=>{ pg.geom=g; formPoligono(pg,onSave,onDelete); },()=>formPoligono(pg,onSave,onDelete)); }},'✥ Vértices'));
+  if(onDelete) bar.append(el('button',{class:'btn del',onclick:()=>{if(confirm('¿Eliminar este polígono?')){ov.remove();onDelete();}}},'Eliminar'));
+  bar.append(el('button',{class:'btn sec',onclick:()=>ov.remove()},'Cancelar'));
+  box.append(bar); ov.append(box); document.body.append(ov);
+}
+// Edición de vértices en el mapa (polígonos y líneas): arrastrar un vértice lo mueve, tocar un
+// ◦ de punto medio inserta uno, doble toque o toque largo sobre un vértice lo borra. No toca el
+// registro hasta "✓ Listo": onListo recibe la geometría nueva; ✕ la descarta.
+function geomInsertar(g,i){   // puro: inserta el punto medio del tramo i → i+1 (el último tramo cierra el anillo)
+  const a=g[i], b=g[(i+1)%g.length];
+  const out=g.slice(); out.splice(i+1,0,[(a[0]+b[0])/2,(a[1]+b[1])/2]); return out;
+}
+function geomQuitar(g,i,cerrado){ if(g.length<=(cerrado?3:2)) return g; const out=g.slice(); out.splice(i,1); return out; }
+function editarVertices(geom,cerrado,onListo,onCancelar){
+  if(!mapaVista) return;
+  salirModosMapa();
+  let g=geom.map(c=>[c[0],c[1]]);
+  const capa=L.layerGroup().addTo(mapaVista);
+  // Área de toque de 24 px (un dedo), aunque se dibujen de 16/12 px: con 12 px un toque a 8 px del
+  // punto medio caía en el polígono de abajo y abría su ficha (visto al probarlo).
+  const icoV=L.divIcon({className:'vtx-hit vtx-edit',iconSize:[24,24]}), icoM=L.divIcon({className:'vtx-hit vtx-mid',iconSize:[24,24]});
+  editandoVertices=true;
+  const cerrar=()=>{ editandoVertices=false; mapaVista.removeLayer(capa); const b=document.getElementById('drawbanner'); if(b) b.remove(); };
+  const banner=()=>{
+    const cont=document.querySelector('.mapcard'); if(!cont) return;
+    let b=document.getElementById('drawbanner'); if(b) b.remove();
+    b=el('div',{id:'drawbanner',class:'drawbanner'},
+      el('span',{},'✥ '+g.length+' vértices · arrastra · ◦ agrega · doble toque borra'),
+      el('button',{class:'btn mini',onclick:()=>{ cerrar(); onListo(g); }},'✓ Listo'),
+      el('button',{class:'btn del mini',onclick:()=>{ cerrar(); if(onCancelar) onCancelar(); }},'✕'));
+    cont.append(b);
+  };
+  const pintar=()=>{
+    capa.clearLayers();
+    capa.addLayer(cerrado?L.polygon(g,{color:'#12a4ff',weight:2,dashArray:'5,5',fillOpacity:.12,interactive:false})
+                         :L.polyline(g,{color:'#12a4ff',weight:3,dashArray:'5,5',interactive:false}));
+    const nTramos=cerrado?g.length:g.length-1;
+    for(let i=0;i<nTramos;i++){
+      const a=g[i], b=g[(i+1)%g.length];
+      const m=L.marker([(a[0]+b[0])/2,(a[1]+b[1])/2],{icon:icoM,zIndexOffset:500}).addTo(capa);
+      m.on('click',ev=>{ L.DomEvent.stop(ev); g=geomInsertar(g,i); pintar(); });
+    }
+    g.forEach((c,i)=>{
+      const m=L.marker(c,{icon:icoV,draggable:true,zIndexOffset:1000}).addTo(capa);
+      m.on('dragend',()=>{ const ll=m.getLatLng(); g[i]=[ll.lat,ll.lng]; pintar(); });
+      const quitar=ev=>{ if(ev) L.DomEvent.stop(ev); const n=geomQuitar(g,i,cerrado);
+        if(n===g){ toast('No se puede: '+(cerrado?'mínimo 3 vértices':'mínimo 2 vértices')); return; } g=n; pintar(); };
+      m.on('dblclick',quitar); m.on('contextmenu',quitar);
+    });
+    banner();
+  };
+  pintar();
+  try{ mapaVista.fitBounds(g,{padding:[40,40],maxZoom:18}); }catch(e){}
+}
+function wkbPolygon(geom){   // anillo exterior único, cerrado; coords [lat,lon] → WKB (x=lon, y=lat)
+  const ring=geom.concat([geom[0]]);
+  const v=new DataView(new ArrayBuffer(13+16*ring.length));
+  v.setUint8(0,1); v.setUint32(1,3,true); v.setUint32(5,1,true); v.setUint32(9,ring.length,true);
+  ring.forEach((c,i)=>{ v.setFloat64(13+16*i,c[1],true); v.setFloat64(21+16*i,c[0],true); });
+  return new Uint8Array(v.buffer);
+}
+
 // ============================ Modo Mapa + simbología estructural ============================
 function toggleModo(activo){
   const bar=el('div',{class:'modtoggle'});
@@ -10271,6 +10418,7 @@ async function initMapaVista(puntos){
   // la capa de artículos no tiene object URLs que soltar (va en canvas), pero su capa y su
   // panel quedan colgando del mapa viejo: se olvidan acá y agReponer() los rehace al final.
   agCapa=null; agCtrl=null;
+  editandoVertices=false;   // si el mapa se rehace a mitad de una edición, la capa de edición muere con él
   if(mapaVista){try{mapaVista.remove();}catch(e){}mapaVista=null;}
   mapaVista=L.map('projmap',{zoomControl:true});
   savetiles=capaSatelital(mapaVista);
@@ -10281,15 +10429,17 @@ async function initMapaVista(puntos){
     const estr=await childrenOf('estructural',p.id), mus=await childrenOf('muestreo',p.id);
     const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus,p._estiloKml&&p._estiloKml.punto)}).addTo(mapaVista);
     if(p.ID_PUNTO_CONTROL)m.bindTooltip(p.ID_PUNTO_CONTROL,{permanent:true,direction:'bottom',offset:[0,18],className:'ptlabel'});
-    m.on('click',()=>{curPunto=null;vista={n:'punto',id:p.id};render();});
+    m.on('click',()=>{if(editandoVertices)return;curPunto=null;vista={n:'punto',id:p.id};render();});
     pts.push([lat,lon]);
   }
   // --- líneas geológicas (contactos/fallas) del proyecto ---
   const lineas=await childrenOf(storeLineaActivo(),curProyecto.id);
+  const extraFit=[];   // v136: sin puntos, el encuadre usa líneas y polígonos (antes saltaba a todo Chile)
   for(const L2 of lineas){
     if(!L2.geom||L2.geom.length<2)continue;
+    extraFit.push(...L2.geom);
     const pl=L.polyline(L2.geom, estiloLinea(L2)).addTo(mapaVista);
-    pl.on('click',ev=>{ if(dibujando)return; L.DomEvent.stop(ev);
+    pl.on('click',ev=>{ if(dibujando||editandoVertices)return; L.DomEvent.stop(ev);
       formLinea(L2, async()=>{await put(storeLineaActivo(),L2);initMapaVista(_puntosMapa);},
                     async()=>{await del(storeLineaActivo(),L2.id);initMapaVista(_puntosMapa);}); });
   }
@@ -10303,9 +10453,20 @@ async function initMapaVista(puntos){
     if(!pl.traza||pl.traza.length<2)continue;
     const coords=pl.traza.map(p=>[p.lat,p.lon]);
     const pline=L.polyline(coords,{color:'#7c3aed',weight:3,dashArray:'6,6',opacity:.9}).addTo(mapaVista);
-    pline.on('click',ev=>{ if(dibujando)return; L.DomEvent.stop(ev);
+    pline.on('click',ev=>{ if(dibujando||editandoVertices)return; L.DomEvent.stop(ev);
       formPlanoProy(pl, async()=>{await put('planoproy',pl);initMapaVista(_puntosMapa);},
                         async()=>{await del('planoproy',pl.id);initMapaVista(_puntosMapa);}); });
+  }
+  // --- polígonos del proyecto (v136): relleno tenue para no tapar el satelital ---
+  for(const pg of await childrenOf('poligono',curProyecto.id)){
+    if(!pg.geom||pg.geom.length<3)continue;
+    extraFit.push(...pg.geom);
+    const c=poliColor(pg);
+    const poly=L.polygon(pg.geom,{color:c,weight:2,fillColor:c,fillOpacity:.22}).addTo(mapaVista);
+    if(pg.NOMBRE) poly.bindTooltip(pg.NOMBRE,{sticky:true});
+    poly.on('click',ev=>{ if(dibujando||midiendo||editandoVertices)return; L.DomEvent.stop(ev);
+      formPoligono(pg, async()=>{await put('poligono',pg);initMapaVista(_puntosMapa);},
+                       async()=>{await del('poligono',pg.id);initMapaVista(_puntosMapa);}); });
   }
   // --- notas de campo del proyecto (avisos para futuras campañas: sin colección terreno/gabinete) ---
   const notas=await childrenOf('nota',curProyecto.id);
@@ -10314,6 +10475,7 @@ async function initMapaVista(puntos){
     if(isNaN(lat)||isNaN(lon))continue;
     const m=L.marker([lat,lon],{icon:iconoNota(n.CATEGORIA_NOTA)}).addTo(mapaVista);
     m.on('click',()=>{
+      if(editandoVertices)return;
       formNota(n, async()=>{await put('nota',n);initMapaVista(_puntosMapa);},
                   async()=>{await del('nota',n.id);initMapaVista(_puntosMapa);});
     });
@@ -10344,7 +10506,9 @@ async function initMapaVista(puntos){
     if(_tmpLine)_tmpLine.setLatLngs(_verts); else _tmpLine=L.polyline(_verts,{color:colVert,weight:3,dashArray:midiendo?'2,8':'5,5'}).addTo(mapaVista);
     _tmpMk.push(L.circleMarker(ev.latlng,{radius:4,color:colVert,fillColor:colVert,fillOpacity:1,weight:1}).addTo(mapaVista));
     if(midiendo)bannerMedir(); else bannerDibujo(); });
-  if(pts.length)mapaVista.fitBounds(pts,{padding:[46,46],maxZoom:17}); else mapaVista.setView([-33.45,-70.65],5);
+  if(pts.length)mapaVista.fitBounds(pts,{padding:[46,46],maxZoom:17});
+  else if(extraFit.length)mapaVista.fitBounds(extraFit,{padding:[46,46],maxZoom:17});
+  else mapaVista.setView([-33.45,-70.65],5);
   L.control.scale({position:'bottomleft',metric:true,imperial:false,maxWidth:120}).addTo(mapaVista);
   controlEscala(mapaVista);
   // Reengancha la capa de Cartas Geológicas si estaba activa antes de que initMapaVista
@@ -10420,6 +10584,7 @@ function iconoNota(cat){
   return L.divIcon({className:'notasym', html:svg, iconSize:[34,34], iconAnchor:[17,17]});
 }
 let dibujando=false,_verts=[],_tmpLine=null,_tmpMk=[],_puntosMapa=[];
+let editandoVertices=false;   // v136: mientras se editan vértices, tocar otra forma/punto no abre su ficha
 let agregandoPunto=false, coordsPendientes=null;
 let agregandoNota=false;
 let midiendo=false;   // modo medir distancia: reusa _verts/_tmpLine/_tmpMk de dibujando (nunca activos a la vez)
@@ -10478,7 +10643,8 @@ function bannerDibujo(){
   let b=document.getElementById('drawbanner'); if(b)b.remove();
   b=el('div',{id:'drawbanner',class:'drawbanner'},
     el('span',{},'✏️ Toca el mapa para trazar ('+_verts.length+' vértices)'),
-    el('button',{class:'btn mini',onclick:terminarDibujo},'✓ Terminar'),
+    el('button',{class:'btn mini',onclick:terminarDibujo},'✓ Línea'),
+    _verts.length>=3?el('button',{class:'btn blue mini',onclick:terminarPoligono},'⬠ Polígono'):'',
     el('button',{class:'btn sec mini',onclick:e=>{const v=_verts;if(v.length){v.pop();if(_tmpMk.length){mapaVista.removeLayer(_tmpMk.pop());}if(_tmpLine)_tmpLine.setLatLngs(v);}bannerDibujo();}},'↶'),
     el('button',{class:'btn del mini',onclick:cancelarDibujo},'✕'));
   cont.append(b);
@@ -10554,6 +10720,9 @@ function formLinea(linea,onSave,onDelete){
   const bar=el('div',{class:'btnbar'});
   bar.append(el('button',{class:'btn',onclick:()=>{Object.assign(linea,f.getData());ov.remove();onSave();}},'Guardar'));
   if((linea.geom||[]).length>1)bar.append(el('button',{class:'btn blue',onclick:()=>{ov.remove();perfilAbrir(linea.geom,linea.ID_LINEA||linea.CLASE_LINEA||'Línea');}},'📈 Perfil'));
+  // ✥ solo en una línea ya guardada (onDelete existe): al terminar se reabre la ficha con la forma nueva
+  if(onDelete&&(linea.geom||[]).length>1)bar.append(el('button',{class:'btn sec',onclick:()=>{Object.assign(linea,f.getData());ov.remove();
+    editarVertices(linea.geom,false,g=>{linea.geom=g;formLinea(linea,onSave,onDelete);},()=>formLinea(linea,onSave,onDelete));}},'✥ Vértices'));
   if(onDelete)bar.append(el('button',{class:'btn del',onclick:()=>{if(confirm('¿Eliminar esta línea?')){ov.remove();onDelete();}}},'Eliminar'));
   bar.append(el('button',{class:'btn sec',onclick:()=>ov.remove()},'Cancelar'));
   box.append(bar);ov.append(box);document.body.append(ov);
@@ -10906,6 +11075,19 @@ async function exportKMZ(proyectoId){
     return s;
   };
   const planoProyKml=carpeta('📐 Planos proyectados', await placemarksPlanoProy());
+  // polígonos (v136) -> <Polygon> con el anillo cerrado; relleno al 40 % (alfa 66 en aabbggrr)
+  let nPoli=0, poliKml='';
+  let poligonos=await all('poligono');
+  if(proyectoId)poligonos=poligonos.filter(p=>p._parent===proyectoId);
+  for(const pg of poligonos){
+    if(!pg.geom||pg.geom.length<3)continue; nPoli++;
+    const c=toKmlColor(poliColor(pg)), ring=pg.geom.concat([pg.geom[0]]).map(q=>q[1]+','+q[0]+',0').join(' ');
+    poliKml+='<Placemark><name>'+esc(pg.NOMBRE||pg.TIPO||'Polígono')+'</name>'
+      +'<description>'+esc((pg.TIPO||'')+(pg.DESCRIPCION?' · '+pg.DESCRIPCION:'')+' · '+fmtArea(poliArea(pg.geom)))+'</description>'
+      +'<Style><LineStyle><color>'+c+'</color><width>2</width></LineStyle><PolyStyle><color>66'+c.slice(2)+'</color></PolyStyle></Style>'
+      +'<Polygon><tessellate>1</tessellate><outerBoundaryIs><LinearRing><coordinates>'+ring+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n';
+  }
+  poliKml=carpeta('⬠ Polígonos', poliKml);
   // notas de campo -> Placemark de punto, foto opcional embebida igual que _satelital
   let notasKml=''; let nNot=0;
   let notas=await all('nota');
@@ -10921,11 +11103,11 @@ async function exportKMZ(proyectoId){
     notasKml+='<Placemark><name>📝 '+esc(nt.CATEGORIA_NOTA||'Nota')+'</name><description>'+desc+'</description>'
       +'<Point><coordinates>'+lon+','+lat+',0</coordinates></Point></Placemark>\n';
   }
-  const kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Captura de terreno</name>\n'+overlays+lineasKml+planoProyKml+notasKml+pk+'</Document></kml>';
+  const kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Captura de terreno</name>\n'+overlays+lineasKml+poliKml+planoProyKml+notasKml+pk+'</Document></kml>';
   files.unshift({name:'doc.kml',data:new TextEncoder().encode(kml)});
   const nombre=proyectoId?'captura_terreno_'+nombreArchivoProyecto(proyectos[0])+'.kmz':'captura_terreno.kmz';
   descargar(nombre,zipStore(files));
-  toast('KMZ exportado ('+n+' puntos'+(nLin?', '+nLin+' líneas':'')+(nPlanoProy?', '+nPlanoProy+' planos proyectados':'')+(nNot?', '+nNot+' notas':'')+(nFoto?', '+nFoto+' fotos/esquemas':'')+')');
+  toast('KMZ exportado ('+n+' puntos'+(nLin?', '+nLin+' líneas':'')+(nPoli?', '+nPoli+' polígonos':'')+(nPlanoProy?', '+nPlanoProy+' planos proyectados':'')+(nNot?', '+nNot+' notas':'')+(nFoto?', '+nFoto+' fotos/esquemas':'')+')');
 }
 
 // -------- ZIP store-only (sin compresión) --------
@@ -10960,7 +11142,7 @@ function gpkgGeom(wkb){const g=new Uint8Array(8+wkb.length);g[0]=0x47;g[1]=0x50;
   new DataView(g.buffer).setInt32(4,4326,true);g.set(wkb,8);return g;}
 const WKT4326='GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]]';
 
-async function construirGPKG(proyectoId){
+async function construirGPKG(proyectoId,{poligonos=true}={}){
   const idsPuntos = proyectoId ? await idsPuntosProyecto(proyectoId) : null;
   const fks = await mapasFKCodigos();
   if(!window.initSqlJs)await cargarLib('vendor/sql-wasm.js');
@@ -11035,6 +11217,21 @@ async function construirGPKG(proyectoId){
    db.run("INSERT INTO gpkg_contents (table_name,data_type,identifier,min_x,min_y,max_x,max_y,srs_id) VALUES ('NOTA_CAMPO','features','NOTA_CAMPO',?,?,?,?,4326)",nN?[env.x0,env.y0,env.x1,env.y1]:[null,null,null,null]);
    db.run("INSERT INTO gpkg_geometry_columns VALUES ('NOTA_CAMPO','geom','POINT',4326,0,0)");
   }
+  let nPg=0;
+  if(poligonos){// capa de polígonos (v136): fuera del modelo CDC, por eso la GDB pide {poligonos:false}
+   const csPg=['NOMBRE','TIPO','COLOR','DESCRIPCION'];
+   const extras=[['AREA_HA',pg=>Math.round(poliArea(pg.geom)/100)/100,'REAL']];
+   const st=crear('POLIGONO',csPg,extras,true);
+   const env={x0:1/0,y0:1/0,x1:-1/0,y1:-1/0};
+   for(const pg of (await all('poligono')).filter(pg=>!proyectoId||pg._parent===proyectoId)){
+     if(!pg.geom||pg.geom.length<3)continue; nPg++;
+     pg.geom.forEach(c=>{env.x0=Math.min(env.x0,c[1]);env.x1=Math.max(env.x1,c[1]);env.y0=Math.min(env.y0,c[0]);env.y1=Math.max(env.y1,c[0]);});
+     st.run([gpkgGeom(wkbPolygon(pg.geom)),txt(pg.id),txt(pg._parent)].concat(csPg.map(n=>txt(n==='COLOR'?poliColor(pg):pg[n])),extras.map(e=>e[1](pg))));
+   }
+   st.free();
+   db.run("INSERT INTO gpkg_contents (table_name,data_type,identifier,min_x,min_y,max_x,max_y,srs_id) VALUES ('POLIGONO','features','POLIGONO',?,?,?,?,4326)",nPg?[env.x0,env.y0,env.x1,env.y1]:[null,null,null,null]);
+   db.run("INSERT INTO gpkg_geometry_columns VALUES ('POLIGONO','geom','POLYGON',4326,0,0)");
+  }
   let nT=0;
   for(const s of STORES){  // resto de tablas, sin geometría
     if(s==='punto'||s==='punto_gabinete'||s==='linea_gabinete')continue;   // ya salieron como capas espaciales
@@ -11049,7 +11246,7 @@ async function construirGPKG(proyectoId){
     db.run("INSERT INTO gpkg_contents (table_name,data_type,identifier,srs_id) VALUES (?,?,?,0)",[tbl,'attributes',tbl]);
   }
   const bytes=db.export();db.close();
-  return {bytes,nP,nL,nT};
+  return {bytes,nP,nL,nT,nPg};
 }
 
 async function exportGPKG(proyectoId){
@@ -11058,7 +11255,7 @@ async function exportGPKG(proyectoId){
     const r=await construirGPKG(proyectoId);
     const nombre=proyectoId?'captura_terreno_'+nombreArchivoProyecto(await get('proyecto',proyectoId))+'.gpkg':'captura_terreno.gpkg';
     descargar(nombre,new Blob([r.bytes],{type:'application/geopackage+sqlite3'}));
-    toast('GeoPackage exportado ('+r.nP+' puntos, '+r.nL+' líneas, '+r.nT+' tablas)');
+    toast('GeoPackage exportado ('+r.nP+' puntos, '+r.nL+' líneas'+(r.nPg?', '+r.nPg+' polígonos':'')+', '+r.nT+' tablas)');
   }catch(e){console.error(e);toast('Error al generar GeoPackage: '+e.message);}
 }
 
@@ -11072,7 +11269,7 @@ async function exportGDB(proyectoId){
     // Con URL absoluta (http.../vendor/) el locateFile la devuelve tal cual.
     if(!window._Gdal)window._Gdal=await initGdalJs({path:new URL('vendor/',location.href).href,useWorker:false});
     const Gdal=window._Gdal;
-    const r=await construirGPKG(proyectoId);
+    const r=await construirGPKG(proyectoId,{poligonos:false});   // la GDB es el entregable del modelo CDC
     const stem='ct_'+Date.now().toString(36);   // nombre único: aísla esta corrida de restos de intentos previos en /output
     const res=await Gdal.open(new File([r.bytes],stem+'.gpkg'));
     const ds=res.datasets[0];

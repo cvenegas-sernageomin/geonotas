@@ -32,6 +32,11 @@ Instalable en celular; funciona sin conexión tras la primera carga.
 - **# Grilla UTM** (v135): capa del selector de capas, huso del centro de la vista, paso de
   100 m a 100 km según el zoom, rótulos Este/Norte en los bordes con punto de miles. Recuerda
   si se dejó encendida.
+- **⬠ Polígonos** (v136): se dibujan con ✏️ Línea y "⬠ Polígono" al tener 3+ vértices; ficha con
+  nombre, tipo (unidad, alteración, zona de muestreo…), color y descripción, con área y
+  perímetro. **✥ Vértices** edita la forma en el mapa (arrastrar, ◦ insertar, doble toque borrar),
+  también para líneas. Store `poligono` (DB v16) fuera del modelo CDC: va en el respaldo, el KMZ
+  y el GeoPackage (capa `POLIGONO` con `AREA_HA`), no en la GDB.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas

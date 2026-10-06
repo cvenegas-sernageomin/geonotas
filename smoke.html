@@ -43,7 +43,7 @@ const STORES_TODOS = ['proyecto','punto','punto_gabinete','linea','linea_gabinet
 // 'planoproy' existe en la base y cuelga del proyecto (tiene índice parent), pero NO es una
 // ficha del modelo canónico (fuera de STORE2TBL/campos()) -- separado a propósito de
 // STORES_TODOS, que alimenta las pruebas de CSV/GeoPackage dirigidas por el modelo.
-const STORES_EXTRA = ['planoproy'];
+const STORES_EXTRA = ['planoproy', 'poligono'];
 const STORES_LIMPIAR = STORES_TODOS.concat(STORES_EXTRA);
 // Cachés que pertenecen a ESTA app (debe coincidir con MIAS en sw.js). Todo lo demás que haya
 // en el origen es ajeno y NO se toca: la light y el modelo de voz viven en el mismo github.io.
@@ -1757,6 +1757,80 @@ async function correr(){
       return 'paso 1 km a z14, 100 m a z17; vértices a ' + peor.toFixed(3) + ' m de su valor';
     });
 
+    await prueba('Con la grilla UTM encendida antes de la vista, los polígonos se siguen dibujando', async () => {
+      // Regresión v135: la grilla dibujaba dentro del primer fitBounds y dejaba roto el renderer
+      // SVG compartido -- ni polígonos, ni líneas, ni la edición de vértices se veían.
+      const div = w.document.createElement('div');
+      div.style.cssText = 'position:fixed;left:0;top:0;width:400px;height:300px';
+      w.document.body.append(div);
+      const errores = [], onErr = e => errores.push(String((e.error && e.error.message) || (e.reason && e.reason.message) || e.message));
+      w.addEventListener('error', onErr); w.addEventListener('unhandledrejection', onErr);
+      let m;
+      try {
+        m = w.L.map(div, {zoomAnimation:false, fadeAnimation:false});
+        // Mismo orden que initMapaVista: grilla y polígono ANTES de la vista, después el fitBounds.
+        // Con el código de v135 esto lanza "Cannot read properties of undefined (reading 'min')".
+        new (w.eval('CapaGrillaUTM'))().addTo(m);
+        const pol = w.L.polygon([[-33.428, -70.638], [-33.422, -70.628], [-33.428, -70.628]]).addTo(m);
+        m.fitBounds([[-33.43, -70.64], [-33.42, -70.62]]);
+        await new Promise(r => setTimeout(r, 250));
+        ok(pol._path && /\d/.test(pol._path.getAttribute('d') || ''), 'el polígono no se dibujó');
+        ok(div.querySelectorAll('.utm-rot').length > 0, 'la grilla no alcanzó a rotular');
+        eq(errores, [], 'errores durante el dibujo');
+      } finally {
+        w.removeEventListener('error', onErr); w.removeEventListener('unhandledrejection', onErr);
+        if (m) m.remove(); div.remove();
+      }
+      return 'grilla y polígono dibujados, sin errores del renderer';
+    });
+
+    // ---- v136: polígonos ----
+    await prueba('Polígono: área geodésica, perímetro y edición de vértices', async () => {
+      const cuad = [[0,0],[0,0.01],[0.01,0.01],[0.01,0]];        // 0,01° x 0,01° en el ecuador
+      const a = w.poliArea(cuad), esperado = 1111.95**2;          // 1 112 m de lado (R media)
+      ok(Math.abs(a/esperado - 1) < 0.005, 'área ' + Math.round(a) + ' m², esperaba ~' + Math.round(esperado));
+      ok(Math.abs(w.poliPerimetro(cuad) - 4*1111.95) < 5, 'perímetro ' + w.poliPerimetro(cuad).toFixed(1));
+      eq([w.fmtArea(a), w.fmtArea(52000), w.fmtArea(800)], ['1.24 km²', '5.20 ha', '800 m²'], 'formato del área');
+      eq(w.geomInsertar(cuad, 3).length, 5, 'insertar en el tramo que cierra el anillo');
+      eq(w.geomInsertar(cuad, 3)[4], [0.005, 0], 'el vértice nuevo va en el punto medio del tramo de cierre');
+      eq(w.geomQuitar(cuad.slice(0,3), 0, true).length, 3, 'un polígono no puede quedar con menos de 3 vértices');
+      eq(w.geomQuitar([[0,0],[1,1]], 0, false).length, 2, 'una línea no puede quedar con menos de 2');
+      return 'área ' + w.fmtArea(a) + ' (±0,5 %), perímetro e inserción/borrado de vértices';
+    });
+
+    await prueba('Polígono: viaja en el respaldo, en el KMZ y en el GeoPackage, pero no en la GDB', async () => {
+      await sembrar(w);
+      const pg = {id:P+'pg-1', _parent:P+'pr', NOMBRE:'Zona argílica smoke', TIPO:'Alteración', COLOR:'', DESCRIPCION:'prueba',
+                  geom:[[-33.00,-70.60],[-33.00,-70.59],[-33.01,-70.59],[-33.01,-70.60]]};
+      await w.put('poligono', pg);
+      try {
+        const j = JSON.parse(await (await w.buildBackupBlob('terreno')).text());
+        ok(Array.isArray(j.poligono) && j.poligono.some(x => x.id === P+'pg-1'), 'el polígono no viajó en el respaldo');
+        const cap = await capturar(w, () => w.exportKMZ(P+'pr'));
+        const kml = await (await new w.JSZip().loadAsync(await cap.blob.arrayBuffer())).file('doc.kml').async('text');
+        ok(kml.includes('⬠ Polígonos') && kml.includes('Zona argílica smoke'), 'falta la carpeta o el nombre del polígono en el KML');
+        ok(kml.includes('<outerBoundaryIs><LinearRing><coordinates>-70.6,-33,0 -70.59,-33,0 -70.59,-33.01,0 -70.6,-33.01,0 -70.6,-33,0</coordinates>'),
+           'el anillo del KML no está cerrado o tiene las coordenadas mal');
+        ok(kml.includes('<PolyStyle><color>66'), 'falta el relleno semitransparente');
+        const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
+        const r = await w.construirGPKG(P+'pr');
+        eq(r.nPg, 1, 'polígonos en el GeoPackage');
+        const db = new SQL.Database(r.bytes);
+        try {
+          eq(db.exec("SELECT geometry_type_name FROM gpkg_geometry_columns WHERE table_name='POLIGONO'")[0].values[0][0], 'POLYGON', 'tipo de geometría');
+          const fila = db.exec("SELECT NOMBRE, COLOR, AREA_HA, length(geom) FROM POLIGONO")[0].values[0];
+          eq([fila[0], fila[1]], ['Zona argílica smoke', '#d97706'], 'atributos (color por tipo)');
+          ok(Math.abs(fila[2] - 103.8) < 1.5, 'AREA_HA ' + fila[2]);
+          eq(fila[3], 8 + 13 + 16*5, 'largo del WKB: header GPKG + polígono de 1 anillo con 5 vértices');
+        } finally { db.close(); }
+        const sinPg = await w.construirGPKG(P+'pr', {poligonos:false});
+        const db2 = new SQL.Database(sinPg.bytes);
+        try { eq(db2.exec("SELECT count(*) FROM sqlite_master WHERE name='POLIGONO'")[0].values[0][0], 0, 'la GDB (poligonos:false) no debe llevar la capa'); }
+        finally { db2.close(); }
+      } finally { await w.del('poligono', P+'pg-1'); }
+      return 'respaldo, KMZ con anillo cerrado y relleno, GPKG POLYGON con área; GDB sin la capa';
+    });
+
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.
@@ -1776,6 +1850,26 @@ async function correr(){
       eq((await w.all('aflora')).filter(mio).length, 0, 'quedaron afloramientos smoke-');
       eq((await w.all('proyecto')).length, antesProyectos - 1, 'no se borró exactamente el proyecto smoke (¿se tocó un ajeno?)');
       return 'puntos, líneas, notas, foto-mapas y proyecto limpios';
+    });
+
+    await prueba('openDB abre una base que la otra app ya subió de versión (sin VersionError)', async () => {
+      // Completa y light comparten 'captura-terreno'. Si una sube VER, la otra pedía la versión
+      // vieja y moría con VersionError (pasó: completa en 15 desde v130, light en 14).
+      const nom = P + 'dbver', dbReal = w.eval('db');
+      await new Promise((res, rej) => { const r = w.indexedDB.open(nom, 5);
+        r.onupgradeneeded = () => r.result.createObjectStore('x');
+        r.onsuccess = () => { r.result.close(); res(); }; r.onerror = () => rej(r.error); });
+      let d;
+      try {
+        d = await w.openDB(nom, 2);
+        eq(d.version, 5, 'debía abrir la base en su versión real');
+        ok(d.objectStoreNames.contains('x'), 'la base abierta no trae sus stores');
+      } finally {
+        w.__d = dbReal; w.eval('db = window.__d'); delete w.__d;
+        if (d) d.close();
+        await new Promise(r => { const q = w.indexedDB.deleteDatabase(nom); q.onsuccess = q.onerror = q.onblocked = r; });
+      }
+      return 'pidió v2, abrió la v5 tal cual, sin migrar';
     });
 
   } finally {
