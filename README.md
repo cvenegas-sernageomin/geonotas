@@ -29,6 +29,9 @@ Instalable en celular; funciona sin conexión tras la primera carga.
   Relieve del DEM propio de la Vista 3D o de las teselas Terrarium (las del área bajada en ⛰️ 3D
   sirven sin señal), con los puntos de control a ≤300 m proyectados y sus actitudes en **manteo
   aparente**. Exageración vertical automática o ×1/×2/×5; exporta SVG y CSV.
+- **# Grilla UTM** (v135): capa del selector de capas, huso del centro de la vista, paso de
+  100 m a 100 km según el zoom, rótulos Este/Norte en los bordes con punto de miles. Recuerda
+  si se dejó encendida.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas

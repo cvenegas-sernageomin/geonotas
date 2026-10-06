@@ -234,6 +234,9 @@
   select:disabled{background:var(--surface2);color:var(--muted)}
   .mapbox{height:320px;width:100%;border:1px solid var(--bd);border-radius:12px;z-index:0;overflow:hidden}
   .leaflet-control-savetiles a{font-size:15px;line-height:26px}
+  .utm-rot{font:600 10.5px system-ui,sans-serif;color:#111;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;pointer-events:none}
+  .utm-rot.utm-e{transform:translate(-50%,0)} .utm-rot.utm-n{transform:translate(0,-50%)}
+  .utm-rot.utm-pie{transform:translate(-50%,0);background:rgba(255,255,255,.75);padding:1px 6px;border-radius:6px;text-shadow:none}
   .leaflet-control-escala{background:var(--surface);color:var(--txt);border:1px solid var(--bd);border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;box-shadow:var(--shadow);white-space:nowrap}
   .leaflet-control-scale-line{background:rgba(255,255,255,.75);color:#111}
   #satthumb img{width:120px;height:90px}
@@ -3593,7 +3596,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v134';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v135';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -5686,6 +5689,7 @@ function capaSatelital(map){
   map._ctrlCapas=L.control.layers(capas,null,{position:'topright'}).addTo(map);
   map.on('baselayerchange',e=>{ if(e.layer._nombreBase) map._baseActual=e.layer._nombreBase; });
   zonasMontarPropias(map);
+  grillaUTMMontar(map);
   // v132: el ⬇️/🗑️ de leaflet.offline se reemplazó por el panel de zonas (📦). La capa sigue
   // siendo L.tileLayer.offline para que las teselas bajadas antes de v132 se sigan viendo.
   const Btn=L.Control.extend({options:{position:'topleft'},onAdd(){
@@ -5695,6 +5699,68 @@ function capaSatelital(map){
     L.DomEvent.disableClickPropagation(d); return d; }});
   new Btn().addTo(map);
   return null;
+}
+// ---- Grilla UTM (v135) ----
+// Capa activable en el selector de capas: líneas de Este/Norte UTM del huso del CENTRO de la
+// vista, con el espaciado que deja ~120 px entre líneas (100 m a 100 km). Las líneas son rectas
+// en UTM pero no en Web Mercator: cada una se dibuja con 12 tramos para seguir la curvatura y la
+// convergencia de meridianos. Si la vista cruza un límite de huso, del otro lado se sigue en el
+// huso del centro (UTM extendido), igual que una carta impresa. Hemisferio sur (utmALatLon).
+// Rótulos en el borde superior (Este) e izquierdo (Norte), con punto de miles como las cartas IGM.
+const UTM_PASOS=[100,200,500,1000,2000,5000,10000,20000,50000,100000];
+const UTM_GRILLA_LS='geonotas-grilla-utm';
+function utmGrilla(b,zoom){          // b = [oeste, sur, este, norte]; puro, para poder probarlo
+  const cLat=(b[1]+b[3])/2, cLon=(b[0]+b[2])/2, zona=husoDeLon(cLon);
+  const mpp=156543.03392*Math.cos(cLat*Math.PI/180)/2**zoom;
+  const paso=UTM_PASOS.find(p=>p>=mpp*120*.7)||UTM_PASOS[UTM_PASOS.length-1];
+  const esq=[[b[1],b[0]],[b[1],b[2]],[b[3],b[0]],[b[3],b[2]],[cLat,cLon]].map(([la,lo])=>latLonAUtm(la,lo,zona));
+  const e0=Math.floor(Math.min(...esq.map(u=>u.este))/paso)*paso, e1=Math.ceil(Math.max(...esq.map(u=>u.este))/paso)*paso;
+  const n0=Math.floor(Math.min(...esq.map(u=>u.norte))/paso)*paso, n1=Math.ceil(Math.max(...esq.map(u=>u.norte))/paso)*paso;
+  const SEG=12, lineasE=[], lineasN=[];
+  if((e1-e0)/paso>80||(n1-n0)/paso>80) return {zona,paso,lineasE,lineasN};
+  for(let e=e0;e<=e1;e+=paso){ const c=[]; for(let i=0;i<=SEG;i++){ const q=utmALatLon(e,n0+(n1-n0)*i/SEG,zona); c.push([q.lat,q.lon]); } lineasE.push({valor:e,coords:c}); }
+  for(let n=n0;n<=n1;n+=paso){ const c=[]; for(let i=0;i<=SEG;i++){ const q=utmALatLon(e0+(e1-e0)*i/SEG,n,zona); c.push([q.lat,q.lon]); } lineasN.push({valor:n,coords:c}); }
+  return {zona,paso,lineasE,lineasN};
+}
+function utmFmt(v){ return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+const CapaGrillaUTM=L.LayerGroup.extend({
+  onAdd(map){ L.LayerGroup.prototype.onAdd.call(this,map); this._fn=()=>this._pintar(); map.on('moveend zoomend resize',this._fn); this._pintar(); },
+  onRemove(map){ map.off('moveend zoomend resize',this._fn); this.clearLayers(); L.LayerGroup.prototype.onRemove.call(this,map); },
+  _pintar(){
+    const map=this._map; if(!map) return;
+    this.clearLayers();
+    const bb=map.getBounds(), b=[bb.getWest(),bb.getSouth(),bb.getEast(),bb.getNorth()];
+    if(b[3]>0) return;                                   // utmALatLon es solo hemisferio sur
+    // Blanca con halo oscuro: una línea negra fina desaparece sobre el satelital, una blanca sobre el topo.
+    const g=utmGrilla(b,map.getZoom()), halo={color:'#000',weight:3,opacity:.35,interactive:false}, est={color:'#fff',weight:1.2,opacity:.9,interactive:false};
+    const linea=c=>{ this.addLayer(L.polyline(c,halo)); this.addLayer(L.polyline(c,est)); };
+    const pxN=map.latLngToContainerPoint(bb.getNorthWest()), tam=map.getSize();
+    const rot=(txt,pos,cls)=>this.addLayer(L.marker(pos,{interactive:false,keyboard:false,
+      icon:L.divIcon({className:'utm-rot '+cls,html:txt,iconSize:null})}));
+    for(const l of g.lineasE){
+      linea(l.coords);
+      // rótulo donde la línea cruza el borde superior de la vista
+      const pts=l.coords.map(c=>map.latLngToContainerPoint(c));
+      for(let i=1;i<pts.length;i++) if((pts[i-1].y-pxN.y)*(pts[i].y-pxN.y)<=0&&pts[i].y!==pts[i-1].y){
+        const t=(pxN.y-pts[i-1].y)/(pts[i].y-pts[i-1].y), x=pts[i-1].x+(pts[i].x-pts[i-1].x)*t;
+        if(x>30&&x<tam.x-30) rot(utmFmt(l.valor),map.containerPointToLatLng([x,2]),'utm-e'); break; }
+    }
+    for(const l of g.lineasN){
+      linea(l.coords);
+      const pts=l.coords.map(c=>map.latLngToContainerPoint(c));
+      for(let i=1;i<pts.length;i++) if(pts[i-1].x*pts[i].x<=0&&pts[i].x!==pts[i-1].x){
+        const t=-pts[i-1].x/(pts[i].x-pts[i-1].x), y=pts[i-1].y+(pts[i].y-pts[i-1].y)*t;
+        if(y>30&&y<tam.y-24) rot(utmFmt(l.valor),map.containerPointToLatLng([2,y]),'utm-n'); break; }
+    }
+    rot('UTM '+g.zona+'S · cada '+(g.paso>=1000?(g.paso/1000)+' km':g.paso+' m'),map.containerPointToLatLng([tam.x/2,tam.y-30]),'utm-pie');
+  }
+});
+function grillaUTMMontar(map){
+  const g=new CapaGrillaUTM(); map._grillaUTM=g;
+  map._ctrlCapas.addOverlay(g,'# Grilla UTM');
+  let on=false; try{ on=localStorage.getItem(UTM_GRILLA_LS)==='1'; }catch(e){}
+  if(on) g.addTo(map);
+  map.on('overlayadd overlayremove',e=>{ if(e.layer===g){ try{ localStorage.setItem(UTM_GRILLA_LS,e.type==='overlayadd'?'1':'0'); }catch(x){} } });
 }
 // ---- Escala del mapa como fracción representativa (1:N), estilo carta topográfica ----
 // El zoom de Leaflet no tiene una "escala" fija: son metros/pixel, que dependen de la latitud

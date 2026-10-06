@@ -1740,6 +1740,23 @@ async function correr(){
       return Math.round(pf.largo) + ' m, 1100→1890 m; PF-1 a ' + Math.round(p.dist) + ' m con manteo aparente 30°';
     });
 
+    // ---- v135: grilla UTM ----
+    await prueba('Grilla UTM: espaciado según zoom y líneas que vuelven a su Este/Norte exacto', async () => {
+      const b = [-70.70, -33.48, -70.60, -33.42];                 // ~9 x 7 km en Santiago (huso 19)
+      const g = w.utmGrilla(b, 14);
+      eq([g.zona, g.paso], [19, 1000], 'huso y paso a z14');
+      ok(g.lineasE.length >= 9 && g.lineasN.length >= 7, 'muy pocas líneas: ' + g.lineasE.length + 'E ' + g.lineasN.length + 'N');
+      let peor = 0;
+      for (const l of g.lineasE) for (const [la, lo] of l.coords) peor = Math.max(peor, Math.abs(w.latLonAUtm(la, lo, 19).este - l.valor));
+      for (const l of g.lineasN) for (const [la, lo] of l.coords) peor = Math.max(peor, Math.abs(w.latLonAUtm(la, lo, 19).norte - l.valor));
+      ok(peor < 0.5, 'un vértice quedó a ' + peor.toFixed(2) + ' m de su línea');
+      ok(g.lineasE.every(l => l.valor % 1000 === 0), 'valores no múltiplos del paso');
+      eq(w.utmGrilla(b, 17).paso, 100, 'a z17 el paso debe ser 100 m');
+      eq(w.utmGrilla([-72.5, -38, -70.5, -36], 9).zona, 19, 'centro en -71.5° es huso 19');
+      eq(w.utmFmt(6296000), '6.296.000', 'formato con punto de miles');
+      return 'paso 1 km a z14, 100 m a z17; vértices a ' + peor.toFixed(3) + ' m de su valor';
+    });
+
     // Borrido de proyecto al final: las pruebas de arriba usan el dataset de `sembrar()` y
     // dependen de que existan sus puntos/foto-mapas. Esta prueba los destruye, así que va
     // después de todas.
