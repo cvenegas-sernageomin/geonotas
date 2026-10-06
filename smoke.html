@@ -1784,6 +1784,98 @@ async function correr(){
       return 'grilla y polígono dibujados, sin errores del renderer';
     });
 
+    // ---- v139: declinación magnética, cota sobre el nivel del mar, aviso de versión ----
+    await prueba('Declinación WMM2025 en Chile coincide con la referencia (pygeomag)', async () => {
+      const f = new Date(Date.UTC(2026, 9, 6));
+      // referencia: pygeomag 1.1.0 con WMM_2025.COF, altura 0, 2026-10-06
+      const casos = [[-33.45, -70.66, 0.11, 'Santiago'], [-53.16, -70.91, 12.52, 'Punta Arenas'],
+                     [-23.65, -70.40, -5.36, 'Antofagasta'], [-41.47, -72.94, 7.15, 'Puerto Montt']];
+      for (const [la, lo, ref, n] of casos) {
+        const d = w.declinacionMagnetica(la, lo, 0, f);
+        ok(Math.abs(d - ref) < 0.05, n + ': ' + d.toFixed(2) + '° vs ' + ref + '°');
+      }
+      eq(w.fmtDeclinacion(null), 'sin GPS: norte magnético', 'sin posición');
+      eq(w.fmtDeclinacion(12.52), 'decl. +12.5° aplicada', 'formato');
+      return 'Santiago +0,1°, Punta Arenas +12,5°, Antofagasta −5,4°, Puerto Montt +7,2° (±0,05°)';
+    });
+
+    await prueba('COTA: altura elipsoidal de Android → nivel del mar con EGM96; iOS sin tocar', async () => {
+      const N = w.ondulacionGeoide(-33.45, -70.66);
+      ok(Math.abs(N - 26.9) < 0.5, 'geoide en Santiago ' + N);
+      ok(Math.abs(w.ondulacionGeoide(-53.16, -70.91) - 8.8) < 0.5, 'geoide en Punta Arenas');
+      eq(w.ondulacionGeoide(-10, -70), null, 'fuera de Chile: sin dato');
+      eq(Math.round(w.cotaSobreNivelMar(600, -33.45, -70.66, false)), 573, 'Android: 600 m elipsoidales en Santiago');
+      eq(w.cotaSobreNivelMar(600, -33.45, -70.66, true), 600, 'iOS ya entrega nivel del mar');
+      eq(w.cotaSobreNivelMar(600, -10, -70, false), 600, 'fuera de la grilla: sin corregir');
+      eq(w.cotaSobreNivelMar(null, -33, -70, false), null, 'sin altitud');
+      return 'Santiago 600 → 573 m; iOS y fuera de Chile intactos';
+    });
+
+    await prueba('Clinómetro y brújula: suman la declinación; sin brújula real no inventan rumbo', async () => {
+      w.anotarPosGPS({coords: {latitude: -53.16, longitude: -70.91}});           // Punta Arenas: +12,5°
+      const d = w.declinacionMagnetica(-53.16, -70.91);
+      const evt = ('ondeviceorientationabsolute' in w) ? 'deviceorientationabsolute' : 'deviceorientation';
+      const disparar = (o) => { const e = new w.Event(evt); for (const k in o) Object.defineProperty(e, k, {value: o[k]}); w.dispatchEvent(e); };
+      // teléfono horizontal apuntando al norte magnético, levantado 30° hacia adelante (beta 30):
+      // manteo 30° hacia el sur magnético → rumbo (mano derecha) 90° magnético
+      // el permiso de orientación (iOS / este navegador de escritorio) no se puede dar desde una prueba
+      const permOrig = w.ensureOrientPerm; w.ensureOrientPerm = async () => true;
+      let r, iv;
+      try {
+        const pr = w.medirEstructura('plano');
+        iv = setInterval(() => disparar({alpha: 0, beta: 30, gamma: 0, absolute: true}), 50);
+        r = await pr;
+      } finally { clearInterval(iv); w.ensureOrientPerm = permOrig; }
+      ok(r && Math.abs(r.manteo - 30) < 0.5, 'manteo ' + (r && r.manteo));
+      ok(Math.abs(r.rumbo - (90 + d)) < 0.5, 'rumbo ' + r.rumbo.toFixed(1) + ', esperaba ' + (90 + d).toFixed(1));
+      ok(Math.abs(r.decl - d) < 1e-9, 'la declinación aplicada viaja en el resultado');
+      eq(w.anglesFromEvent({alpha: 10, beta: 0, gamma: 0, absolute: false}), null, 'alpha relativo: sin rumbo');
+      eq(w.headingFromEvent({alpha: 10, absolute: false}), null, 'brújula: alpha relativo descartado');
+      eq(w.headingFromEvent({alpha: 10, absolute: true}), 350, 'brújula: alpha absoluto');
+      eq(w.headingFromEvent({webkitCompassHeading: 42, absolute: false}), 42, 'iOS: webkitCompassHeading manda');
+      return 'rumbo ' + r.rumbo.toFixed(1) + '° = 90° magnético + ' + d.toFixed(1) + '°';
+    });
+
+    await prueba('gdal3 (GDB) vive en su propia caché: no se purga al subir de versión', async () => {
+      const sw = await (await fetch('sw.js?smoke=' + Date.now())).text();
+      const nombre = (sw.match(/const GDAL_CACHE='([^']+)'/) || [])[1];
+      eq(nombre, 'geonotas-gdal-v1', 'nombre de la caché de gdal3');
+      const mias = (sw.match(/const MIAS=\[([^\]]+)\]/) || ['', ''])[1];
+      const patrones = [...mias.matchAll(/\/\^([^/]+)\$\//g)].map(m => new RegExp('^' + m[1] + '$'));
+      ok(patrones.length >= 1, 'no encontré MIAS');
+      ok(!patrones.some(re => re.test('geonotas-gdal-v1') || re.test('geonotas-light-gdal-v1')), 'MIAS de esta app purgaría la caché de gdal3');
+      ok(/k!==GDAL_CACHE&&esGdalCache\(k\)/.test(sw), 'activate debe purgar solo las versiones VIEJAS de gdal3');
+      ok(/esGdal\(u\)[\s\S]{0,80}caches\.open\(GDAL_CACHE\)/.test(sw), 'la rama de fetch de gdal3 no usa su caché');
+      return nombre + ': fuera de MIAS, solo se purgan sus versiones viejas';
+    });
+
+    await prueba('Versión nueva: aviso con botón, sin recargar a mitad de una ficha', async () => {
+      w.avisoActualizacion(); w.avisoActualizacion();
+      const avisos = w.document.querySelectorAll('#aviso-version');
+      eq(avisos.length, 1, 'un solo aviso');
+      ok(/versión nueva/.test(avisos[0].textContent) && avisos[0].querySelectorAll('button').length === 2, 'texto y botones');
+      avisos[0].querySelector('[aria-label="Más tarde"]').click();
+      eq(w.document.querySelectorAll('#aviso-version').length, 0, '✕ lo cierra');
+      return 'aviso único, Actualizar / Más tarde';
+    });
+
+    await prueba('Clinómetro: dirección de manteo correcta en orientaciones conocidas (regresión del +180°)', async () => {
+      const R = Math.PI/180;
+      const med = (a, b, g) => { const {n, L} = w.ejesMundo(a*R, b*R, g*R);
+        const pl = w.planoDeNormal(n), li = w.lineaDeVector(L);
+        return [Math.round(pl.rumbo)%360, Math.round(pl.manteo), Math.round(li.trend)%360, Math.round(li.plunge)]; };
+      // alpha 0 = parte de arriba al N. beta +30: arriba levantada → baja hacia el S
+      eq(med(0, 30, 0).slice(0, 2), [90, 30], 'arriba al N levantada 30°: mantea al S (090/30)');
+      eq(med(0, 30, 0).slice(2), [180, 30], 'la lineación del eje largo hunde al S');
+      // gamma +30: borde derecho (E) hacia abajo → mantea al E
+      eq(med(0, 0, 30).slice(0, 2), [0, 30], 'borde E abajo: mantea al E (000/30)');
+      // alpha 90 = arriba al W; beta +40: baja hacia el E
+      eq(med(90, 40, 0).slice(0, 2), [0, 40], 'arriba al W levantada: mantea al E');
+      // alpha 270 = arriba al E; beta +60: baja hacia el W
+      eq(med(270, 60, 0).slice(0, 2), [180, 60], 'arriba al E levantada: mantea al W (180/60)');
+      return 'mano derecha: el manteo cae a la derecha del rumbo, coherente con la lineación';
+    });
+
     // ---- v138: auditoría ----
     await prueba('Si otra instancia cierra la base, el siguiente guardado la reabre', async () => {
       w.soltarDB();                                    // lo mismo que hace onversionchange

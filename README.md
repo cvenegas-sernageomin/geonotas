@@ -43,6 +43,10 @@ Instalable en celular; funciona sin conexión tras la primera carga.
 - **Auditoría v138**: la base se reabre sola si otra instancia (la light u otra pestaña) cerró la
   conexión; el botón 📡 de manteo usa beta y gamma (apoyado de costado ya no da 0°); se pide
   almacenamiento persistente al arrancar para que el navegador no desaloje la campaña.
+- **v139**: **clinómetro corregido** (📐 Medir plano daba el manteo invertido, rumbo +180°, desde
+  2026-07-10); **declinación magnética automática** (WMM2025 en la posición del GPS) en la brújula y el
+  clinómetro; **COTA sobre el nivel del mar** (Android entrega altura elipsoidal; se resta el geoide
+  EGM96); aviso de versión nueva en vez de recarga a mitad de una ficha; gdal3 en caché propia.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas

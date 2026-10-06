@@ -3603,7 +3603,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v138';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v139';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -6436,7 +6436,7 @@ function initMapPunto(reg, f){
   setTimeout(()=>mapa.invalidateSize(),120);
 }
 function ubicarGPSmapa(){if(!navigator.geolocation||!marcador)return;toast('Obteniendo GPS…');
-  navigator.geolocation.getCurrentPosition(p=>{marcador.setLatLng([p.coords.latitude,p.coords.longitude]);
+  navigator.geolocation.getCurrentPosition(p=>{anotarPosGPS(p);marcador.setLatLng([p.coords.latitude,p.coords.longitude]);
     mapa.setView([p.coords.latitude,p.coords.longitude],16);marcador.fire('dragend');
     toast('GPS ✓ ±'+Math.round(p.coords.accuracy)+' m');},e=>toast('GPS: '+e.message),{enableHighAccuracy:true,timeout:15000});}
 function descargarTiles(){zonasPanel();}
@@ -8824,6 +8824,111 @@ function v3dCerrar(){
   return true;
 }
 
+// ---- Declinación magnética (WMM2025) y geoide (EGM96) para corregir lo que mide el teléfono (v139) ----
+// La brújula del teléfono (iOS webkitCompassHeading; Android deviceorientationabsolute) apunta al
+// norte MAGNÉTICO, y hasta v138 ese valor se guardaba tal cual como azimut/rumbo. En Chile la
+// declinación va de ~−6° (Norte Grande) a ~+13° (Magallanes): en el sur el rumbo salía torcido una
+// docena de grados. Se corrige con el World Magnetic Model 2025 (NOAA/BGS, dominio público,
+// válido 2025.0–2030.0), evaluado en la posición del GPS. Coeficientes de grado 12 tal como el
+// archivo oficial WMM_2025.COF: g, h, ġ, ḣ por (n,m) en orden n=1..12, m=0..n.
+const WMM_EPOCA=2025.0;
+const WMM_COEF=[-29351.8,0.0,12.0,0.0,-1410.8,4545.4,9.7,-21.5,-2556.6,0.0,-11.6,0.0,2951.1,-3133.6,-5.2,-27.7,1649.3,-815.1,-8.0,-12.1,1361.0,0.0,-1.3,0.0,-2404.1,-56.6,-4.2,4.0,1243.8,237.5,0.4,-0.3,453.6,-549.5,-15.6,-4.1,895.0,0.0,-1.6,0.0,799.5,278.6,-2.4,-1.1,55.7,-133.9,-6.0,4.1,-281.1,212.0,5.6,1.6,12.1,-375.6,-7.0,-4.4,-233.2,0.0,0.6,0.0,368.9,45.4,1.4,-0.5,187.2,220.2,0.0,2.2,-138.7,-122.9,0.6,0.4,-142.0,43.0,2.2,1.7,20.9,106.1,0.9,1.9,64.4,0.0,-0.2,0.0,63.8,-18.4,-0.4,0.3,76.9,16.8,0.9,-1.6,-115.7,48.8,1.2,-0.4,-40.9,-59.8,-0.9,0.9,14.9,10.9,0.3,0.7,-60.7,72.7,0.9,0.9,79.5,0.0,-0.0,0.0,-77.0,-48.9,-0.1,0.6,-8.8,-14.4,-0.1,0.5,59.3,-1.0,0.5,-0.8,15.8,23.4,-0.1,0.0,2.5,-7.4,-0.8,-1.0,-11.1,-25.1,-0.8,0.6,14.2,-2.3,0.8,-0.2,23.2,0.0,-0.1,0.0,10.8,7.1,0.2,-0.2,-17.5,-12.6,0.0,0.5,2.0,11.4,0.5,-0.4,-21.7,-9.7,-0.1,0.4,16.9,12.7,0.3,-0.5,15.0,0.7,0.2,-0.6,-16.8,-5.2,-0.0,0.3,0.9,3.9,0.2,0.2,4.6,0.0,-0.0,0.0,7.8,-24.8,-0.1,-0.3,3.0,12.2,0.1,0.3,-0.2,8.3,0.3,-0.3,-2.5,-3.3,-0.3,0.3,-13.1,-5.2,0.0,0.2,2.4,7.2,0.3,-0.1,8.6,-0.6,-0.1,-0.2,-8.7,0.8,0.1,0.4,-12.9,10.0,-0.1,0.1,-1.3,0.0,0.1,0.0,-6.4,3.3,0.0,0.0,0.2,0.0,0.1,-0.0,2.0,2.4,0.1,-0.2,-1.0,5.3,-0.0,0.1,-0.6,-9.1,-0.3,-0.1,-0.9,0.4,0.0,0.1,1.5,-4.2,-0.1,0.0,0.9,-3.8,-0.1,-0.1,-2.7,0.9,-0.0,0.2,-3.9,-9.1,-0.0,-0.0,2.9,0.0,0.0,0.0,-1.5,0.0,-0.0,-0.0,-2.5,2.9,0.0,0.1,2.4,-0.6,0.0,-0.0,-0.6,0.2,0.0,0.1,-0.1,0.5,-0.1,-0.0,-0.6,-0.3,0.0,-0.0,-0.1,-1.2,-0.0,0.1,1.1,-1.7,-0.1,-0.0,-1.0,-2.9,-0.1,0.0,-0.2,-1.8,-0.1,0.0,2.6,-2.3,-0.1,0.0,-2.0,0.0,0.0,0.0,-0.2,-1.3,0.0,-0.0,0.3,0.7,-0.0,0.0,1.2,1.0,-0.0,-0.1,-1.3,-1.4,-0.0,0.1,0.6,-0.0,-0.0,-0.0,0.6,0.6,0.1,-0.0,0.5,-0.1,-0.0,-0.0,-0.1,0.8,0.0,0.0,-0.4,0.1,0.0,-0.0,-0.2,-1.0,-0.1,-0.0,-1.3,0.1,-0.0,0.0,-0.7,0.2,-0.1,-0.1];
+let _wmmTabla=null;
+function wmmTabla(){
+  if(_wmmTabla) return _wmmTabla;
+  const N=12, g=[],h=[],gd=[],hd=[];
+  for(let n=0;n<=N;n++){g.push(new Float64Array(N+1));h.push(new Float64Array(N+1));gd.push(new Float64Array(N+1));hd.push(new Float64Array(N+1));}
+  let k=0;
+  for(let n=1;n<=N;n++) for(let m=0;m<=n;m++){ g[n][m]=WMM_COEF[k++]; h[n][m]=WMM_COEF[k++]; gd[n][m]=WMM_COEF[k++]; hd[n][m]=WMM_COEF[k++]; }
+  return _wmmTabla={N,g,h,gd,hd};
+}
+function anioDecimal(fecha){
+  const y=fecha.getUTCFullYear(), t0=Date.UTC(y,0,1), t1=Date.UTC(y+1,0,1);
+  return y+(fecha.getTime()-t0)/(t1-t0);
+}
+// Declinación en grados (positiva = norte magnético al ESTE del geográfico), a cota altKm sobre el
+// elipsoide. Algoritmo del informe técnico WMM: geodésica → geocéntrica, Legendre de Schmidt
+// semi-normalizadas, campo en el marco geocéntrico y rotación al marco geodésico (X norte, Y este).
+function declinacionMagnetica(lat,lon,altKm=0,fecha=new Date()){
+  const {N,g,h,gd,hd}=wmmTabla();
+  const dt=anioDecimal(fecha)-WMM_EPOCA;
+  const a=6378.137, f=1/298.257223563, e2=f*(2-f), re=6371.2;
+  const phi=lat*Math.PI/180, lam=lon*Math.PI/180;
+  const Rc=a/Math.sqrt(1-e2*Math.sin(phi)**2);
+  const p=(Rc+altKm)*Math.cos(phi), z=(Rc*(1-e2)+altKm)*Math.sin(phi);
+  const r=Math.hypot(p,z), phiP=Math.asin(z/r);
+  // Legendre de Schmidt semi-normalizadas P[n][m](sin φ') y sus derivadas respecto de φ'
+  const x=Math.sin(phiP), cx=Math.cos(phiP);
+  const P=[],dP=[];
+  for(let n=0;n<=N;n++){P.push(new Float64Array(N+1));dP.push(new Float64Array(N+1));}
+  P[0][0]=1; dP[0][0]=0;
+  for(let n=1;n<=N;n++) for(let m=0;m<=n;m++){
+    if(n===m){
+      const k=n===1?1:Math.sqrt((2*n-1)/(2*n));
+      P[n][m]=k*cx*P[n-1][m-1]; dP[n][m]=k*(cx*dP[n-1][m-1]-x*P[n-1][m-1]);
+    } else {
+      const k1=(2*n-1)/Math.sqrt(n*n-m*m), k2=Math.sqrt(((n-1)*(n-1)-m*m)/(n*n-m*m));
+      P[n][m]=k1*x*P[n-1][m]-(n>1&&m<=n-2?k2*P[n-2][m]:0);
+      dP[n][m]=k1*(x*dP[n-1][m]+cx*P[n-1][m])-(n>1&&m<=n-2?k2*dP[n-2][m]:0);
+    }
+  }
+  let Xp=0,Yp=0,Zp=0;
+  for(let n=1;n<=N;n++){
+    const fr=Math.pow(re/r,n+2);
+    for(let m=0;m<=n;m++){
+      const gg=g[n][m]+dt*gd[n][m], hh=h[n][m]+dt*hd[n][m];
+      const cm=Math.cos(m*lam), sm=Math.sin(m*lam);
+      Xp+=-fr*(gg*cm+hh*sm)*dP[n][m];
+      Yp+=fr*m*(gg*sm-hh*cm)*P[n][m]/(cx||1e-12);
+      Zp+=-(n+1)*fr*(gg*cm+hh*sm)*P[n][m];
+    }
+  }
+  const psi=phiP-phi;
+  const X=Xp*Math.cos(psi)-Zp*Math.sin(psi), Y=Yp;
+  return Math.atan2(Y,X)*180/Math.PI;
+}
+// Ondulación del geoide EGM96 (N, m) en Chile continental e insular cercano: grilla de 0,5°
+// (lat −17 a −56,5; lon −82 a −64) en decímetros, remuestreada de la grilla oficial de 15' de
+// la NGA (us_nga_egm96_15.tif). Error de la interpolación ≤ 1,9 m (máximo, en la cordillera);
+// media 0,1 m. Fuera de la grilla devuelve null y la cota GPS queda sin corregir.
+const GEOIDE_CL={la0:-17, lo0:-82, paso:.5, filas:80, cols:37, dm:null,
+  datos:'30,40,50,60,73,87,101,118,130,141,152,156,158,155,141,123,118,143,190,246,304,358,394,423,445,450,446,452,444,435,427,403,361,288,249,222,211,35,43,53,64,76,90,104,117,129,137,146,155,160,163,163,156,134,115,133,178,229,290,334,369,419,448,443,448,450,456,460,442,421,381,343,297,255,37,45,54,66,78,90,103,112,121,133,144,151,159,165,170,175,174,156,134,142,181,235,275,314,383,438,444,442,443,442,450,437,414,401,375,336,304,39,48,58,67,78,90,100,110,119,130,140,148,155,165,173,179,187,191,172,143,145,189,235,286,361,425,443,436,440,440,445,444,423,400,370,338,308,44,52,61,69,78,91,99,106,118,127,134,143,153,163,172,181,188,197,206,181,139,149,204,275,354,413,435,429,432,436,441,445,433,412,391,357,303,49,58,64,73,80,89,98,106,113,120,129,140,150,161,167,175,187,196,206,207,163,131,178,268,346,398,425,429,431,434,439,443,434,423,409,368,303,52,61,69,76,82,88,94,101,109,117,125,136,146,155,165,172,183,196,202,211,188,130,158,257,336,385,418,433,432,430,432,432,436,439,418,364,298,57,65,75,78,80,88,93,100,107,116,124,134,144,152,159,171,180,191,197,202,197,144,155,254,327,358,401,435,430,428,429,429,437,435,408,357,298,63,73,77,78,82,86,91,99,105,113,121,131,139,149,158,171,180,187,196,200,200,152,156,251,316,332,379,426,428,429,424,425,429,421,397,351,294,69,78,72,71,84,86,89,96,102,111,116,129,135,145,156,169,176,182,193,200,200,151,152,246,314,331,371,419,431,436,430,427,419,413,394,344,289,65,74,70,71,84,84,88,94,98,107,113,126,134,146,157,167,172,179,192,199,195,143,146,251,333,344,368,412,433,442,436,429,420,422,389,321,275,64,73,70,74,82,82,86,92,98,105,114,127,137,148,158,167,172,182,195,200,189,136,145,260,342,344,363,392,417,442,439,435,427,427,380,294,256,70,70,71,80,80,82,87,92,101,108,117,132,141,150,159,168,176,188,198,201,184,131,150,267,333,336,363,378,403,436,438,445,434,427,373,279,247,70,65,74,82,80,85,92,97,104,113,123,134,142,148,158,170,180,188,193,195,176,129,157,269,313,311,342,359,390,428,434,441,435,414,346,272,254,62,70,79,77,81,88,95,100,105,116,124,135,142,147,158,174,182,185,189,189,171,131,170,289,321,309,342,371,398,424,432,435,432,386,308,277,266,64,71,79,79,85,90,96,101,108,117,122,133,140,147,161,175,183,184,186,182,167,132,181,319,357,336,364,398,409,412,427,433,419,360,296,287,268,77,73,79,84,84,87,95,102,110,117,121,131,141,153,166,176,182,184,189,185,165,132,183,309,358,363,384,401,412,419,431,422,390,339,293,279,267,74,72,79,83,82,85,93,103,111,118,124,131,144,156,162,168,173,178,189,189,160,129,189,297,344,374,398,404,421,433,423,397,369,334,296,274,269,64,70,78,86,95,93,94,105,111,119,130,137,145,152,158,166,174,181,183,185,156,129,202,302,343,376,407,418,428,433,413,387,361,321,293,277,266,68,74,77,87,100,99,97,107,114,121,132,137,144,152,162,173,181,187,185,180,143,124,211,303,347,387,410,424,431,432,414,396,374,317,284,270,256,68,73,77,79,86,95,100,108,117,126,133,135,142,152,162,171,177,184,185,177,134,130,227,302,346,390,412,429,410,382,369,372,359,298,264,258,247,66,71,76,78,84,92,99,107,116,124,130,134,141,151,156,161,171,176,176,164,130,147,235,295,340,380,408,425,378,325,315,320,312,272,255,255,244,61,65,67,72,80,87,94,102,109,116,124,129,136,146,153,158,167,172,171,153,129,176,258,305,351,377,383,383,350,311,285,281,291,279,266,253,241,57,61,66,71,77,84,94,102,108,116,121,127,135,144,153,160,169,172,168,139,130,207,282,316,362,382,368,343,324,311,284,276,288,283,269,251,241,58,61,65,72,78,85,93,103,112,117,120,127,136,145,153,159,167,168,158,129,141,234,308,346,376,373,352,319,311,314,281,256,256,262,258,245,244,57,61,67,74,82,88,94,102,107,111,118,127,137,146,153,159,164,161,146,118,145,241,320,368,378,361,339,302,303,308,262,233,239,249,246,243,252,54,59,65,73,80,84,90,98,102,107,115,125,134,141,147,154,157,154,137,113,152,249,326,369,367,348,318,268,270,279,248,236,238,235,239,254,256,52,57,65,74,79,81,87,94,101,107,114,122,128,135,143,153,156,152,133,112,162,254,319,356,347,321,282,234,236,248,244,250,244,235,247,267,258,49,56,64,71,73,77,85,92,99,105,113,121,127,135,144,155,159,156,133,112,168,255,314,349,332,302,270,234,237,249,253,259,250,248,266,274,257,49,55,62,69,72,79,87,93,100,107,117,125,132,141,148,157,161,158,131,107,160,245,311,349,328,295,268,237,239,252,258,263,254,256,277,274,249,49,55,61,65,71,78,86,93,100,109,119,126,132,139,146,153,157,154,124,100,146,228,294,332,323,295,256,216,213,225,238,256,253,249,267,266,245,47,54,60,63,70,77,83,89,96,103,110,119,127,132,139,146,153,148,115,93,142,222,278,310,322,296,237,196,197,205,221,249,254,249,260,260,243,46,53,55,58,64,69,76,80,88,100,108,113,117,124,135,143,152,142,103,92,149,225,262,291,318,291,228,200,206,210,228,254,255,250,252,244,234,47,54,64,72,73,81,100,103,99,104,109,112,116,129,140,144,146,125,89,97,171,237,252,279,305,274,230,217,217,219,234,250,244,238,237,228,224,49,55,66,76,74,81,101,104,96,98,106,114,124,135,140,142,133,105,84,114,192,239,250,297,320,276,244,230,218,218,224,232,228,219,218,215,212,48,52,57,64,68,71,79,83,89,99,110,120,128,133,135,132,115,91,95,141,202,230,252,318,335,287,261,240,217,215,214,216,213,205,206,207,202,47,54,60,67,73,78,84,90,97,105,113,121,126,128,128,118,95,87,117,168,207,221,248,300,301,265,258,246,221,211,209,208,202,197,197,195,189,47,54,62,68,73,78,84,91,98,105,112,120,122,124,121,101,83,100,151,193,206,215,248,284,277,256,259,258,234,210,201,199,193,187,185,184,182,49,55,60,66,73,78,84,91,98,104,110,117,119,120,112,90,90,132,185,210,207,216,248,271,270,263,262,252,228,206,198,194,187,183,180,178,177,47,53,58,64,69,75,83,89,95,101,109,116,117,115,102,88,108,158,198,208,208,225,251,265,266,260,249,231,211,196,190,188,183,180,179,175,173,45,51,57,63,68,74,80,85,92,99,107,111,112,109,95,90,124,177,206,206,208,232,253,259,253,241,229,216,201,187,179,177,174,171,172,170,168,43,49,55,60,65,71,76,82,90,96,103,107,109,106,90,92,137,191,210,201,208,236,251,252,245,232,221,206,189,180,175,170,165,162,163,162,163,42,48,54,59,65,71,75,83,90,96,103,107,109,104,88,96,143,189,199,193,209,235,245,246,239,224,212,198,187,183,176,169,161,155,155,153,152,43,49,54,59,64,71,77,85,92,97,103,107,108,101,89,101,139,172,182,187,209,234,245,245,233,215,202,191,184,180,172,166,158,148,146,146,144,44,50,57,62,67,73,79,87,93,98,103,106,106,99,93,106,130,152,170,184,205,230,244,241,227,213,203,192,185,180,172,166,159,149,144,141,139,45,51,57,62,69,75,81,88,94,101,106,108,108,100,95,107,125,144,168,188,209,231,240,235,223,213,209,204,196,188,180,174,165,156,149,143,140,45,50,55,62,69,74,81,88,94,101,107,111,110,100,96,110,134,156,173,192,215,232,233,229,227,226,227,224,211,197,186,174,163,154,147,144,141,45,50,56,63,70,77,84,90,97,104,109,113,110,103,103,119,149,173,182,194,217,230,226,223,230,237,244,241,223,202,183,166,157,152,143,140,138,51,57,64,71,77,84,90,96,103,107,111,115,111,108,113,129,157,180,185,195,215,224,221,221,225,230,240,245,233,215,198,178,163,153,141,136,136,56,61,68,75,80,85,91,96,103,107,112,116,110,108,117,131,155,173,178,190,207,215,218,221,224,228,237,247,241,224,209,188,166,152,141,134,132,59,64,71,77,81,88,92,97,104,109,114,114,107,107,118,135,157,169,171,184,201,208,212,214,217,224,231,235,227,210,193,175,157,149,141,135,133,61,65,72,77,82,87,90,95,103,108,112,113,105,104,115,132,154,165,167,183,201,206,206,205,207,214,219,219,209,192,176,159,147,142,137,135,135,62,66,72,77,82,87,91,96,102,106,112,110,101,105,117,127,146,162,168,183,199,201,200,202,203,203,203,200,189,174,161,150,143,138,130,127,127,62,66,72,75,79,85,90,97,103,106,110,105,98,107,119,122,135,153,165,179,191,192,194,200,200,193,185,178,170,160,152,144,139,133,124,118,118,63,67,72,76,83,89,92,96,100,103,107,106,103,113,123,129,139,152,167,182,181,173,180,190,188,182,175,167,160,152,145,140,136,131,121,114,114,62,65,68,71,77,83,89,95,99,106,112,109,107,120,133,142,151,160,173,182,170,157,167,179,177,172,165,157,150,143,139,136,129,125,122,119,117,58,62,64,67,72,79,89,98,104,110,111,106,108,123,134,142,161,181,193,198,189,179,178,175,169,165,158,153,147,139,135,133,123,117,119,120,119,55,61,67,73,80,86,92,99,104,107,109,107,110,123,135,148,172,200,219,225,216,201,187,172,161,157,154,152,148,139,131,128,122,118,118,119,121,54,61,66,71,76,80,85,92,98,102,108,109,113,129,149,163,176,198,229,247,234,207,188,173,161,155,151,148,144,137,130,124,117,115,117,118,119,52,56,61,66,72,76,82,88,93,98,102,102,108,127,146,160,177,197,219,235,230,209,188,171,156,148,145,141,137,133,127,121,116,114,116,116,115,48,52,57,63,68,72,77,82,86,90,89,85,98,122,135,148,179,202,201,199,200,190,175,164,158,152,145,136,130,126,121,118,116,114,115,116,113,44,48,53,57,62,67,73,77,79,81,77,75,97,130,142,149,175,198,198,194,188,173,161,161,162,157,147,134,123,118,118,118,117,115,116,116,114,40,44,48,53,59,63,67,72,73,70,69,79,109,142,150,146,156,169,174,178,178,166,157,157,152,145,139,129,116,112,115,117,115,113,114,115,114,37,42,46,51,57,60,64,68,66,60,62,79,114,149,156,151,157,164,160,162,170,167,155,147,140,132,127,120,114,115,118,117,114,112,111,113,115,35,40,44,50,55,57,61,61,56,54,58,71,102,138,147,145,163,180,169,156,160,159,146,135,129,123,119,117,115,115,114,110,109,110,109,110,113,34,38,42,48,52,54,58,58,52,51,57,68,97,131,139,139,165,189,174,150,147,147,137,128,120,111,109,112,112,111,110,107,106,108,109,111,115,32,37,41,46,49,51,55,57,52,50,56,70,100,130,135,134,158,178,161,138,137,138,129,121,115,107,104,105,104,104,105,104,105,110,113,116,121,29,34,37,42,46,50,54,55,50,47,51,67,101,131,133,130,150,168,155,135,132,128,117,111,108,104,101,101,101,101,102,103,108,116,121,123,128,24,29,34,40,45,50,54,54,50,47,46,59,92,126,137,137,149,160,148,132,126,119,108,104,104,101,98,98,100,100,100,102,108,117,123,127,133,20,24,30,37,43,48,52,53,52,49,45,51,79,115,138,144,149,148,135,122,116,110,100,95,94,93,94,98,100,100,100,102,109,118,125,129,133,18,22,28,34,41,47,51,53,54,51,45,47,71,106,128,131,131,132,127,117,107,100,95,93,93,94,99,103,103,102,103,106,111,118,124,127,132,14,19,26,32,38,44,48,51,53,51,44,42,59,91,115,121,119,119,118,113,105,96,91,91,93,96,102,108,111,112,114,115,117,121,126,128,131,12,17,23,29,34,40,45,48,50,51,46,42,47,66,91,109,113,106,101,104,105,98,89,88,93,100,108,116,120,122,122,123,123,125,126,127,128,9,15,21,25,30,35,40,45,49,50,48,45,43,45,57,80,102,108,104,102,103,98,89,86,92,104,115,123,127,126,127,130,131,129,126,121,116,4,11,17,21,26,32,37,41,47,51,48,44,42,37,37,55,88,113,116,108,103,99,93,90,97,108,117,120,122,123,123,122,119,115,110,104,100,-3,5,12,16,21,29,34,37,43,49,50,46,43,38,33,39,64,95,114,118,113,104,97,100,113,126,129,125,122,124,125,122,119,114,107,101,102,-9,-1,7,11,15,23,31,35,39,45,48,48,45,41,34,29,35,50,69,85,96,103,109,117,127,135,136,136,138,141,142,139,135,130,123,116,113,-14,-6,2,7,11,17,24,30,35,39,44,47,49,48,45,40,35,32,34,42,55,73,94,114,128,134,137,141,149,157,161,155,143,131,125,124,124,-17,-12,-6,1,7,13,18,24,29,34,37,42,46,50,51,51,50,47,45,44,43,47,61,86,114,135,144,146,148,153,156,153,143,134,132,134,138,-19,-14,-9,-3,2,7,11,17,22,27,32,37,42,47,51,55,58,60,60,62,62,61,61,69,84,103,120,135,147,151,146,138,136,139,143,144,145'};
+function ondulacionGeoide(lat,lon){
+  const G=GEOIDE_CL;
+  if(!G.dm) G.dm=Int16Array.from(G.datos.split(','),Number);
+  const fr=(G.la0-lat)/G.paso, fc=(lon-G.lo0)/G.paso;
+  if(!(fr>=0&&fc>=0&&fr<=G.filas-1&&fc<=G.cols-1)) return null;
+  const r0=Math.min(G.filas-2,Math.floor(fr)), c0=Math.min(G.cols-2,Math.floor(fc)), a=fr-r0, b=fc-c0;
+  const v=(r,c)=>G.dm[r*G.cols+c];
+  return ((v(r0,c0)*(1-b)+v(r0,c0+1)*b)*(1-a)+(v(r0+1,c0)*(1-b)+v(r0+1,c0+1)*b)*a)/10;
+}
+// iOS entrega la altitud sobre el nivel del mar (CLLocation.altitude); Android y el resto, según
+// la norma W3C, altura sobre el ELIPSOIDE WGS84 -- en Chile 20-40 m más que la cota sobre el
+// nivel del mar (Santiago: +27 m). Hasta v138 la COTA guardaba esa altura elipsoidal tal cual
+// en Android y quedaba sobre el DEM del perfil y del 3D.
+function esIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1); }
+function cotaSobreNivelMar(alt,lat,lon,ios=esIOS()){
+  if(alt==null||isNaN(alt)) return null;
+  if(ios) return alt;
+  const n=ondulacionGeoide(lat,lon);
+  return n==null?alt:alt-n;
+}
+// Última posición conocida, para la declinación: la brújula se usa casi siempre justo después
+// de tomar el GPS del punto. Cualquier lectura de GPS de la app la actualiza.
+let ultimaPosGPS=null;
+function anotarPosGPS(p){ if(p&&p.coords) ultimaPosGPS={lat:p.coords.latitude, lon:p.coords.longitude, t:Date.now()}; }
+// Declinación a aplicar ahora: con la posición del GPS (cualquier fix de las últimas 12 h basta:
+// la declinación cambia ~0,1° cada 10 km); si no hay, la pide (máx. 8 s, acepta una de caché).
+async function declinacionActual(){
+  if(!ultimaPosGPS||Date.now()-ultimaPosGPS.t>12*3600e3){
+    if(navigator.geolocation) await new Promise(res=>navigator.geolocation.getCurrentPosition(p=>{anotarPosGPS(p);res();},()=>res(),
+      {enableHighAccuracy:false,maximumAge:12*3600e3,timeout:8000}));
+  }
+  if(!ultimaPosGPS) return null;
+  return declinacionMagnetica(ultimaPosGPS.lat,ultimaPosGPS.lon);
+}
+function fmtDeclinacion(d){ return d==null?'sin GPS: norte magnético':'decl. '+(d>=0?'+':'')+d.toFixed(1)+'° aplicada'; }
+
 // ============================ Clinómetro (plano + lineación) ============================
 // Mide rumbo/manteo (y trend/plunge de una línea) con los sensores del teléfono.
 // Muestrea 3 s, calcula el vector normal al plano (eje Z del teléfono) y el eje mayor (eje Y)
@@ -8838,6 +8943,7 @@ const PLANO_CAMPOS = {
 function anglesFromEvent(e){
   let a=e.alpha;
   if(typeof e.webkitCompassHeading==='number') a=(360-e.webkitCompassHeading);
+  else if(e.absolute===false) return null;      // alpha relativo (sin brújula): el rumbo no tendría norte
   if(a==null||e.beta==null||e.gamma==null) return null;
   return {a:a*D2R, b:e.beta*D2R, g:e.gamma*D2R};
 }
@@ -8853,7 +8959,12 @@ function media(vecs){const s=[0,0,0];vecs.forEach(v=>{s[0]+=v[0];s[1]+=v[1];s[2]
 function planoDeNormal(n){
   if(n[2]<0)n=[-n[0],-n[1],-n[2]];                       // hemisferio superior
   const dip=Math.acos(Math.max(-1,Math.min(1,n[2])))*R2D;
-  const dipDir=((Math.atan2(n[0],n[1])*R2D)+180+360)%360;
+  // La componente horizontal de la normal SUPERIOR apunta hacia donde baja el plano: esa es la
+  // dirección de manteo. Hasta v138 / light-27 se le sumaban 180° y el plano salía con el manteo
+  // invertido (rumbo girado 180°): teléfono con la parte de arriba levantada hacia el N daba
+  // 270/30 (mantea al N) en vez de 090/30 (mantea al S), contradiciendo la lineación del mismo
+  // botón (180/30). Medido con ejesMundo() y la matriz de la norma W3C.
+  const dipDir=((Math.atan2(n[0],n[1])*R2D)+360)%360;
   const strike=(dipDir-90+360)%360;                      // regla de la mano derecha
   return {rumbo:strike, manteo:dip};
 }
@@ -8872,6 +8983,7 @@ async function medirEstructura(modo, onTick){   // modo: 'plano' | 'linea'
   if(!(await ensureOrientPerm())) return null;
   const evt=('ondeviceorientationabsolute' in window)?'deviceorientationabsolute':'deviceorientation';
   const normals=[], lines=[];
+  const pDecl=declinacionActual().catch(()=>null);   // en paralelo con el muestreo
   return new Promise(res=>{
     const on=e=>{const ang=anglesFromEvent(e);if(!ang)return;const {n,L}=ejesMundo(ang.a,ang.b,ang.g);
       normals.push(n[2]<0?[-n[0],-n[1],-n[2]]:n);
@@ -8879,11 +8991,14 @@ async function medirEstructura(modo, onTick){   // modo: 'plano' | 'linea'
     window.addEventListener(evt,on);
     const t0=Date.now(); let iv=null;
     if(onTick){iv=setInterval(()=>onTick(Math.max(0,Math.ceil((CLINO_MS-(Date.now()-t0))/1000))),250);}
-    setTimeout(()=>{window.removeEventListener(evt,on);if(iv)clearInterval(iv);
+    setTimeout(async()=>{window.removeEventListener(evt,on);if(iv)clearInterval(iv);
       if(!normals.length){res(null);return;}
       const mn=media(normals), pl=planoDeNormal(mn), disp=dispersionGrados(normals,mn);
-      const out={...pl, n:normals.length, disp};
-      if(modo==='linea'){Object.assign(out, lineaDeVector(media(lines)));}
+      // norte magnético → geográfico: girar el marco entero es sumar la declinación a los
+      // azimuts (rumbo y trend); manteo y plunge no cambian
+      const decl=await pDecl, sumar=v=>decl==null?v:((v+decl)%360+360)%360;
+      const out={...pl, rumbo:sumar(pl.rumbo), n:normals.length, disp, decl};
+      if(modo==='linea'){const li=lineaDeVector(media(lines)); Object.assign(out, li, {trend:sumar(li.trend)});}
       res(out);
     }, CLINO_MS);
   });
@@ -8905,7 +9020,8 @@ function barraMedicion(store, f){
     const conf=r.disp<2?'ALTA':(r.disp<5?'MEDIA':'BAJA');
     const cg=f.node.querySelector('[name="'+map.conf+'"]'); if(cg&&!cg.value){cg.value=conf;cg.dispatchEvent(new Event('change',{bubbles:true}));}
     status.textContent='✓ '+r.n+' lecturas · ±'+r.disp.toFixed(1)+'° · '+conf
-      +'  →  '+Math.round(r.rumbo)+'/'+Math.round(r.manteo)+(r.trend!=null?'  · L '+Math.round(r.trend)+'/'+Math.round(r.plunge):'');
+      +'  →  '+Math.round(r.rumbo)+'/'+Math.round(r.manteo)+(r.trend!=null?'  · L '+Math.round(r.trend)+'/'+Math.round(r.plunge):'')
+      +' · '+fmtDeclinacion(r.decl);
   };
   bar.append(el('button',{type:'button',class:'btn blue mini',onclick:()=>medir('plano')},'📐 Medir plano'));
   if(map.trend)bar.append(el('button',{type:'button',class:'btn orange mini',onclick:()=>medir('linea')},'📏 Plano + línea'));
@@ -8926,6 +9042,7 @@ async function ensureOrientPerm(){
 }
 function headingFromEvent(e){
   if(typeof e.webkitCompassHeading==='number')return e.webkitCompassHeading;   // iOS: norte magnético real
+  if(e.absolute===false)return null;           // alpha relativo (sin brújula): no hay norte
   if(e.alpha!=null)return (360-e.alpha)%360;                                     // Android orientación absoluta
   return null;
 }
@@ -8945,11 +9062,17 @@ function medirSensor(modo){ // modo: 'brujula'(azimut 0-360) | 'dip'(inclinació
   return new Promise(async res=>{
     if(!(await ensureOrientPerm())){res(null);return;}
     const hs=[],bs=[];
+    const pDecl=modo==='brujula'?declinacionActual().catch(()=>null):null;
     const evt = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' : 'deviceorientation';
     const on=e=>{const h=headingFromEvent(e);if(h!=null)hs.push(h);const m=manteoDeSensor(e.beta,e.gamma);if(m!=null)bs.push(m);
       if((modo==='brujula'?hs.length:bs.length)>=6){window.removeEventListener(evt,on);fin();}};
-    const fin=()=>{window.removeEventListener(evt,on);
-      if(modo==='brujula')res(hs.length?circularMean(hs):null);
+    let terminado=false;
+    const fin=async()=>{window.removeEventListener(evt,on); if(terminado)return; terminado=true;
+      if(modo==='brujula'){
+        if(!hs.length){res(null);return;}
+        const d=await pDecl; medirSensor.decl=d;       // el botón muestra cuál se aplicó
+        res(d==null?circularMean(hs):((circularMean(hs)+d)%360+360)%360);
+      }
       else res(bs.length?Math.min(90,Math.round(bs.reduce((s,b)=>s+b,0)/bs.length)):null);};
     window.addEventListener(evt,on);
     setTimeout(fin,2500);
@@ -8971,7 +9094,7 @@ function sensorInput(inp,modo){
     btn.disabled=false;btn.textContent=orig;
     if(v==null){toast('Sin sensor de orientación; ingresa el valor manual');return;}
     inp.value=Math.round(v);inp.dispatchEvent(new Event('change',{bubbles:true}));
-    toast((modo==='brujula'?'Azimut ':'Inclinación ')+Math.round(v)+'°');
+    toast(modo==='brujula'?'Azimut '+Math.round(v)+'° ('+fmtDeclinacion(medirSensor.decl)+')':'Inclinación '+Math.round(v)+'°');
   });
   wrap.append(inp,btn);
   return wrap;
@@ -8979,7 +9102,19 @@ function sensorInput(inp,modo){
 
 // ============================ Estado / navegación ============================
 let vista={n:'home'}; // {n:'home'} | {n:'proyecto',id} | {n:'punto',id}
-function nav(v){vista=v;render();}
+function nav(v){
+  if(actualizacionPendiente&&v&&v.n==='home'){ location.reload(); return; }   // versión nueva esperando: se toma al volver al inicio
+  vista=v;render();
+}
+let actualizacionPendiente=false;
+function avisoActualizacion(){
+  if(document.getElementById('aviso-version'))return;
+  const b=el('div',{id:'aviso-version',style:'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(64px + env(safe-area-inset-bottom));z-index:3000;background:#12324a;color:#fff;padding:8px 10px 8px 14px;border-radius:22px;font-size:13px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px -6px rgba(0,0,0,.5);max-width:calc(100vw - 32px)'},
+    el('span',{},'🔄 Hay una versión nueva'),
+    el('button',{class:'btn mini',onclick:()=>location.reload()},'Actualizar'),
+    el('button',{class:'btn sec mini','aria-label':'Más tarde',onclick:()=>b.remove()},'✕'));
+  document.body.append(b);
+}
 $('#btnBack').addEventListener('click',()=>{
   if(vista.n==='punto'){const p= curPunto&&curPunto._parent; nav({n:'proyecto',id:p});}
   else if(vista.n==='proyecto') nav({n:'home'});
@@ -10720,6 +10855,7 @@ function toggleGPSLive(btn){
   gpsSiguiendo=true; gpsPrimerFix=true;
   if(mapaVista){ mapaVista.off('dragstart',gpsPausar); mapaVista.on('dragstart',gpsPausar); }
   gpsWatchId=navigator.geolocation.watchPosition(p=>{
+    anotarPosGPS(p);
     if(!mapaVista)return;
     const ll=[p.coords.latitude,p.coords.longitude];
     gpsUltimo=ll;
@@ -10973,7 +11109,8 @@ function tomarGPS(f,btn){
     if(!mejor){toast('No se pudo obtener GPS');return;}
     set('Coordenadas Geográficas Decimales_Lat',mejor.coords.latitude.toFixed(6));
     set('Coordenadas Geográficas Decimales_Long',mejor.coords.longitude.toFixed(6));
-    if(mejor.coords.altitude!=null)set('COTA',Math.round(mejor.coords.altitude));
+    // altura elipsoidal (Android) → cota sobre el nivel del mar con el geoide EGM96
+    if(mejor.coords.altitude!=null)set('COTA',Math.round(cotaSobreNivelMar(mejor.coords.altitude,mejor.coords.latitude,mejor.coords.longitude)));
     set('PRECISION_GPS',precisionGpsCategoria(mejor.coords.accuracy));
     const now=new Date();
     set('FECHA',now.toISOString().slice(0,10));set('HORA',now.toTimeString().slice(0,5));
@@ -10982,6 +11119,7 @@ function tomarGPS(f,btn){
   if(btn){btn.disabled=true;btn.textContent='📡 Buscando…';}
   toast('Obteniendo GPS — esperando mejor señal…');
   watchId=navigator.geolocation.watchPosition(p=>{
+    anotarPosGPS(p);
     if(!mejor||p.coords.accuracy<mejor.coords.accuracy)mejor=p;
     if(btn)btn.textContent='📡 ±'+Math.round(p.coords.accuracy)+' m…';
     if(p.coords.accuracy<=UMBRAL_BUENO)terminar();
@@ -12767,9 +12905,18 @@ window.addEventListener('unhandledrejection',e=>{
   // navegador lo niega no pasa nada visible (es la misma situación de antes).
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persisted().then(p=>p||navigator.storage.persist()).catch(()=>{}); }catch(e){}
   if('serviceWorker' in navigator){
-    // auto-actualiza: cuando el nuevo SW toma control, recarga una vez para tomar la última versión
-    let recargando=false;
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(recargando)return;recargando=true;location.reload();});
+    // Versión nueva: hasta v138 se recargaba la página apenas el SW nuevo tomaba el control, a
+    // veces a mitad de una ficha o de una medición (las fichas se guardan solas, pero la pantalla
+    // volvía al inicio sin aviso). Ahora: en la pantalla de inicio y sin nada abierto se recarga
+    // de una (no hay nada que perder); si no, sale un aviso para actualizar cuando el geólogo
+    // quiera, y se toma sola al volver al inicio. La primera instalación (sin SW previo) no recarga.
+    const habiaSW=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!habiaSW||actualizacionPendiente)return;
+      actualizacionPendiente=true;
+      if(vista&&vista.n==='home'&&!document.querySelector('.fmov, .sk-ov')){ location.reload(); return; }
+      avisoActualizacion();
+    });
     try{await navigator.serviceWorker.register('sw.js');}catch(e){}
   }
 })();
