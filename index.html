@@ -3593,7 +3593,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v132';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v133';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -6292,7 +6292,37 @@ function b64ToBytes(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);
 const MP_ACEPTA = '.tif,.tiff,.kmz,.kml';
 const MP_AVISO_MB = 60;            // sobre esto se avisa el peso antes de guardar
 let mpOverlay = null, mpObjUrl = null, mpActivoId = null, mpOpacidad = .85;
-const mpCacheRaster = {};          // id -> georaster ya parseado (re-parsear un .tif es caro)
+const mpCacheRaster = {};          // id -> Promise<georaster> ya abierto (re-parsear un .tif es caro)
+const mpUrlRaster = {};            // id -> blob: URL que el georaster perezoso sigue leyendo
+
+// v133: el GeoTIFF se abre PEREZOSO. parseGeoraster con un ArrayBuffer decodifica TODOS los
+// pixeles al tiro (medido 2026-10-06, 8000x8000 RGB de 12 MB: 188 MB de heap y 30 s antes de
+// ver algo). Con una URL, georaster deja getValues() leyendo por rangos solo la ventana de
+// cada tesela, y geotiff.js elige el overview del zoom: 16,5 MB y 2,8 s con el mismo archivo.
+// La URL es un blob: del archivo guardado -- Chrome y Safari responden 206 a un Range sobre
+// blob:, que es lo que pide geotiff.js. georaster SOLO es perezoso con URL: con un Blob lee
+// todo igual (rama "url"!==sourceType de su worker), por eso no se le pasa el Blob directo.
+// Excepcion: un TIFF a franjas y sin overviews se lee entero en CADA tesela del zoom lejano;
+// si es chico (<= MP_ENTERO_MB descomprimido) conviene cargarlo de una vez como antes.
+const MP_ENTERO_MB = 64;
+async function mpAbrirGeoraster(blob){
+  const url = URL.createObjectURL(blob);
+  let gr;
+  try { gr = await parseGeoraster(url); }
+  catch(e){ URL.revokeObjectURL(url); throw e; }
+  try {
+    const tif = gr._geotiff, n = tif ? await tif.getImageCount() : 1;
+    const img = tif ? await tif.getImage(0) : null;
+    const liviano = (n > 1) || (img && img.isTiled);
+    const mb = gr.width * gr.height * (gr.numberOfRasters || 1) / 1048576;
+    if(!liviano && mb <= MP_ENTERO_MB){
+      URL.revokeObjectURL(url);
+      return {gr: await parseGeoraster(await blob.arrayBuffer()), url: null};
+    }
+    if(!liviano) toast('⚠️ Este GeoTIFF no tiene overviews ni teselas: puede ir lento al alejarte. Conviene un COG (gdal_translate -of COG).');
+  } catch(e){ console.warn('Mis mapas:', e); }
+  return {gr, url};
+}
 
 const mpTam = b => b < 1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(1)+' MB';
 async function mpLista(){
@@ -6378,8 +6408,11 @@ async function mpDesdeGeoTIFF(file){
   // el Blob despues, con `new Blob([buf])`, daba un archivo de 0 BYTES: se guardaba un GeoTIFF
   // vacio e inservible. Por eso se guarda el File mismo -- que ya es un Blob -- y a
   // parseGeoraster se le entrega una lectura APARTE, que puede desprender sin dano.
-  try { gr = await parseGeoraster(await file.arrayBuffer()); }
+  // v133: solo se valida la georreferencia, asi que basta abrirlo perezoso (lee el header).
+  const url = URL.createObjectURL(file);
+  try { gr = await parseGeoraster(url); }
   catch(e){ throw new Error('No se pudo leer el GeoTIFF: ' + (e.message || e)); }
+  finally { URL.revokeObjectURL(url); }
   // Sin transform afin no hay forma de ubicarlo: un TIFF cualquiera no es un GeoTIFF.
   if(!isFinite(gr.xmin) || !isFinite(gr.ymax) || !gr.pixelWidth)
     throw new Error('Este TIFF no trae georreferenciación: no se puede ubicar en el mapa');
@@ -6407,7 +6440,9 @@ async function mpMostrar(id, volar){
   if(!rec){ mpActivoId = null; return; }
   try{
     if(rec.tipo === 'geotiff'){
-      const gr = mpCacheRaster[id] || (mpCacheRaster[id] = await parseGeoraster(await rec.blob.arrayBuffer()));
+      if(!mpCacheRaster[id]) mpCacheRaster[id] = mpAbrirGeoraster(rec.blob).then(r => { if(r.url) mpUrlRaster[id] = r.url; return r.gr; },
+                                                                         e => { delete mpCacheRaster[id]; throw e; });
+      const gr = await mpCacheRaster[id];
       mpOverlay = new GeoRasterLayer({georaster:gr, opacity:mpOpacidad, resolution:256});
     } else {
       mpObjUrl = URL.createObjectURL(rec.blob);
@@ -6469,6 +6504,7 @@ function mpPanel(){
         if(!confirm('¿Borrar "' + (m.nombre||'') + '" del dispositivo? El archivo original no se toca.')) return;
         if(m.id === mpActivoId){ mpQuitarOverlay(); mpActivoId = null; }
         delete mpCacheRaster[m.id];
+        if(mpUrlRaster[m.id]){ URL.revokeObjectURL(mpUrlRaster[m.id]); delete mpUrlRaster[m.id]; }
         await del('mapaprop', m.id);
         await pintar(); toast('Mapa borrado');
       }}, '🗑️'));

@@ -1283,6 +1283,25 @@ async function correr(){
       return 'EPSG:32719 ubicado en su recuadro real';
     });
 
+    await prueba('Mis mapas: un GeoTIFF con teselas/overviews se abre perezoso; uno chico a franjas, entero (v133)', async () => {
+      // Perezoso = georaster sin .values: lee por rango solo la ventana pedida. Medido con un
+      // 8000x8000: 188 MB → 16,5 MB de heap. El chico a franjas se carga entero como antes.
+      const cog = await (await fetch('smoke-geotiff-cog.tif')).blob();
+      const r = await w.mpAbrirGeoraster(cog);
+      try {
+        ok(r.url && r.url.startsWith('blob:'), 'el GeoTIFF con overviews no quedó leyendo de una blob: URL');
+        ok(!r.gr.values, 'cargó todos los píxeles: no quedó perezoso');
+        eq([r.gr.projection, r.gr.width, r.gr.height, r.gr.xmin, r.gr.ymax], [32719, 1024, 768, 296000, 6100000], 'georreferencia');
+        const v = await r.gr.getValues({left:0, top:0, right:1024, bottom:768, width:8, height:8});
+        eq([v[0][0][3], v[1][0][3], v[2][0][3]], [220, 40, 40], 'la fila norte debe ser la franja roja');
+      } finally { if (r.url) w.URL.revokeObjectURL(r.url); }
+      // Blob del iframe: georaster compara `instanceof ArrayBuffer` con el ArrayBuffer de SU ventana.
+      const chico = new w.Blob([await (await fetch('smoke-geotiff-utm19s.tif')).arrayBuffer()]);
+      const r2 = await w.mpAbrirGeoraster(chico);
+      ok(!r2.url && r2.gr.values, 'el TIFF chico a franjas debía cargarse entero');
+      return 'COG: perezoso, georreferencia y lectura por ventana OK; TIFF chico: entero';
+    });
+
     // ---- Auditoría v129 ----
     await prueba('childrenOf() usa el índice parent y devuelve lo mismo que el barrido', async () => {
       // Hasta v128 childrenOf() leía el store ENTERO y filtraba en memoria: con una campaña con

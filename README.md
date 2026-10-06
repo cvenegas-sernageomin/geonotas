@@ -21,6 +21,10 @@ Instalable en celular; funciona sin conexión tras la primera carga.
   allá del zoom bajado. Se exporta (otro teléfono, QGIS) e importa `.pmtiles` o `.mbtiles`
   (raster; `.mbtiles` hasta 150 MB). Lector/escritor PMTiles v3 propio, contrastado con la
   librería oficial de Python.
+- **Mis mapas en GeoTIFF se leen por partes** (v133): se abre perezoso desde el archivo guardado
+  (lecturas por rango a una `blob:` URL) y solo se decodifica la ventana y el overview de cada
+  tesela. Con un COG o un TIFF con overviews, un 8000×8000 pasó de 188 MB / 30 s a 16,5 MB / 2,8 s.
+  Un TIFF chico a franjas se sigue cargando entero.
 - **Vista 3D** (botón ⛰️ 3D del mapa): terreno real con los puntos, notas, líneas y actitudes del
   proyecto encima, y el plano de rumbo/manteo ajustable sobre el relieve — el ajuste se guarda por
   defecto como una medición *nueva*, sin pisar lo medido en terreno. El relieve sale de teselas
