@@ -1784,6 +1784,55 @@ async function correr(){
       return 'grilla y polígono dibujados, sin errores del renderer';
     });
 
+    // ---- v141: mapa girable (el norte ya no queda fijo) ----
+    await prueba('Mapa girado: los símbolos estructurales siguen apuntando al rumbo real', async () => {
+      // un plano N0° con el mapa girado 90° se ve igual que un plano N90° con el norte arriba
+      const e0 = {AZIMUT:'0', MANTEO_BUZAMIENTO:'30'}, e90 = {AZIMUT:'90', MANTEO_BUZAMIENTO:'30'};
+      eq(w.svgEstructura(e0, 30, 30, 90), w.svgEstructura(e90, 30, 30, 0), 'plano girado');
+      const l0 = {TREND:'10', PLUNGE:'20'}, l1 = {TREND:'340', PLUNGE:'20'};
+      eq(w.svgEstructura(l0, 30, 30, -30), w.svgEstructura(l1, 30, 30, 0), 'lineación girada');
+      eq(w.svgEstructura(e0, 30, 30), w.svgEstructura(e0, 30, 30, 0), 'sin giro cambia el dibujo');
+      ok(/>30</.test(w.svgPunto([e0], [], null, 90)), 'el número de manteo debe seguir escrito derecho');
+      return 'az+giro y número sin rotar';
+    });
+    await prueba('Mapa girable: girar con los dedos pasa a modo libre, la grilla UTM rotula, la aguja vuelve al norte', async () => {
+      const div = w.document.createElement('div');
+      div.style.cssText = 'position:fixed;left:0;top:0;width:400px;height:300px';
+      w.document.body.append(div);
+      const errores = [], onErr = e => errores.push(String((e.error && e.error.message) || (e.reason && e.reason.message) || e.message));
+      w.addEventListener('error', onErr); w.addEventListener('unhandledrejection', onErr);
+      const G = w.eval('giroMapa'), modo0 = G.modo;
+      let m;
+      try {
+        ok(typeof w.L.Map.prototype.setBearing === 'function', 'leaflet-rotate no está cargado');
+        m = w.L.map(div, {zoomAnimation:false, fadeAnimation:false, rotate:true, touchRotate:true, rotateControl:false, bearing:0});
+        G.modo = 'norte';
+        w.giroMontar(m);
+        new (w.eval('CapaGrillaUTM'))().addTo(m);
+        const pol = w.L.polygon([[-33.428, -70.638], [-33.422, -70.628], [-33.428, -70.628]]).addTo(m);
+        m.fitBounds([[-33.43, -70.64], [-33.42, -70.62]]);
+        m.setBearing(40);                                   // como si lo girara con dos dedos
+        await new Promise(r => setTimeout(r, 400));
+        eq(G.modo, 'libre', 'modo tras girar a mano');
+        ok(Math.abs(m.getBearing() - 40) < .01, 'bearing ' + m.getBearing());
+        ok(/rotate\(40/.test(G.btn.querySelector('svg').style.transform), 'la aguja no giró con el mapa');
+        ok(pol._path && /\d/.test(pol._path.getAttribute('d') || ''), 'el polígono no se dibujó girado');
+        ok(div.querySelectorAll('.utm-rot').length > 0, 'la grilla no rotuló con el mapa girado');
+        // el punto de la pantalla y su coordenada siguen siendo inversos con el mapa girado
+        // (punto fuera del centro para que el giro cuente; tolerancia < 1 px, Leaflet redondea a píxel)
+        const ll = w.L.latLng(-33.4215, -70.6235), back = m.containerPointToLatLng(m.latLngToContainerPoint(ll));
+        ok(Math.abs(back.lat - ll.lat) < 5e-5 && Math.abs(back.lng - ll.lng) < 5e-5, 'pantalla↔coordenada no cuadra girado');
+        G.btn.click();                                      // la aguja: de libre vuelve a norte arriba
+        eq([G.modo, Math.round(m.getBearing())], ['norte', 0], 'la aguja no enderezó el mapa');
+        eq(errores, [], 'errores durante el giro');
+      } finally {
+        w.removeEventListener('error', onErr); w.removeEventListener('unhandledrejection', onErr);
+        G.modo = modo0; G.map = null; G.btn = null; G.marcas = [];
+        if (m) m.remove(); div.remove();
+      }
+      return 'libre → norte, grilla y polígono girados sin errores';
+    });
+
     // ---- v139: declinación magnética, cota sobre el nivel del mar, aviso de versión ----
     await prueba('Declinación WMM2025 en Chile coincide con la referencia (pygeomag)', async () => {
       const f = new Date(Date.UTC(2026, 9, 6));

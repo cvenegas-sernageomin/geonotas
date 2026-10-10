@@ -1,5 +1,5 @@
 // Service worker offline-first (cache estatico)
-const CACHE='geonotas-v140';
+const CACHE='geonotas-v141';
 // Caches que ESTA app puede purgar al activarse. NO se borra "todo lo que no sea CACHE":
 // la Cache API tiene alcance de ORIGEN, no de ruta, y las dos PWAs (completa y light) viven
 // en el mismo cvenegas-sernageomin.github.io. Con el filtro viejo, activar una borraba la
@@ -22,7 +22,7 @@ const esMia=k=>MIAS.some(re=>re.test(k));
 const CESIUM_CACHE='geonotas-cesium';
 const esCesium=u=>u.hostname==='cesium.com' && u.pathname.startsWith('/downloads/cesiumjs/');
 const ASSETS=['./','./index.html','./manifest.json','./icons/icon-192.png','./icons/icon-512.png',
-  './vendor/leaflet.css','./vendor/leaflet.js','./vendor/idb.js','./vendor/leaflet.offline.js',
+  './vendor/leaflet.css','./vendor/leaflet.js','./vendor/leaflet-rotate.js','./vendor/idb.js','./vendor/leaflet.offline.js',
   './vendor/georaster.browser.bundle.min.js','./vendor/georaster-layer-for-leaflet.min.js',
   './vendor/sql-wasm.js','./vendor/sql-wasm.wasm','./vendor/jszip.js','./vendor/shp.js',
   './vendor/images/marker-icon.png','./vendor/images/marker-icon-2x.png','./vendor/images/marker-shadow.png',

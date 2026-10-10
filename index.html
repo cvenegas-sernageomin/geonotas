@@ -9,6 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="vendor/leaflet.css">
 <script src="vendor/leaflet.js"></script>
+<script src="vendor/leaflet-rotate.js"></script>
 <script src="vendor/idb.js"></script>
 <script src="vendor/leaflet.offline.js"></script>
 <script src="vendor/georaster.browser.bundle.min.js"></script>
@@ -242,6 +243,12 @@
   select:disabled{background:var(--surface2);color:var(--muted)}
   .mapbox{height:320px;width:100%;border:1px solid var(--bd);border-radius:12px;z-index:0;overflow:hidden}
   .leaflet-control-savetiles a{font-size:15px;line-height:26px}
+/* v141: aguja de orientación del mapa (norte / girado / sigue tu rumbo) */
+.leaflet-control-norte a{position:relative;display:grid!important;place-items:center;padding:0}
+.leaflet-control-norte svg{width:24px;height:24px;transition:transform .15s linear}
+.leaflet-control-norte small{position:absolute;top:-1px;left:0;right:0;text-align:center;font-size:8px;font-weight:800;color:#e0362c;line-height:10px;pointer-events:none}
+.leaflet-control-norte a.rumbo{background:#2b8cff}
+.leaflet-control-norte a.rumbo small{color:#fff}
   input[type=color]{width:72px;height:38px;padding:3px;cursor:pointer}
   .pend-ley{background:rgba(255,255,255,.88);color:#222;padding:5px 8px;border-radius:7px;font:11px system-ui,sans-serif;line-height:1.5;box-shadow:0 1px 4px rgba(0,0,0,.3)}
   .pend-ley i{display:inline-block;width:12px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:2px}
@@ -3611,7 +3618,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v140';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v141';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -5784,8 +5791,10 @@ const CapaGrillaUTM=L.LayerGroup.extend({
   // "Leaflet: capas antes de la vista".
   onAdd(map){ L.LayerGroup.prototype.onAdd.call(this,map);
     this._fn=()=>{ clearTimeout(this._t); this._t=setTimeout(()=>this._pintar(),0); };
-    map.on('moveend zoomend resize',this._fn); map.whenReady(this._fn); },
-  onRemove(map){ clearTimeout(this._t); map.off('moveend zoomend resize',this._fn); this.clearLayers(); L.LayerGroup.prototype.onRemove.call(this,map); },
+    // v141: con el mapa girado los rótulos van al borde de la pantalla: se rehace al detenerse el giro
+    this._fnR=()=>{ clearTimeout(this._t); this._t=setTimeout(()=>this._pintar(),200); };
+    map.on('moveend zoomend resize',this._fn); map.on('rotate',this._fnR); map.whenReady(this._fn); },
+  onRemove(map){ clearTimeout(this._t); map.off('moveend zoomend resize',this._fn); map.off('rotate',this._fnR); this.clearLayers(); L.LayerGroup.prototype.onRemove.call(this,map); },
   _pintar(){
     const map=this._map; if(!map||!map._loaded) return;
     this.clearLayers();
@@ -5794,7 +5803,8 @@ const CapaGrillaUTM=L.LayerGroup.extend({
     // Blanca con halo oscuro: una línea negra fina desaparece sobre el satelital, una blanca sobre el topo.
     const g=utmGrilla(b,map.getZoom()), halo={color:'#000',weight:3,opacity:.35,interactive:false}, est={color:'#fff',weight:1.2,opacity:.9,interactive:false};
     const linea=c=>{ this.addLayer(L.polyline(c,halo)); this.addLayer(L.polyline(c,est)); };
-    const pxN=map.latLngToContainerPoint(bb.getNorthWest()), tam=map.getSize();
+    // borde superior de la PANTALLA (y=0): con el mapa girado el NW de getBounds ya no queda ahí
+    const pxN={y:0}, tam=map.getSize();
     const rot=(txt,pos,cls)=>this.addLayer(L.marker(pos,{interactive:false,keyboard:false,
       icon:L.divIcon({className:'utm-rot '+cls,html:txt,iconSize:null})}));
     for(const l of g.lineasE){
@@ -7363,7 +7373,8 @@ function agFiltradas(){
 function agPintar(){
   agQuitarCapa();
   if(!mapaVista||!agData) return;
-  if(!mapaVista.getPane('agPane')) mapaVista.createPane('agPane').style.zIndex=450;
+  // v141: dentro de rotatePane (leaflet-rotate); colgado del mapPane no giraría con el mapa
+  if(!mapaVista.getPane('agPane')) mapaVista.createPane('agPane',mapaVista.getPane('rotatePane')||undefined).style.zIndex=450;
   const render=L.canvas({pane:'agPane', padding:.3});
   agCapa=L.layerGroup();
   for(const f of agFiltradas()){
@@ -10991,14 +11002,19 @@ async function initMapaVista(puntos){
   agCapa=null; agCtrl=null;
   editandoVertices=false;   // si el mapa se rehace a mitad de una edición, la capa de edición muere con él
   if(mapaVista){try{mapaVista.remove();}catch(e){}mapaVista=null;}
-  mapaVista=L.map('projmap',{zoomControl:true});
+  // v141: mapa girable (leaflet-rotate). El giro y el modo sobreviven a la reconstrucción del mapa
+  // (initMapaVista se vuelve a llamar tras cada guardado), igual que en MTB Visor / Sendereando.
+  mapaVista=L.map('projmap',{zoomControl:true, rotate:true, touchRotate:true, rotateControl:false, bearing:giroMapa.bearing});
   savetiles=capaSatelital(mapaVista);
+  giroMontar(mapaVista);
   const pts=[];
   for(const p of puntos){
     const lat=parseFloat(p['Coordenadas Geográficas Decimales_Lat']), lon=parseFloat(p['Coordenadas Geográficas Decimales_Long']);
     if(isNaN(lat)||isNaN(lon))continue;
     const estr=await childrenOf('estructural',p.id), mus=await childrenOf('muestreo',p.id);
-    const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus,p._estiloKml&&p._estiloKml.punto)}).addTo(mapaVista);
+    const ck=p._estiloKml&&p._estiloKml.punto;
+    const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus,ck,mapaVista.getBearing())}).addTo(mapaVista);
+    if(estr.length) giroMapa.marcas.push({m,estr,mus,ck});   // se redibujan al girar el mapa
     if(p.ID_PUNTO_CONTROL)m.bindTooltip(p.ID_PUNTO_CONTROL,{permanent:true,direction:'bottom',offset:[0,18],className:'ptlabel'});
     m.on('click',()=>{if(editandoVertices)return;curPunto=null;vista={n:'punto',id:p.id};render();});
     pts.push([lat,lon]);
@@ -11094,6 +11110,78 @@ async function initMapaVista(puntos){
   agReponer();   // ídem la capa de artículos de Andean Geology
   setTimeout(()=>mapaVista.invalidateSize(),160);
 }
+// ---- Orientación de la vista mapa (v141, portado de MTB Visor v22 / Sendereando) ----
+// Tres modos: 'norte' (norte arriba), 'libre' (girado con dos dedos) y 'rumbo' (el mapa gira con
+// la brújula: arriba queda hacia donde apunta el teléfono). La aguja alterna norte ↔ rumbo; si al
+// soltar los dedos queda a <7° del norte, se endereza sola. bearing = −(rumbo verdadero).
+const giroMapa={modo:'norte', bearing:0, yo:false, raf:0, rafIco:0, rumbo:null, decl:0, oyente:null, btn:null, map:null, marcas:[]};
+const difAng=(a,b)=>((a-b)%360+540)%360-180;
+function giroPoner(b){ if(!giroMapa.map)return; giroMapa.yo=true; try{ giroMapa.map.setBearing(b); }finally{ giroMapa.yo=false; } }
+function giroPintar(){
+  const b=giroMapa.btn; if(!b)return;
+  b.classList.toggle('rumbo',giroMapa.modo==='rumbo');
+  b.title=giroMapa.modo==='rumbo'?'El mapa sigue tu rumbo (toca para norte arriba)'
+         :giroMapa.modo==='libre'?'Mapa girado (toca para norte arriba)':'Norte arriba (toca para que el mapa siga tu rumbo)';
+  const s=b.querySelector('svg'); if(s&&giroMapa.map) s.style.transform='rotate('+giroMapa.map.getBearing()+'deg)';
+}
+// símbolos estructurales: se redibujan una vez por cuadro mientras el mapa gira
+function giroIconos(){
+  if(giroMapa.rafIco)return;
+  giroMapa.rafIco=requestAnimationFrame(()=>{ giroMapa.rafIco=0; if(!giroMapa.map)return;
+    const g=giroMapa.map.getBearing();
+    for(const k of giroMapa.marcas){ k.m.options.icon=iconoPunto(k.estr,k.mus,k.ck,g); if(k.m._icon) k.m._icon.innerHTML=svgPunto(k.estr,k.mus,k.ck,g); } });
+}
+function giroMontar(map){
+  giroMapa.marcas=[]; giroMapa.map=map;
+  const Norte=L.Control.extend({options:{position:'topright'},onAdd(){
+    const d=L.DomUtil.create('div','leaflet-bar leaflet-control-norte');
+    const a=L.DomUtil.create('a','',d); a.href='#'; a.setAttribute('aria-label','Orientación del mapa');
+    a.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 16.5 12h-9z" fill="#e0362c"/><path d="M12 22 7.5 12h9z" fill="#9aa3ad"/></svg><small>N</small>';
+    L.DomEvent.on(a,'click',e=>{ L.DomEvent.stop(e);
+      if(giroMapa.modo==='norte') giroModoRumbo(); else { giroRumboParar(); giroMapa.modo='norte'; giroPoner(0); giroPintar(); } });
+    L.DomEvent.disableClickPropagation(d); giroMapa.btn=a; return d; }});
+  new Norte().addTo(map);
+  map.on('rotate',()=>{
+    giroMapa.bearing=map.getBearing();
+    if(!giroMapa.yo && giroMapa.modo!=='libre'){ giroRumboParar(); giroMapa.modo='libre'; }   // lo giró con los dedos
+    giroPintar(); giroIconos();
+  });
+  map.getContainer().addEventListener('touchend',e=>{
+    if(giroMapa.modo!=='libre'||e.touches.length)return;
+    if(Math.abs(difAng(map.getBearing(),0))<7){ giroPoner(0); giroMapa.modo='norte'; giroPintar(); }
+  });
+  giroPintar();
+}
+function giroAplicarRumbo(){
+  if(giroMapa.modo!=='rumbo'||giroMapa.rumbo==null||giroMapa.raf)return;
+  giroMapa.raf=requestAnimationFrame(()=>{ giroMapa.raf=0;
+    if(giroMapa.modo!=='rumbo'||!giroMapa.map||!document.body.contains(giroMapa.map.getContainer()))return;
+    const b=((-(giroMapa.rumbo+giroMapa.decl))%360+360)%360;
+    if(Math.abs(difAng(b,giroMapa.map.getBearing()))>.8) giroPoner(b); });
+}
+function giroRumboParar(){
+  if(giroMapa.oyente){ window.removeEventListener(giroMapa.oyente.evt,giroMapa.oyente.fn); giroMapa.oyente=null; }
+  giroMapa.rumbo=null;
+}
+async function giroModoRumbo(){
+  if(!(await ensureOrientPerm())) return toast('Sin permiso de orientación el mapa no puede seguir tu rumbo');
+  giroRumboParar();
+  declinacionActual().then(d=>{ if(d!=null) giroMapa.decl=d; }).catch(()=>{});
+  const evt=('ondeviceorientationabsolute' in window)?'deviceorientationabsolute':'deviceorientation';
+  const fn=e=>{
+    let h=headingFromEvent(e); if(h==null)return;
+    h=(h+((screen.orientation&&screen.orientation.angle)||0))%360;   // teléfono apaisado: arriba de la pantalla
+    // suavizado circular: la brújula del teléfono tiembla ±2-3°
+    giroMapa.rumbo = giroMapa.rumbo==null ? h : (giroMapa.rumbo+difAng(h,giroMapa.rumbo)*.25+360)%360;
+    giroAplicarRumbo();
+  };
+  window.addEventListener(evt,fn); giroMapa.oyente={evt,fn};
+  giroMapa.modo='rumbo'; giroPintar();
+  if(gpsDot) giroMapa.map.panTo(gpsDot.getLatLng());
+  toast('🧭 El mapa sigue tu rumbo: sostén el teléfono horizontal');
+  setTimeout(()=>{ if(giroMapa.modo==='rumbo'&&giroMapa.rumbo==null){ giroRumboParar(); giroMapa.modo='norte'; giroPoner(0); giroPintar();
+    toast('Este teléfono no entrega la brújula al navegador'); } },3000);
+}
 // ---- iconos / simbología (SVG orientada por azimut; norte = arriba) ----
 const _rad=d=>d*Math.PI/180;
 function _uv(az){const a=_rad(az);return [Math.sin(a),-Math.cos(a)];}   // [este(x), norte(-y)] en coords de pantalla
@@ -11118,8 +11206,9 @@ function simboloLinea(cx,cy,tr,pl,col){col=col||'#1a5fb4';
   if(!isNaN(pl))s+=_ht(px+tx*8,py+ty*8,Math.round(pl),col);
   return s;
 }
-function svgEstructura(e,cx,cy){
-  const az=parseFloat(e.AZIMUT),dip=parseFloat(e.MANTEO_BUZAMIENTO),tr=parseFloat(e.TREND),pl=parseFloat(e.PLUNGE);
+function svgEstructura(e,cx,cy,giro){
+  const g=+giro||0;   // bearing del mapa: el símbolo se dibuja en pantalla en az+g
+  const az=parseFloat(e.AZIMUT)+g,dip=parseFloat(e.MANTEO_BUZAMIENTO),tr=parseFloat(e.TREND)+g,pl=parseFloat(e.PLUNGE);
   const hasPlano=!isNaN(az)&&!isNaN(dip),hasLinea=!isNaN(tr)&&!isNaN(pl);
   const esFalla=(e.TIPO_ESTRUCTURA==='Estructura falla');
   const lineaPura=hasPlano&&!hasLinea&&/lineaci|eje|estr[íi]a|paleocorriente/i.test(e.TIPO_MEDIDA_ESTRUCTURAL||'');
@@ -11356,16 +11445,21 @@ function formPlanoProy(pl,onSave,onDelete){
   box.append(bar);ov.append(box);document.body.append(ov);
 }
 
-function iconoPunto(estr,mus,colorKml){
+// giro = bearing del mapa (v141): los símbolos se dibujan en az+giro para seguir apuntando al
+// rumbo real con el mapa girado, y los números de manteo/plunge quedan derechos (por eso no se
+// usa rotateWithView, que giraría también el texto y el triángulo de muestras).
+function iconoPunto(estr,mus,colorKml,giro){
+  return L.divIcon({className:'estsym',html:svgPunto(estr,mus,colorKml,giro),iconSize:[60,60],iconAnchor:[30,30]});
+}
+function svgPunto(estr,mus,colorKml,giro){
   const cx=30,cy=30;let inner='';
-  (estr||[]).forEach(e=>inner+=svgEstructura(e,cx,cy));       // símbolos estructurales orientados
+  (estr||[]).forEach(e=>inner+=svgEstructura(e,cx,cy,giro));   // símbolos estructurales orientados
   // estación; un punto importado de KMZ usa el color de su icono original, un poco más grande
   const ck=hexSeguro(colorKml);
   inner+= ck ? '<circle cx="30" cy="30" r="5.5" fill="'+ck+'" stroke="#222" stroke-width="1.4"/>'
              : '<circle cx="30" cy="30" r="4.2" fill="#c0392b" stroke="#fff" stroke-width="1.6"/>';
   if(mus&&mus.length)inner+='<g transform="translate(45,15)"><polygon points="0,-6 6,5 -6,5" fill="#2166a8" stroke="#fff" stroke-width="1.2"/><text x="0" y="2.5" font-size="7" fill="#fff" text-anchor="middle" font-weight="bold">'+mus.length+'</text></g>';
-  const svg='<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">'+inner+'</svg>';
-  return L.divIcon({className:'estsym',html:svg,iconSize:[60,60],iconAnchor:[30,30]});
+  return '<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">'+inner+'</svg>';
 }
 // compone la foto base con pines numerados (para la libreta PDF)
 function compositaFotomapa(node){return new Promise(async res=>{
