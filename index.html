@@ -3618,7 +3618,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v141';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v142';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -6891,11 +6891,17 @@ async function cgMostrar(id, fly){
   const m=(cgData||[]).find(x=>x.id===id); if(!m||!mapaVista) return;
   cgQuitarOverlay();
   const rec=await get('cartageo', id);
-  let src;
-  if(rec && rec.overlayBlob){ src=URL.createObjectURL(rec.overlayBlob); cgOverlayObjUrl=src; }
+  // v142: la imagen guardada va SIEMPRE con los bounds con que se guardó (si el manifest corrigió la carta,
+  // imagen vieja + bounds nuevos quedaría peor). Si hay una revisión nueva (m.rev) y hay red, se muestra la
+  // versión en línea y se refresca la copia guardada en segundo plano.
+  const vieja = rec && rec.overlayBlob && m.rev && rec.rev!==m.rev;
+  let src, b=m.bounds;
+  if(rec && rec.overlayBlob && !(vieja && navigator.onLine)){ src=URL.createObjectURL(rec.overlayBlob); cgOverlayObjUrl=src; b=rec.bounds||m.bounds; }
   else if(navigator.onLine && m.overlay){ src=cgUrl(m.overlay); }
   else { toast('📥 Descarga esta carta antes de ir a terreno (sin conexión)'); return; }
-  const b=m.bounds, bounds=[[b.s,b.w],[b.n,b.e]];
+  if(vieja && navigator.onLine){ toast('🔄 Esta carta fue corregida: actualizando la copia guardada…'); setTimeout(()=>cgDescargar(id), 800); }
+  else if(vieja) toast('🔄 Hay una versión corregida de esta carta: actualízala cuando tengas conexión');
+  const bounds=[[b.s,b.w],[b.n,b.e]];
   if(m.opacidad!=null) cgOpacidad=m.opacidad;
   cgOverlay=L.imageOverlay(src, bounds, {opacity:cgOpacidad, interactive:false});
   cgOverlay.on('error', ()=>{ toast('⚠️ No se pudo cargar esta carta (¿sin conexión?)'); cgQuitarOverlay(); cgSyncPanel(); });
@@ -6943,7 +6949,7 @@ async function cgDescargar(id){
   }catch(e){ console.warn('cgDescargar (red)',e); toast('⚠️ No se pudo descargar «'+(m.titulo||id)+'» (¿sin conexión?)'); return; }
   try{
     const rec={id:m.id, titulo:m.titulo, region:m.region, fuente:m.fuente, anio:m.anio, escala:m.escala,
-      informe:m.informe, bounds:m.bounds, opacidad:m.opacidad, overlayBlob, leyendaBlob,
+      informe:m.informe, bounds:m.bounds, opacidad:m.opacidad, rev:m.rev||'', overlayBlob, leyendaBlob,
       manifestVer:cgVer, fechaDescarga:new Date().toISOString(), tamB:overlayBlob.size+(leyendaBlob?leyendaBlob.size:0)};
     await put('cartageo', rec);
     await cgRefrescarDescargadas();
