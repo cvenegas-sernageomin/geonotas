@@ -3618,7 +3618,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v143';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v144';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -6960,7 +6960,7 @@ async function cgDescargar(id){
                                              : '⚠️ No se pudo guardar la carta en el dispositivo'); }
 }
 async function cgDescargarRegion(region){
-  const pend=(cgData||[]).filter(m=>(m.region||'Sin región')===region && !cgDescargadasIds.has(m.id));
+  const pend=(cgData||[]).filter(m=>[].concat(m.region||'Sin región').includes(region) && !cgDescargadasIds.has(m.id));
   for(const m of pend) await cgDescargar(m.id);   // secuencial a propósito: no saturar datos móviles
 }
 async function cgBorrar(id){
@@ -7065,7 +7065,7 @@ function cgCrearControl(abiertasPrevias){
       html+=ordenadas.map(itemHtml).join('');
     } else if(multi){
       const porRegion={};
-      cgData.forEach(m=>{ const r=m.region||'Sin región'; (porRegion[r]=porRegion[r]||[]).push(m); });
+      cgData.forEach(m=>{ [].concat(m.region||'Sin región').forEach(r=>(porRegion[r]=porRegion[r]||[]).push(m)); });   // region puede ser lista (mapas que cruzan regiones)
       const regiones=Object.keys(porRegion).sort(cgCompararRegiones);
       html+=regiones.map(r=>{
         const abierta=(!!cgActivoId && porRegion[r].some(m=>m.id===cgActivoId))
