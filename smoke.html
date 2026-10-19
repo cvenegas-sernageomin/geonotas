@@ -1772,6 +1772,60 @@ async function correr(){
       return Math.round(pf.largo) + ' m, 1100→1890 m; PF-1 a ' + Math.round(p.dist) + ' m con manteo aparente 30°';
     });
 
+    // ---- v146: contacto medido = medida estructural vinculada ----
+    await prueba('Contacto medido: la medida estructural copia rumbo/manteo al contacto y no se dibuja dos veces', async () => {
+      const pt = P+'pt-T', c1 = P+'ct-1', c2 = P+'ct-2', e1 = P+'es-c1', e2 = P+'es-c2';
+      await w.put('contacto', {id:c1, _parent:pt, TIPO_CONTACTO:'Nítido', UNIDAD_TECHO:'A', UNIDAD_BASE:'B'});
+      await w.put('contacto', {id:c2, _parent:pt, TIPO_CONTACTO:'Gradual', RUMBO_CONTACTO:'200', MANTEO_CONTACTO:'20'});
+      const est = {id:e1, _parent:pt, TIPO_ESTRUCTURA:'Estructura contacto', ID_CONTACTO:c1, AZIMUT:'120', MANTEO_BUZAMIENTO:'35'};
+      try {
+        const M = w.eval('MODELO');
+        const oblig = n => M.tablas.TBL_CONTACTO.campos.find(c => c.nombre === n).obligatorio;
+        eq([oblig('RUMBO_CONTACTO'), oblig('MANTEO_CONTACTO')], [false, false], 'rumbo/manteo de contacto deben ser opcionales');
+        ok(M.tablas.TBL_DATOS_ESTRUCTURALES.campos.some(c => c.nombre === 'ID_CONTACTO'), 'falta ID_CONTACTO en estructurales');
+        // el selector aparece solo para 'Estructura contacto'
+        const fld = f => { const i = f.node.querySelector('[name="ID_CONTACTO"]'); return i ? i.closest('.fld').style.display : 'sin campo'; };
+        const conts = await w.childrenOf('contacto', pt);
+        eq(fld(w.formulario('estructural', {TIPO_ESTRUCTURA:'Estructura contacto'}, {contactos:conts})), '', 'ID_CONTACTO oculto en una medida de contacto');
+        eq(fld(w.formulario('estructural', {TIPO_ESTRUCTURA:'Estructura falla'}, {contactos:conts})), 'none', 'ID_CONTACTO visible en una falla');
+        ok(w.formulario('contacto', {}).node.querySelector('[name="ID_CONTACTO"]') === null, 'la PK del contacto no debe verse');
+        // 1) vincular copia
+        await w.put('estructural', est); await w.sincronizarContactoDeMedida(est, undefined);
+        let c = await w.get('contacto', c1);
+        eq([c.RUMBO_CONTACTO, c.MANTEO_CONTACTO, c._medidaDe], ['120', '35', e1], 'copia al vincular');
+        // 2) editar la medida actualiza el contacto
+        Object.assign(est, {AZIMUT:'125', MANTEO_BUZAMIENTO:'40'}); await w.put('estructural', est); await w.sincronizarContactoDeMedida(est, c1);
+        c = await w.get('contacto', c1); eq([c.RUMBO_CONTACTO, c.MANTEO_CONTACTO], ['125', '40'], 'copia al editar');
+        // 3) segunda medida del mismo contacto: manda la última; al soltarla vuelve la primera
+        const est2 = {id:e2, _parent:pt, TIPO_ESTRUCTURA:'Estructura contacto', ID_CONTACTO:c1, AZIMUT:'130', MANTEO_BUZAMIENTO:'45'};
+        await w.put('estructural', est2); await w.sincronizarContactoDeMedida(est2, undefined);
+        eq((await w.get('contacto', c1))._medidaDe, e2, 'manda la última medida guardada');
+        await w.soltarContactoDeMedida(c1, e2); await w.del('estructural', e2);
+        c = await w.get('contacto', c1); eq([c.RUMBO_CONTACTO, c._medidaDe], ['125', e1], 'al soltar la última, vuelve la otra medida');
+        // 4) el contacto escrito a mano y sin vínculo no se tocó
+        const m = await w.get('contacto', c2); eq([m.RUMBO_CONTACTO, m.MANTEO_CONTACTO, m._medidaDe], ['200', '20', undefined], 'contacto manual intacto');
+        // 5) perfil: el plano del contacto vinculado se cuenta una vez (desde la medida); el manual sí aparece
+        const W = 100, datos = new w.Int16Array(W*W).fill(1000);
+        const dem = {crs:4326, width:W, height:W, datos, bbox:{minX:-70.7, maxX:-70.6, minY:-33.5, maxY:-33.4}};
+        const pf = await w.perfilCalcular([[-33.45, -70.6895], [-33.45, -70.6105]], {puntos:[{id:pt, ID_PUNTO_CONTROL:'PC-T', [LAT]:-33.451, [LON]:-70.6505}], dem});
+        const acts = pf.proyectados[0].actitudes.filter(a => [125, 200].includes(a.rumbo));
+        eq(acts.map(a => a.store + ':' + a.rumbo).sort(), ['contacto:200', 'estructural:125'], 'actitudes del perfil');
+        // 6) GPKG: ID_CONTACTO de la medida calza con la PK (antes vacía) del contacto
+        const r = await w.construirGPKG();
+        const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
+        const db = new SQL.Database(r.bytes);
+        try {
+          const q = s => { const st = db.prepare(s); const o = []; while(st.step()) o.push(st.getAsObject()); st.free(); return o; };
+          eq(q("SELECT c.RUMBO_CONTACTO r FROM TBL_DATOS_ESTRUCTURALES e JOIN TBL_CONTACTO c ON c.ID_CONTACTO = e.ID_CONTACTO WHERE e.ID_REG='"+e1+"'"), [{r:'125'}], 'join medida→contacto en el GPKG');
+          eq(q("SELECT COUNT(*) n FROM TBL_LITOLOGIA WHERE ID_REG LIKE '"+P+"%' AND (ID_LITOLOGIA IS NULL OR ID_LITOLOGIA='')"), [{n:0}], 'PK de litología vacía en el GPKG');
+        } finally { db.close(); }
+        // 7) borrar la medida limpia el contacto
+        await w.soltarContactoDeMedida(c1, e1); await w.del('estructural', e1);
+        c = await w.get('contacto', c1); eq([c.RUMBO_CONTACTO, c.MANTEO_CONTACTO, c._medidaDe], ['', '', undefined], 'limpieza al borrar la medida');
+        return 'copia, edición, varias medidas, contacto manual intacto, perfil sin dobles, join en GPKG, limpieza';
+      } finally { for (const [s, id] of [['estructural', e1], ['estructural', e2], ['contacto', c1], ['contacto', c2]]) await w.del(s, id); }
+    });
+
     // ---- v135: grilla UTM ----
     await prueba('Grilla UTM: espaciado según zoom y líneas que vuelven a su Este/Norte exacto', async () => {
       const b = [-70.70, -33.48, -70.60, -33.42];                 // ~9 x 7 km en Santiago (huso 19)
