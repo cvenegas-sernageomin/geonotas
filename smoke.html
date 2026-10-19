@@ -334,10 +334,16 @@ async function correr(){
                      'ESPESOR_DEPOSITO_MIN_M','ESPESOR_DEPOSITO_MAX_M'];
       eq(salen.filter(n => nom('TBL_AFLORAMIENTO').includes(n)), [], 'quedaron campos que salieron del afloramiento');
       ok(nom('TBL_AFLORAMIENTO').includes('ESPESOR_MIN_AFLORAMIENTO_M'), 'falta ESPESOR_MIN_AFLORAMIENTO_M');
-      eq(['ID_AFLORAMIENTO','ESPESOR_MIN_CM','ESPESOR_MAX_CM','ESPESOR_DEPOSITO_MIN_M','ESPESOR_DEPOSITO_MAX_M'].filter(n => !nom('TBL_LITOLOGIA').includes(n)), [], 'faltan campos en litología');
+      eq(['ID_AFLORAMIENTO','ESPESOR_ESTRATO_MIN_CM','ESPESOR_ESTRATO_MAX_CM','ESPESOR_TOTAL_MIN_M'].filter(n => !nom('TBL_LITOLOGIA').includes(n)), [], 'faltan campos en litología');
+      eq(['ESPESOR_MIN_CM','ESPESOR_MAX_CM','ESPESOR_DEPOSITO_MIN_M','ESPESOR_DEPOSITO_MAX_M'].filter(n => nom('TBL_LITOLOGIA').includes(n)), [], 'quedaron los nombres viejos de espesor (v148)');
+      // v148: espesor de estratos oculto solo en intrusivas; el total, en todas
+      const vis = (reg, n) => w.formulario('litologia', reg).node.querySelector('[name="'+n+'"]').closest('.fld').style.display;
+      eq(['Intrusiva','Metamórfica','Volcánica','Sedimentaria','Depósito'].map(t => vis({TIPO_ROCA:t}, 'ESPESOR_ESTRATO_MAX_CM')),
+         ['none','','','',''], 'visibilidad del espesor de estratos por tipo de roca');
+      eq(vis({TIPO_ROCA:'Intrusiva'}, 'ESPESOR_TOTAL_MIN_M'), '', 'el espesor total debe verse también en intrusivas');
       ok(!w.formulario('aflora', {}).node.querySelector('[name="CLASE_AFLORAMIENTO"]'), 'el formulario de afloramiento aún muestra la clase');
       ok(!w.formulario('litologia', {}).node.querySelector('[name="ID_AFLORAMIENTO"]'), 'ID_AFLORAMIENTO no debe verse en la ficha');
-      ok(w.formulario('litologia', {}).node.querySelector('[name="ESPESOR_MAX_CM"]'), 'la ficha de litología no muestra los espesores');
+      ok(w.formulario('litologia', {}).node.querySelector('[name="ESPESOR_ESTRATO_MAX_CM"]'), 'la ficha de litología no muestra los espesores');
       const af = P+'af-1';
       await w.put('aflora', {id:af, _parent:P+'pt-T', ESPESOR_MIN_AFLORAMIENTO_M:'8'});
       try {
@@ -709,14 +715,20 @@ async function correr(){
       // espesores (v147): de estrato (cm) y de depósito (m) van en CADA litología; el afloramiento
       // solo lleva su espesor mínimo expuesto
       const litEsp = w.prosaPunto(pt, Object.assign({}, datos, {litos:[{id:'le', TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca',
-        ESPESOR_MIN_CM:'10', ESPESOR_MAX_CM:'40', ESPESOR_DEPOSITO_MIN_M:'20', ESPESOR_DEPOSITO_MAX_M:'35'}]}), null, null, 500);
+        ESPESOR_ESTRATO_MIN_CM:'10', ESPESOR_ESTRATO_MAX_CM:'40', ESPESOR_TOTAL_MIN_M:'20'}]}), null, null, 500);
       ok(/Se dispone en capas de 10 a 40 cm de espesor/.test(litEsp), 'el espesor de estratos de la litología no llegó a la prosa');
-      ok(/La capa alcanza un espesor de 20 a 35 m/.test(litEsp), 'el espesor del depósito (m) no llegó a la prosa');
+      ok(/Alcanza un espesor mínimo de 20 m/.test(litEsp), 'el espesor total (m) no llegó a la prosa');
+      const lava = w.prosaPunto(pt, Object.assign({}, datos, {litos:[{id:'lv', TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava', NOMBRE_ROCA:'Basalto',
+        ESPESOR_ESTRATO_MIN_CM:'200', ESPESOR_ESTRATO_MAX_CM:'500'}]}), null, null, 500);
+      ok(/Se dispone en coladas de 2 a 5 m de espesor/.test(lava), 'en una lava los estratos deben decirse coladas');
+      const intr = w.prosaPunto(pt, Object.assign({}, datos, {litos:[{id:'in', TIPO_ROCA:'Intrusiva', NOMBRE_ROCA:'Granito',
+        ESPESOR_ESTRATO_MIN_CM:'10', ESPESOR_TOTAL_MIN_M:'3'}]}), null, null, 500);
+      ok(!/Se dispone/.test(intr) && /Alcanza un espesor mínimo de 3 m/.test(intr), 'intrusiva: sin estratos, con espesor total');
       const aflEsp = w.prosaPunto(pt, Object.assign({}, datos, {aflora:[{ESPESOR_MIN_AFLORAMIENTO_M:'12,5'}]}), null, null, 500);
       ok(/El afloramiento expone un espesor mínimo de 12,5 m/.test(aflEsp), 'el espesor mínimo del afloramiento no llegó a la prosa');
       const aflVacio = w.prosaPunto(pt, Object.assign({}, datos, {aflora:[{}]}), null, null, 500);
-      ok(!/alcanza un espesor|espesor mínimo/.test(aflVacio), 'sin espesores no debe aparecer la oración');
-      eq(w.etiquetaCampo('ESPESOR_DEPOSITO_MAX_M'), 'ESPESOR DEPOSITO MAX (m)', 'etiqueta _M no muestra (m)');
+      ok(!/lcanza un espesor|espesor mínimo/.test(aflVacio), 'sin espesores no debe aparecer la oración');
+      eq(w.etiquetaCampo('ESPESOR_TOTAL_MIN_M'), 'ESPESOR TOTAL MIN (m)', 'etiqueta _M no muestra (m)');
       ok(!/,\s*\./.test(p) && !/\s{2,}/.test(p), 'quedó puntuación suelta o espacios dobles');
       return p.split('. ').length + ' oraciones, concordancia y campos enlazados correctos';
     });
