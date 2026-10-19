@@ -294,6 +294,38 @@ async function correr(){
       } finally { db.close(); }
     });
 
+    await prueba('El GeoPackage reparte la litología en padre + hijas 1:1 por familia', async () => {
+      const ids = [P+'li-fam-pir', P+'li-fam-int'];
+      await w.put('litologia', {id:ids[0], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-1', TIPO_ROCA:'Volcánica',
+                                TIPO_VOLCANICA:'Rocas piroclásticas', NOMBRE_ROCA:'Toba', POMEZ_PCT:'30', SELECCION:'Mala'});
+      await w.put('litologia', {id:ids[1], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-2', TIPO_ROCA:'Intrusiva',
+                                NOMBRE_ROCA:'Granito', COMPOSICION_MINERAL_INTRUSIVA:'Biotita'});
+      try {
+        const r = await w.construirGPKG();
+        const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
+        const db = new SQL.Database(r.bytes);
+        const q = s => { const st = db.prepare(s); const o = []; while(st.step()) o.push(st.getAsObject()); st.free(); return o; };
+        try {
+          const M = w.eval('MODELO'); const fam = M.familias_litologia;
+          ok(fam && fam.length === 7, 'el modelo no trae las 7 tablas de litología');
+          const hijas = fam.filter(f => !f.padre).map(f => f.tabla);
+          const total = fam.reduce((n, f) => n + f.campos.length, 0);
+          eq(total, M.tablas.TBL_LITOLOGIA.campos.length, 'las familias no cubren los campos de TBL_LITOLOGIA');
+          const cols = t => q("SELECT name FROM pragma_table_info('" + t + "')").map(x => x.name);
+          ok(!cols('TBL_LITOLOGIA').includes('POMEZ_PCT') && !cols('TBL_LITOLOGIA').includes('COMPOSICION_MINERAL_INTRUSIVA'),
+             'el padre aún trae columnas de familia');
+          ok(cols('LITO_PIROCLASTICA').includes('POMEZ_PCT') && cols('LITO_PIROCLASTICA').includes('ID_LITOLOGIA'), 'LITO_PIROCLASTICA sin POMEZ_PCT/ID_LITOLOGIA');
+          eq(q("SELECT ID_LITOLOGIA, POMEZ_PCT FROM LITO_PIROCLASTICA WHERE ID_REG='"+ids[0]+"'"), [{ID_LITOLOGIA:'LIT-SMK-1', POMEZ_PCT:'30'}], 'fila piroclástica');
+          eq(q("SELECT ID_LITOLOGIA FROM LITO_INTRUSIVA WHERE ID_REG='"+ids[1]+"'"), [{ID_LITOLOGIA:'LIT-SMK-2'}], 'fila intrusiva');
+          eq(q("SELECT COUNT(*) n FROM LITO_PIROCLASTICA WHERE ID_REG='"+ids[1]+"'"), [{n:0}], 'la intrusiva no debe tener fila piroclástica');
+          eq(q("SELECT COUNT(*) n FROM LITO_CLASTICA WHERE ID_REG='"+ids[0]+"'"), [{n:1}], 'la toba (SELECCION) debe tener fila clástica');
+          eq(q("SELECT COUNT(*) n FROM TBL_LITOLOGIA WHERE ID_REG IN ('"+ids.join("','")+"')"), [{n:2}], 'padre: una fila por litología');
+          eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:6}], 'hijas sin registrar en gpkg_contents');
+          return 'TBL_LITOLOGIA + 6 hijas; las hijas solo traen fila si la ficha llenó esa familia';
+        } finally { db.close(); }
+      } finally { for (const id of ids) await w.del('litologia', id); }
+    });
+
     await prueba('El KMZ separa las colecciones en carpetas', async () => {
       const cap = await capturar(w, () => w.exportKMZ());
       const zip = await new w.JSZip().loadAsync(await cap.blob.arrayBuffer());

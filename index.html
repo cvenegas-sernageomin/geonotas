@@ -3613,12 +3613,124 @@ const MODELO = {
     "PROPOSITO_ANALISIS: poblada desde diagrama v3 / estandar (CONFIRMAR).",
     "LV_FUENTE_COORDENADA: poblada desde diagrama v3 / estandar (CONFIRMAR).",
     "TIPO_DEPOSITO: poblada desde diagrama v3 / estandar (CONFIRMAR)."
+  ],
+  "familias_litologia": [
+    {
+      "tabla": "TBL_LITOLOGIA",
+      "padre": true,
+      "descripcion": "Padre. Datos comunes a toda roca o deposito descrito en un punto de control.",
+      "aplica_a": "Toda roca o deposito",
+      "campos": [
+        "ID_PUNTO_CONTROL",
+        "ID_LITOLOGIA",
+        "TIPO_ROCA",
+        "NOMBRE_ROCA",
+        "UNIDAD_GEOLOGICA",
+        "COLOR_FRESCO",
+        "COLOR_METEORIZADO",
+        "TEXTURA",
+        "ESTRUCTURA_TIPO_ROCA",
+        "DESCRIPCION_LITOLOGIA",
+        "GRADO_CONFIANZA_LITO",
+        "TIPO_ALTERACION_LITO",
+        "INTENSIDAD_ALTERACION",
+        "DISTRIBUCION_ALTERACION",
+        "RELACION_LITOLOGIA_ESTRUCTURA",
+        "OBSERVACION"
+      ]
+    },
+    {
+      "tabla": "LITO_CLASTICA",
+      "padre": false,
+      "descripcion": "Hija 1:1. Rocas y depositos formados por clastos: tamano, forma, composicion, matriz y cemento.",
+      "aplica_a": "Deposito; Sedimentaria clastica; Rocas piroclasticas y Tefra",
+      "campos": [
+        "TIPO_DEPOSITO",
+        "GRANULOMETRIA",
+        "SELECCION",
+        "REDONDEAMIENTO",
+        "ESFERICIDAD",
+        "CLASTOS_TAM_MAX_CM",
+        "COMPOSICION_CLASTICA",
+        "LITOLOGIA_CLASTOS",
+        "LITOLOGIA_CLASTOS_DETALLE",
+        "FABRICA_CLASTOS",
+        "COMPOSICION_CLASTICA_MATRIZ",
+        "CEMENTO",
+        "GRADO_CONSOLIDACION"
+      ]
+    },
+    {
+      "tabla": "LITO_SEDIMENTARIA",
+      "padre": false,
+      "descripcion": "Hija 1:1. Rasgos propios de rocas sedimentarias (fosiles, textura Dunham de calizas).",
+      "aplica_a": "Sedimentaria",
+      "campos": [
+        "CONTENIDO_FOSIL",
+        "CONTENIDO_FOSIL_DETALLE",
+        "TEXTURA_DUNHAM"
+      ]
+    },
+    {
+      "tabla": "LITO_VOLCANICA",
+      "padre": false,
+      "descripcion": "Hija 1:1. Rasgos de rocas volcanicas: lavas (fenocristales, masa fundamental) y cristalinidad (lava y piroclastica).",
+      "aplica_a": "Volcanica (lava y rocas piroclasticas)",
+      "campos": [
+        "TIPO_VOLCANICA",
+        "CRISTALINIDAD",
+        "FENOCRISTALES_ESPECIE",
+        "FENOCRISTALES_DETALLE",
+        "MASA_FUNDAMENTAL"
+      ]
+    },
+    {
+      "tabla": "LITO_PIROCLASTICA",
+      "padre": false,
+      "descripcion": "Hija 1:1. Componentes de depositos piroclasticos (liticos, pomez, cristaloclastos, vidrio, matriz, soldadura).",
+      "aplica_a": "Rocas piroclasticas y Tefra",
+      "campos": [
+        "SOLDADURA",
+        "LITICOS_PCT",
+        "TIPO_LITICOS",
+        "TIPO_LITICOS_DETALLE",
+        "POMEZ_PCT",
+        "CRISTALES_PCT",
+        "CRISTALES_ESPECIE",
+        "CRISTALES_DETALLE",
+        "TIPO_FRAGMENTO_VITREO",
+        "TIPO_FRAGMENTO_VITREO_DETALLE",
+        "MATRIZ_COMPOSICION",
+        "MATRIZ_PCT",
+        "MATRIZ_DETALLE"
+      ]
+    },
+    {
+      "tabla": "LITO_INTRUSIVA",
+      "padre": false,
+      "descripcion": "Hija 1:1. Mineralogia de rocas intrusivas.",
+      "aplica_a": "Intrusiva",
+      "campos": [
+        "COMPOSICION_MINERAL_INTRUSIVA",
+        "COMPOSICION_MINERAL_INTRUSIVA_DETALLE"
+      ]
+    },
+    {
+      "tabla": "LITO_METAMORFICA",
+      "padre": false,
+      "descripcion": "Hija 1:1. Mineralogia de rocas metamorficas.",
+      "aplica_a": "Metamorfica",
+      "campos": [
+        "COMPOSICION_MINERAL_PRINCIPAL",
+        "COMPOSICION_MINERAL_DETALLE"
+      ]
+    }
   ]
 };
 </script>
 <script>
 "use strict";
-const APP_VER = 'v144';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v145';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -11908,15 +12020,31 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
   let nT=0;
   for(const s of STORES){  // resto de tablas, sin geometría
     if(s==='punto'||s==='punto_gabinete'||s==='linea_gabinete')continue;   // ya salieron como capas espaciales
-    nT++;
     const tbl=STORE2TBL[s];const cs=campos(s).map(c=>c.nombre);
     const extras=(s==='foto'||s==='esquema')?[['IMAGEN',r=>dataUrlBytes(r._img)]]:[];
-    const st=crear(tbl,cs,extras,false);
     let regsS=await all(s);
     if(proyectoId)regsS=regsS.filter(r=>esDeProyecto(s,r,proyectoId,idsPuntos));
-    for(let r of regsS){r=enriquecerFK(r,fks);st.run([txt(r.id),txt(r._parent)].concat(cs.map(c=>txt(r[c])),extras.map(e=>e[1](r))));}
-    st.free();
-    db.run("INSERT INTO gpkg_contents (table_name,data_type,identifier,srs_id) VALUES (?,?,?,0)",[tbl,'attributes',tbl]);
+    regsS=regsS.map(r=>enriquecerFK(r,fks));
+    // Litología: en la libreta es UNA ficha, pero al exportar se reparte en tabla padre + hijas 1:1
+    // por familia (MODELO.familias_litologia: clástica, sedimentaria, volcánica, piroclástica,
+    // intrusiva, metamórfica). IndexedDB no cambia. Cada hija lleva ID_LITOLOGIA (clave 1:1 con el
+    // padre) y solo existe si la ficha llenó algún campo de esa familia.
+    const fams=(s==='litologia'&&MODELO.familias_litologia)||null;
+    const defs=fams?fams.map(f=>({tbl:f.tabla,padre:f.padre,cs:f.campos}))
+                    :[{tbl,padre:true,cs}];
+    const lleno=v=>v!=null&&v!==''&&!(Array.isArray(v)&&!v.length);
+    for(const d of defs){
+      nT++;
+      const csD=d.padre?d.cs:['ID_LITOLOGIA'].concat(d.cs);
+      const st=crear(d.tbl,csD,d.padre?extras:[],false);
+      for(const r of regsS){
+        if(!d.padre&&!d.cs.some(c=>lleno(r[c])))continue;
+        const fila=d.padre?r:Object.assign({},r,{ID_LITOLOGIA:r.ID_LITOLOGIA||r.id});
+        st.run([txt(r.id),txt(d.padre?r._parent:r.id)].concat(csD.map(c=>txt(fila[c])),(d.padre?extras:[]).map(e=>e[1](r))));
+      }
+      st.free();
+      db.run("INSERT INTO gpkg_contents (table_name,data_type,identifier,srs_id) VALUES (?,?,?,0)",[d.tbl,'attributes',d.tbl]);
+    }
   }
   const bytes=db.export();db.close();
   return {bytes,nP,nL,nT,nPg};
