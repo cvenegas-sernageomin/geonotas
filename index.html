@@ -399,6 +399,12 @@ const MODELO = {
           "nota": null
         },
         {
+          "nombre": "ID_AFLORAMIENTO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Afloramiento del mismo punto (hay a lo más uno por punto). No se elige en la ficha: la app lo llena al exportar."
+        },
+        {
           "nombre": "TIPO_ROCA",
           "obligatorio": true,
           "dominio": "TIPO_ROCA",
@@ -494,6 +500,30 @@ const MODELO = {
           "obligatorio": false,
           "dominio": "UNIDAD_GEOLOGICA",
           "nota": null
+        },
+        {
+          "nombre": "ESPESOR_MIN_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Numérico, centímetros. Espesor mínimo de los estratos/bancos de ESTA litología. La app deriva la clase de la escala de Ingram (1954) para la prosa: láminas / capas / bancos."
+        },
+        {
+          "nombre": "ESPESOR_MAX_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Numérico, centímetros. Espesor máximo de los estratos/bancos de ESTA litología."
+        },
+        {
+          "nombre": "ESPESOR_DEPOSITO_MIN_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Numérico, metros. Espesor MÍNIMO de la capa/depósito de esta litología (norma CDC 2016 Vol III, TBL_AF_DEP_SEDIMENTARIO). Antes estaba en el afloramiento."
+        },
+        {
+          "nombre": "ESPESOR_DEPOSITO_MAX_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Numérico, metros. Espesor MÁXIMO de la capa/depósito de esta litología (norma CDC 2016 Vol III). Antes estaba en el afloramiento."
         },
         {
           "nombre": "NOMBRE_ROCA",
@@ -1401,16 +1431,10 @@ const MODELO = {
           "nota": "Trasladado desde PUNTO_CONTROL (mismo dominio, reusado también por TBL_CONTACTO.EXPOSICION_CONTACTO)."
         },
         {
-          "nombre": "CLASE_AFLORAMIENTO",
+          "nombre": "ESPESOR_MIN_AFLORAMIENTO_M",
           "obligatorio": false,
-          "dominio": "CLASE_AFLORAMIENTO",
-          "nota": "Define qué lista de caracteres mesoscópicos se ofrece abajo."
-        },
-        {
-          "nombre": "CARACTER_MESOSCOPICO",
-          "obligatorio": false,
-          "dominio": "CARACTER_MESOSCOPICO",
-          "nota": "Arquitectura del afloramiento como conjunto; la lista depende de CLASE_AFLORAMIENTO. Las estructuras de detalle (ondulitas, bioturbación, flaser…) van en la ficha Litología (ESTRUCTURA_TIPO_ROCA), no aquí."
+          "dominio": null,
+          "nota": "Numérico, metros. Espesor mínimo expuesto del afloramiento como conjunto."
         },
         {
           "nombre": "TIPO_AFLORAMIENTO",
@@ -1425,60 +1449,6 @@ const MODELO = {
           "nota": "Subclase según TIPO_AFLORAMIENTO."
         },
         {
-          "nombre": "ARREGLO_ESTRATOS",
-          "obligatorio": false,
-          "dominio": "ARREGLO_ESTRATOS",
-          "nota": "Tendencia del ESPESOR de los estratos hacia el techo (estrato creciente/decreciente). La tendencia granulométrica va en GRADACION_INTERNA."
-        },
-        {
-          "nombre": "GRADACION_INTERNA",
-          "obligatorio": false,
-          "dominio": "GRADACION_INTERNA",
-          "nota": "Gradación granulométrica dentro del depósito (normal = grano decreciente hacia el techo)."
-        },
-        {
-          "nombre": "ESPESOR_MIN_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Numérico, centímetros. Espesor de estrato/banco observado. La app deriva de aquí la clase de la escala de Ingram (1954) para la prosa: láminas / capas / bancos."
-        },
-        {
-          "nombre": "ESPESOR_MAX_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Numérico, centímetros."
-        },
-        {
-          "nombre": "ESPESOR_DEPOSITO_MIN_M",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Numerico, metros. Espesor MINIMO del deposito (capa en consideracion) descrito en este afloramiento. Norma CDC 2016 Vol III, TBL_AF_DEP_SEDIMENTARIO, campo 'ESPESOR MINIMO DEL DEPOSITO' (bloque 'rasgos macroscopicos de la capa en consideracion'). Es el espesor de la CAPA/DEPOSITO concreta, NO del afloramiento completo ni del promedio de su estratificacion (eso es ESPESOR_MIN_CM/ESPESOR_MAX_CM, escala de Ingram)."
-        },
-        {
-          "nombre": "ESPESOR_DEPOSITO_MAX_M",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Numerico, metros. Espesor MAXIMO del deposito (capa en consideracion) descrito en este afloramiento. Norma CDC 2016 Vol III, TBL_AF_DEP_SEDIMENTARIO, campo 'ESPESOR MAXIMO DEL DEPOSITO' (bloque 'rasgos macroscopicos de la capa en consideracion'). La prosa lo escribe 'alcanza un espesor de X a Y m' (verbo del corpus SGB)."
-        },
-        {
-          "nombre": "GEOMETRIA_CUERPO",
-          "obligatorio": false,
-          "dominio": "GEOMETRIA_CUERPO",
-          "nota": "Geometría de la estratificación (Stow, 2005). El término ya indica si es continua o discontinua; la ESCALA de la extensión va en EXTENSION_LATERAL."
-        },
-        {
-          "nombre": "EXTENSION_LATERAL",
-          "obligatorio": false,
-          "dominio": "EXTENSION_LATERAL",
-          "nota": null
-        },
-        {
-          "nombre": "TIPO_LIMITE_INFERIOR",
-          "obligatorio": false,
-          "dominio": "TIPO_LIMITE_INFERIOR",
-          "nota": "Base de la capa o depósito descrito. NO es el contacto entre unidades geológicas: eso se registra en la ficha Contactos."
-        },
-        {
           "nombre": "GRADO_METEORIZACION",
           "obligatorio": false,
           "dominio": "GRADO_METEORIZACION",
@@ -1489,12 +1459,6 @@ const MODELO = {
           "obligatorio": false,
           "dominio": "GRADO_FRACTURAMIENTO",
           "nota": null
-        },
-        {
-          "nombre": "FABRICA_GRAVOSA",
-          "obligatorio": false,
-          "dominio": "FABRICA_GRAVOSA",
-          "nota": "Solo para depósitos gravosos (granulometría > 2 mm): orientación e imbricación de clastos, útil para inferir paleocorriente."
         },
         {
           "nombre": "NOTA_AFLORAMIENTO",
@@ -1583,6 +1547,11 @@ const MODELO = {
       "padre": "TBL_CONTACTO",
       "hijo": "TBL_DATOS_ESTRUCTURALES",
       "campo": "ID_CONTACTO"
+    },
+    {
+      "padre": "TBL_AFLORAMIENTO",
+      "hijo": "TBL_LITOLOGIA",
+      "campo": "ID_AFLORAMIENTO"
     }
   ],
   "dominios": {
@@ -3634,9 +3603,14 @@ const MODELO = {
       "campos": [
         "ID_PUNTO_CONTROL",
         "ID_LITOLOGIA",
+        "ID_AFLORAMIENTO",
         "TIPO_ROCA",
         "NOMBRE_ROCA",
         "UNIDAD_GEOLOGICA",
+        "ESPESOR_MIN_CM",
+        "ESPESOR_MAX_CM",
+        "ESPESOR_DEPOSITO_MIN_M",
+        "ESPESOR_DEPOSITO_MAX_M",
         "COLOR_FRESCO",
         "COLOR_METEORIZADO",
         "TEXTURA",
@@ -3741,7 +3715,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v146';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v147';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -5049,7 +5023,7 @@ function etiquetaCampo(n){
     .replace(/_/g,' ');
 }
 const esPK = (store,n)=> n===pkDe(store);
-const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_LITOLOGIA','ID_CONTACTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
+const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_LITOLOGIA','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
 // Claves de negocio que el usuario SÍ nombra (visibles/editables); el resto de ids son técnicos y se ocultan.
 const NOMBRABLES = new Set(['ID_PROYECTO','ID_PUNTO_CONTROL','ID_MUESTRA']);
 function hideField(store,n){
@@ -5057,6 +5031,7 @@ function hideField(store,n){
   if(store==='punto' && n==='ID_PROYECTO') return true;                                                  // FK proyecto en punto
   if(n===pkDe(store)) return !NOMBRABLES.has(n);                                                          // PK propio: ocultar salvo nombrables
   if(n==='ID_LITOLOGIA') return store==='litologia';                                                      // FK selector en estructural/foto; PK oculto en litología
+  if(n==='ID_AFLORAMIENTO') return true;                                                                   // PK en afloramiento; FK en litología que llena el export (v147)
   if(n==='ID_CONTACTO') return store==='contacto';                                                       // FK selector en estructural (v146); PK oculto en contacto
   if(['ID_ESTRUCTURA','ID_FOTOGRAFIA','ID_ESQUEMA'].includes(n)) return true;               // ids técnicos
   return false;
@@ -5199,13 +5174,6 @@ function esClastico(v){
   if (tipo === 'Sedimentaria') return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
   return false;
 }
-// Clases de afloramiento sin arquitectura en capas: la "arquitectura en capas" (arreglo de
-// estratos, gradación interna, espesor, geometría/extensión del cuerpo, base) no aplica a un
-// cuerpo intrusivo, metamórfico o una tectonita. Volcánico se deja AFUERA a propósito: incluye
-// secuencias piroclásticas estratificadas (CARACTER_MESOSCOPICO ya ofrece "Estratificado
-// (piroclástico)") junto con cuerpos macizos/columnares — la clase sola no alcanza para
-// decidir, y el campo es opcional (2026-08-21, a pedido explícito del usuario).
-const CLASE_AFL_NO_ESTRATIFICADA = new Set(['Intrusivo', 'Metamórfico', 'Roca de falla (tectonita)']);
 
 // ============ Revelado progresivo de campos (2026-09-01) ============
 // A pedido del usuario: en vez de mostrar TODOS los campos que aplican a la vez (una roca
@@ -5404,20 +5372,8 @@ const CONDICIONALES = {
   // sensores. Con la regla puesta, medir y clasificar después borraba el plano recién medido
   // (verificado: 208/64 desaparecía del formulario y del disco), y clasificar primero dejaba
   // trend/plunge escribiéndose en campos atenuados que el geólogo no podía ver ni corregir.
-  // --- TBL_AFLORAMIENTO: ver CLASE_AFL_NO_ESTRATIFICADA arriba.
-  ARREGLO_ESTRATOS:     {modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-  GRADACION_INTERNA:    {modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-ESPESOR_MIN_CM:       {modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-ESPESOR_MAX_CM:       {modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-ESPESOR_DEPOSITO_MIN_M:{modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-ESPESOR_DEPOSITO_MAX_M:{modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-  GEOMETRIA_CUERPO:     {modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-  EXTENSION_LATERAL:    {modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-  TIPO_LIMITE_INFERIOR: {modo:'bloquear', regla: v => !CLASE_AFL_NO_ESTRATIFICADA.has(v['CLASE_AFLORAMIENTO'])},
-  // Fábrica de clastos: solo depósitos gravosos — en la práctica, solo Sedimentario/estratificado
-  // (a diferencia del grupo de arriba, aquí SÍ se bloquea también para Volcánico: la fábrica de
-  // clastos orientados/imbricados es un concepto de depósito clástico, no de brecha volcánica).
-  FABRICA_GRAVOSA:      {modo:'bloquear', regla: v => v['CLASE_AFLORAMIENTO']==='Sedimentario / estratificado'},
+  // --- TBL_AFLORAMIENTO: sin reglas desde v147 (CLASE_AFLORAMIENTO y los campos que dependían de
+  // ella salieron del modelo; los espesores pasaron a cada litología).
   // --- LINEA_CONTROL: el tipo y el subtipo los resuelve la cascada
   // CLASE_LINEA→TIPO_LINEA→SUBTIPO_LINEA, no reglas condicionales. Aquí solo quedan
   // el subtipo (hay tipos sin subtipos: el select vacío se esconde, mismo criterio que
@@ -11799,7 +11755,10 @@ async function mapasFKCodigos(){
   for(const s of ['punto','punto_gabinete'])
     for(const p of await all(s)) porPunto[p.id]=p.ID_PUNTO_CONTROL||p.id;
   for(const pr of await all('proyecto')) porProyecto[pr.id]=pr.ID_PROYECTO||pr.id;
-  return {porPunto,porProyecto};
+  // un afloramiento por punto (0..1): la litología lo hereda por su punto (v147)
+  const aflPorPunto={};
+  for(const a of await all('aflora')) aflPorPunto[a._parent]=a.ID_AFLORAMIENTO||a.id;
+  return {porPunto,porProyecto,aflPorPunto};
 }
 // Devuelve una copia de r con las FK rellenas (si estaban vacías) desde su _parent.
 // Con store: además rellena la PK técnica oculta (ID_LITOLOGIA, ID_CONTACTO, ID_ESTRUCTURA…) con
@@ -11810,6 +11769,7 @@ function enriquecerFK(r,fks,store){
   const o=Object.assign({},r);
   const pk=store&&pkDe(store);
   if(pk && !o[pk] && !NOMBRABLES.has(pk)) o[pk]=o.id;
+  if(store==='litologia' && !o.ID_AFLORAMIENTO && fks.aflPorPunto && fks.aflPorPunto[o._parent]) o.ID_AFLORAMIENTO=fks.aflPorPunto[o._parent];
   if(!o.ID_PUNTO_CONTROL && fks.porPunto[o._parent]) o.ID_PUNTO_CONTROL=fks.porPunto[o._parent];
   if(!o.ID_PROYECTO && fks.porProyecto[o._parent]) o.ID_PROYECTO=fks.porProyecto[o._parent];
   return o;
@@ -12329,137 +12289,6 @@ const CONTACTO_VERBO={
 // extensos a escala decamétrica", "no se puede separar a la escala del trabajo").
 // Valor sin frase (o cadena vacía) = no aporta cláusula: "No aplica"/"No determinable" son
 // respuestas explícitas del geólogo, no datos que valga la pena narrar.
-// Carácter mesoscópico: las 5 ramas de la cascada CLASE_AFLORAMIENTO comparten este mapa
-// plano porque los valores no se repiten entre ramas salvo los genéricos ("Macizo, sin
-// estructuras visibles", "Indeterminado"), que además significan lo mismo en todas.
-const CARACTER_FRASE={
-  // Sedimentario / estratificado
-  'Macizo, sin estructuras visibles':'macizo, sin estructuras internas visibles',
-  'Bien estratificado':'bien estratificado',
-  'Mal estratificado':'mal estratificado',
-  'Estratificación difusa':'con superficies de estratificación difusas',
-  'Bancos amalgamados':'en bancos amalgamados',
-  'Laminado (planar)':'con laminación planar',
-  'Laminado (onduloso)':'con laminación ondulosa',
-  'Laminación convoluta':'con laminación convoluta',
-  'Estratificación cruzada planar (tabular)':'con estratificación cruzada planar',
-  'Estratificación cruzada en artesa':'con estratificación cruzada en artesa',
-  'Estratificación cruzada tangencial':'con estratificación cruzada tangencial',
-  'Estratificación cruzada de bajo ángulo':'con estratificación cruzada de bajo ángulo',
-  'Nodular':'con fábrica nodular',
-  'Brechoso':'de aspecto brechoso',
-  // Volcánico
-  'Lávico macizo':'como una lava maciza',
-  'Fluidal (bandeamiento de flujo)':'con bandeamiento de flujo',
-  'Autobrechizado':'autobrechizado',
-  'Disyunción columnar':'con disyunción columnar',
-  'Disyunción en lajas':'con disyunción en lajas',
-  'Vesicular / amigdaloidal':'vesicular a amigdaloidal',
-  'Brechoso (brecha volcánica)':'como una brecha volcánica',
-  'Estratificado (piroclástico)':'estratificado, de carácter piroclástico',
-  'Soldado (ignimbrítico)':'soldado, de carácter ignimbrítico',
-  // Intrusivo
-  'Con foliación magmática':'con foliación magmática',
-  'Con bandeamiento magmático (layering)':'con bandeamiento magmático',
-  'Con enclaves máficos':'con enclaves máficos',
-  'Brechoso (brecha intrusiva)':'como una brecha intrusiva',
-  'Disyunción en bloques':'con disyunción en bloques',
-  // Metamórfico (texturas oficiales del Vol IV)
-  'Macizo':'macizo',
-  'Granofélsico':'con textura granofélsica',
-  'Cornificado (hornfélsico)':'cornificado (hornfélsico)',
-  'Clivaje pizarroso':'con clivaje pizarroso',
-  'Foliación filítica':'con foliación filítica',
-  'Foliación esquistosa':'con foliación esquistosa',
-  'Foliación gnéisica':'con foliación gnéisica',
-  'Foliado (granularidad indeterminada)':'foliado',
-  'Foliado y lineado':'foliado y lineado',
-  'Lineado pero no foliado':'lineado pero no foliado',
-  'Migmatítico':'con estructura migmatítica',
-  'Bandeado':'bandeado',
-  // Roca de falla (tectonita) — texturas oficiales del Vol V
-  'Milonítica foliada':'con textura milonítica foliada',
-  'Milonítica foliada y lineada':'con textura milonítica foliada y lineada',
-  'Cataclástica foliada':'con textura cataclástica foliada',
-  'Cataclástica no foliada':'con textura cataclástica no foliada',
-  'Cataclástica gruesa (brechosa) foliada':'con textura cataclástica gruesa (brechosa) foliada',
-  'Cataclástica gruesa (brechosa) no foliada':'con textura cataclástica gruesa (brechosa) no foliada',
-  'Vidriosa (pseudotaquilita)':'con textura vidriosa (pseudotaquilita)',
-  // común a varias ramas
-  'Indeterminado':'',
-};
-// Geometría de estratificación (Stow 2005, vía norma CDC): el término oficial ya dice si es
-// continua o discontinua, por eso no hay cláusula de continuidad aparte.
-const GEOMETRIA_FRASE={
-  'Tabular: plana-paralela y continua':'de geometría tabular, plana-paralela y continua',
-  'Tabular: plana-paralela y discontinua':'de geometría tabular, plana-paralela y discontinua',
-  'Tabular: plana-no paralela y continua':'de geometría tabular, plana-no paralela y continua',
-  'Forma de cuña (plana-no paralela y discontinua)':'con geometría en forma de cuña',
-  'Ondulada-paralela y continua':'de geometría ondulada-paralela y continua',
-  'Ondulada-paralela y discontinua':'de geometría ondulada-paralela y discontinua',
-  'Ondulada-no paralela y continua':'de geometría ondulada-no paralela y continua',
-  'Ondulada-no paralela y discontinua':'de geometría ondulada-no paralela y discontinua',
-  'Curvada-paralela y continua':'de geometría curvada-paralela y continua',
-  'Curvada-paralela y discontinua':'de geometría curvada-paralela y discontinua',
-  'Curvada-no paralela y continua':'de geometría curvada-no paralela y continua',
-  'Curvada-no paralela y discontinua':'de geometría curvada-no paralela y discontinua',
-  'Lenticular-subparalela y discontinua':'de geometría lenticular-subparalela y discontinua',
-  'Lenticular con base cóncava y techo plano':'en cuerpos lenticulares de base cóncava y techo plano',
-  'Lenticular con base plana y techo convexo':'en cuerpos lenticulares de base plana y techo convexo',
-  'Paralela irregular conforme al sustrato':'en capas paralelas irregulares, conformes al sustrato',
-  'En cintas entrelazadas':'en cintas entrelazadas',
-  'Convoluta':'de geometría convoluta',
-  'Irregular':'de geometría irregular',
-  'Nodular':'de geometría nodular',
-  'Indeterminado':'',
-};
-const EXTENSION_FRASE={
-  'Métrica (< 10 m)':'con continuidad lateral métrica',
-  'Decamétrica (10 – 100 m)':'con continuidad lateral decamétrica',
-  'Hectométrica (100 – 1.000 m)':'con continuidad lateral hectométrica',
-  'Kilométrica (> 1 km)':'con continuidad lateral kilométrica',
-  'No determinable a la escala del trabajo':'sin continuidad lateral separable a la escala del trabajo',
-};
-// Arreglo de estratos según espesor (campo CDC): oración propia, sujeto "el depósito".
-const ARREGLO_FRASE={
-  'Secuencia estrato creciente':'una secuencia estrato creciente',
-  'Capas inferiores de una secuencia estrato creciente':'las capas inferiores de una secuencia estrato creciente',
-  'Capas medias de una secuencia estrato creciente':'las capas medias de una secuencia estrato creciente',
-  'Capas superiores de una secuencia estrato creciente':'las capas superiores de una secuencia estrato creciente',
-  'Secuencia estrato decreciente':'una secuencia estrato decreciente',
-  'Capas inferiores de una secuencia estrato decreciente':'las capas inferiores de una secuencia estrato decreciente',
-  'Capas medias de una secuencia estrato decreciente':'las capas medias de una secuencia estrato decreciente',
-  'Capas superiores de una secuencia estrato decreciente':'las capas superiores de una secuencia estrato decreciente',
-  'Secuencia uniforme':'una secuencia de espesores uniformes',
-  'Secuencia heterogénea':'una secuencia de espesores heterogéneos',
-  'Secuencia con alternancia de conjuntos de capas con espesores uniformes':'una secuencia con alternancia de conjuntos de capas de espesores uniformes',
-  'Capa individual que no forma parte de una secuencia sistemática':'una capa individual, sin arreglo secuencial sistemático',
-  'Indeterminado':'',
-};
-// Gradación interna (Stow 2005, vía CDC). "No gradada" no encaja en "Presenta ..." y lleva
-// su propia oración; el resto se completa como "Presenta gradación …".
-const GRADACION_FRASE={
-  'Gradación normal':'gradación normal',
-  'Gradación normal de la fracción gruesa':'gradación normal de la fracción gruesa',
-  'Gradación normal en la base':'gradación normal en la base',
-  'Gradación normal en el techo':'gradación normal en el techo',
-  'Gradación inversa':'gradación inversa',
-  'Gradación inversa de la fracción gruesa':'gradación inversa de la fracción gruesa',
-  'Gradación inversa en la base':'gradación inversa en la base',
-  'Gradación inversa en el techo':'gradación inversa en el techo',
-  'Gradación compuesta inversa-normal':'gradación compuesta inversa-normal',
-  'Gradación compuesta normal-inversa':'gradación compuesta normal-inversa',
-  'Gradación compuesta oscilatoria':'gradación compuesta oscilatoria',
-  'Gradación compuesta compleja':'gradación compuesta compleja',
-  'No gradada':'',
-  'Indeterminada':'',
-};
-const LIMITE_FRASE={
-  'Base gradacional':'La base del depósito es gradacional',
-  'Base nítida':'La base del depósito es nítida',
-  'Base erosional':'La base del depósito es erosiva',
-  'Base no expuesta':'La base del depósito no está expuesta',
-};
 // Meteorización y fracturamiento comparten oración: el corpus los describe siempre juntos
 // ("de leve a moderada meteorización y fracturamiento"). Sujeto "la roca" (femenino).
 const METEORIZACION_FRASE={
@@ -12476,14 +12305,6 @@ const FRACTURAMIENTO_FRASE={
   'Moderadamente fracturado':'moderadamente fracturada',
   'Intensamente fracturado':'intensamente fracturada',
   'Triturado / brechizado':'triturada y brechizada',
-  'Indeterminado':'',
-};
-const FABRICA_FRASE={
-  'Fábrica organizada con eje mayor de los clastos paralelo al flujo':'Los clastos presentan una fábrica organizada, con su eje mayor paralelo al flujo',
-  'Fábrica organizada con eje mayor de los clastos perpendicular al flujo':'Los clastos presentan una fábrica organizada, con su eje mayor perpendicular al flujo',
-  'Fábrica imbricada con eje mayor de los clastos paralelo al flujo':'Los clastos presentan una fábrica imbricada, con su eje mayor paralelo al flujo',
-  'Fábrica imbricada con eje mayor de los clastos perpendicular al flujo':'Los clastos presentan una fábrica imbricada, con su eje mayor perpendicular al flujo',
-  'Fábrica desorganizada':'Los clastos presentan una fábrica desorganizada, sin orientación preferente',
   'Indeterminado':'',
 };
 // "capas de X a Y cm de espesor" (patrón de espesor del corpus). El sustantivo y la unidad
@@ -13102,6 +12923,9 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       if(nDetalle>0) d=CONECTOR_LITO[(nDetalle-1)%CONECTOR_LITO.length]+d.charAt(0).toLowerCase()+d.slice(1);
       frases.push(d); nDetalle++;
     }
+    // espesores de ESTA litología (v147: antes eran del afloramiento)
+    const eEst=espesorFrase(l.ESPESOR_MIN_CM,l.ESPESOR_MAX_CM); if(eEst) frases.push('Se dispone '+eEst+'.');
+    const eDep=espesorDepositoFrase(l.ESPESOR_DEPOSITO_MIN_M,l.ESPESOR_DEPOSITO_MAX_M); if(eDep) frases.push(eDep+'.');
     const dFeno=detalleSuelto(l.FENOCRISTALES_ESPECIE,l.FENOCRISTALES_DETALLE); if(dFeno) frases.push(dFeno);
     const dCris=detalleSuelto(l.CRISTALES_ESPECIE,l.CRISTALES_DETALLE); if(dCris) frases.push(dCris);
     const dClas=detalleSuelto(l.LITOLOGIA_CLASTOS,l.LITOLOGIA_CLASTOS_DETALLE); if(dClas) frases.push(dClas);
@@ -13132,36 +12956,14 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // alteración tratados aparte más abajo; se enuncia tal cual para no duplicar redacción).
     if(afl.SUBTIPO_AFLORAMIENTO) frases.push('Se clasifica como '+minuscula(afl.SUBTIPO_AFLORAMIENTO)+'.');
     else if(afl.TIPO_AFLORAMIENTO) frases.push('Se clasifica como '+minuscula(afl.TIPO_AFLORAMIENTO)+'.');
-    // 1) cómo se ve el afloramiento: carácter + espesor + geometría + extensión lateral
-    const cl=[CARACTER_FRASE[afl.CARACTER_MESOSCOPICO],
-              espesorFrase(afl.ESPESOR_MIN_CM,afl.ESPESOR_MAX_CM),
-              GEOMETRIA_FRASE[afl.GEOMETRIA_CUERPO],
-              EXTENSION_FRASE[afl.EXTENSION_LATERAL]].filter(Boolean);
-    // Varios términos oficiales ya traen una "y" adentro ("plana-paralela y continua"): cerrar
-    // la enumeración con otra "y" da "…y continua y con continuidad lateral…". En ese caso se
-    // enumera solo con comas, que además es como escriben las cartas.
-    if(cl.length) frases.push('El afloramiento se presenta '
-      +(cl.some(s=>/ y /.test(s)) ? cl.join(', ') : lista(cl))+'.');
-    // 1b) espesor del depósito/capa en consideración (m, norma CDC Vol III) — distinto del
-    // promedio de estratificación arriba; el corpus lo escribe "alcanza un espesor de N m".
-    const ed=espesorDepositoFrase(afl.ESPESOR_DEPOSITO_MIN_M,afl.ESPESOR_DEPOSITO_MAX_M);
-    if(ed) frases.push(ed+'.');
-    // 2) arreglo secuencial de los estratos (tendencia de espesor)
-    const arr=ARREGLO_FRASE[afl.ARREGLO_ESTRATOS];
-    if(arr) frases.push('El depósito corresponde a '+arr+'.');
-    // 3) gradación granulométrica interna
-    if(afl.GRADACION_INTERNA==='No gradada') frases.push('No presenta gradación interna.');
-    else { const gr=GRADACION_FRASE[afl.GRADACION_INTERNA]; if(gr) frases.push('Presenta '+gr+'.'); }
-    // 4) base del depósito (distinta del contacto entre unidades, que va en su propia ficha)
-    const lim=LIMITE_FRASE[afl.TIPO_LIMITE_INFERIOR];
-    if(lim) frases.push(lim+'.');
+    // 1) espesor mínimo expuesto del conjunto (v147). Carácter, geometría, extensión, arreglo,
+    // gradación, base y fábrica salieron del modelo; los espesores de capa van en cada litología.
+    const eAfl=parseFloat(String(afl.ESPESOR_MIN_AFLORAMIENTO_M??'').replace(',','.'));
+    if(!isNaN(eAfl)&&eAfl>0) frases.push('El afloramiento expone un espesor mínimo de '+eAfl.toLocaleString('es-CL',{maximumFractionDigits:2})+' m.');
     // 5) estado de la roca: meteorización y fracturamiento en una sola oración
     const est=[METEORIZACION_FRASE[afl.GRADO_METEORIZACION],
                FRACTURAMIENTO_FRASE[afl.GRADO_FRACTURAMIENTO]].filter(Boolean);
     if(est.length) frases.push('La roca se presenta '+lista(est)+'.');
-    // 6) fábrica de clastos (solo depósitos gravosos)
-    const fab=FABRICA_FRASE[afl.FABRICA_GRAVOSA];
-    if(fab) frases.push(fab+'.');
     // 7) La nota es texto del propio geólogo: se integra tal cual (ver fraseLibre).
     const nota=fraseLibre(afl.NOTA_AFLORAMIENTO); if(nota) frases.push(nota);
   }
