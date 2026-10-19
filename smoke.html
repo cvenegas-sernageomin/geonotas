@@ -326,6 +326,37 @@ async function correr(){
       } finally { for (const id of ids) await w.del('litologia', id); }
     });
 
+    await prueba('Ficha de litología agrupada por familia (v149): cada grupo aparece solo si aplica', async () => {
+      // con el revelado progresivo los campos aparecen de a uno: para medir qué grupos APLICAN se
+      // pide "Mostrar todos los campos"; sin eso, un grupo sin campos revelados no debe verse
+      const verTodo = f => { const b = [...f.node.querySelectorAll('button')].find(x => /Mostrar todos/.test(x.textContent)); if (b) b.click(); };
+      const grupos = (reg, todo = true) => { const f = w.formulario('litologia', reg, {}); w.document.body.append(f.node);
+        if (todo) verTodo(f);
+        try { return [...f.node.querySelectorAll('.grupo-lito')].filter(g => g.style.display !== 'none')
+          .map(g => g.dataset.familia).filter(t => t !== '__nombre'); } finally { f.node.remove(); } };
+      eq(grupos({TIPO_ROCA:'Intrusiva'}), ['TBL_LITOLOGIA','LITO_INTRUSIVA'], 'intrusiva');
+      eq(grupos({TIPO_ROCA:'Metamórfica'}), ['TBL_LITOLOGIA','LITO_METAMORFICA'], 'metamórfica');
+      eq(grupos({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}), ['TBL_LITOLOGIA','LITO_VOLCANICA'], 'lava');
+      eq(grupos({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas'}),
+         ['TBL_LITOLOGIA','LITO_CLASTICA','LITO_VOLCANICA','LITO_PIROCLASTICA'], 'piroclástica');
+      eq(grupos({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'}), ['TBL_LITOLOGIA','LITO_CLASTICA','LITO_SEDIMENTARIA'], 'arenisca');
+      eq(grupos({TIPO_ROCA:'Depósito', NOMBRE_ROCA:'Aluviales'}), ['TBL_LITOLOGIA','LITO_CLASTICA'], 'depósito aluvial');
+      eq(grupos({TIPO_ROCA:'Depósito', NOMBRE_ROCA:'Tefra, depósito volcánico'}), ['TBL_LITOLOGIA','LITO_CLASTICA','LITO_PIROCLASTICA'], 'tefra');
+      eq(grupos({}), ['TBL_LITOLOGIA'], 'sin tipo de roca solo se ven los datos generales');
+      eq(grupos({TIPO_ROCA:'Intrusiva'}, false), ['TBL_LITOLOGIA'], 'con revelado progresivo, un grupo sin campos revelados no debe verse');
+      // cambiar el tipo de roca en la ficha abre/cierra los grupos sin re-dibujar
+      const f = w.formulario('litologia', {TIPO_ROCA:'Intrusiva'}, {}); w.document.body.append(f.node); verTodo(f);
+      try {
+        const t = f.node.querySelector('[name="TIPO_ROCA"]'); t.value = 'Metamórfica'; t.dispatchEvent(new w.Event('change', {bubbles:true}));
+        eq(f.node.querySelector('[data-familia="LITO_INTRUSIVA"]').style.display, 'none', 'el grupo intrusivo siguió visible');
+        eq(f.node.querySelector('[data-familia="LITO_METAMORFICA"]').style.display, '', 'el grupo metamórfico no apareció');
+        const orden = [...f.node.querySelectorAll('[name]')].map(i => i.name);
+        ok(orden.indexOf('TIPO_VOLCANICA') === orden.indexOf('TIPO_ROCA') + 1, 'TIPO_VOLCANICA debe ir junto a TIPO_ROCA');
+        eq(orden[orden.length - 1], 'NOMBRE_ROCA', 'NOMBRE_ROCA debe seguir al final');
+      } finally { f.node.remove(); }
+      return 'grupos por tipo de roca = reglas de aplicabilidad; se abren/cierran al cambiar el tipo';
+    });
+
     await prueba('Afloramiento v147: campos que salieron, espesores en litología e ID_AFLORAMIENTO en el export', async () => {
       const M = w.eval('MODELO');
       const nom = t => M.tablas[t].campos.map(c => c.nombre);

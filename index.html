@@ -95,6 +95,10 @@
     border-radius:9px;background:var(--inp);color:var(--txt);font-size:12px;display:none}
   .multichips .chipnum.on .cn{display:inline-block}
   .row{display:flex;flex-wrap:wrap;gap:10px}
+  /* Ficha de litología agrupada por familia (v149): mismo reparto que la GDB (padre + LITO_*) */
+  .grupo-lito{margin:4px 0 6px}
+  .grupo-lito>h4{margin:6px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bd);
+    font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--verde);text-transform:uppercase}
   .fld{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;flex:1 1 220px;min-width:0}
   .fld label{font-size:11.5px;font-weight:600;color:var(--lbl);letter-spacing:.2px}
   .fld label .req{color:var(--rojo);margin-left:2px}
@@ -3708,7 +3712,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v148';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v149';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -5394,6 +5398,31 @@ function formulario(store, reg, ctx){
     const i=cs.findIndex(c=>c.nombre==='NOMBRE_ROCA');
     if(i>=0){const nr=cs.splice(i,1)[0];cs.push(nr);}
   }
+  // Ficha de litología agrupada por familia (v149): los campos se ordenan y se agrupan igual que
+  // las tablas de la GDB (TBL_LITOLOGIA + LITO_*, MODELO.familias_litologia) y cada grupo se ve
+  // solo si alguno de sus campos aplica al tipo de roca. En el teléfono sigue siendo UNA ficha.
+  // TIPO_VOLCANICA se muestra junto a TIPO_ROCA (acota NOMBRE_ROCA) aunque se exporte en
+  // LITO_VOLCANICA, y NOMBRE_ROCA sigue al final, como conclusión.
+  const grupos=[], grupoDe={};
+  if(store==='litologia' && MODELO.familias_litologia){
+    const TITULO={TBL_LITOLOGIA:'Datos generales', LITO_CLASTICA:'Clastos, matriz y cemento',
+      LITO_SEDIMENTARIA:'Sedimentaria', LITO_VOLCANICA:'Volcánica', LITO_PIROCLASTICA:'Componentes piroclásticos',
+      LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica'};
+    const famDe={}; MODELO.familias_litologia.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
+    famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre';
+    const orden=MODELO.familias_litologia.map(f=>f.tabla).concat('__nombre');
+    const pos=n=>{const k=orden.indexOf(famDe[n]); return k<0?0:k;};
+    // orden estable: dentro de cada grupo se respeta el orden previo; TIPO_VOLCANICA tras TIPO_ROCA
+    cs=cs.map((c,i)=>({c,i})).sort((a,b)=>pos(a.c.nombre)-pos(b.c.nombre)||a.i-b.i).map(x=>x.c);
+    const iv=cs.findIndex(c=>c.nombre==='TIPO_VOLCANICA'), ir=cs.findIndex(c=>c.nombre==='TIPO_ROCA');
+    if(iv>=0&&ir>=0){const tv=cs.splice(iv,1)[0]; cs.splice(cs.findIndex(c=>c.nombre==='TIPO_ROCA')+1,0,tv);}
+    for(const t of orden){
+      const g={tabla:t, nodo:el('div',{class:'grupo-lito','data-familia':t}), row:el('div',{class:'row'})};
+      if(TITULO[t]) g.nodo.append(el('h4',{},TITULO[t]));
+      g.nodo.append(g.row); grupos.push(g);
+      cs.forEach(c=>{ if((famDe[c.nombre]||'TBL_LITOLOGIA')===t) grupoDe[c.nombre]=g; });
+    }
+  }
   // Piloto de revelado progresivo (ver PILOTO_REVELADO_LITOLOGIA_VOLCANICA): la infraestructura
   // (botón "Omitir" por campo, mapa fld por nombre) solo se construye para las fichas de
   // FICHAS_CON_REVELADO -- cero costo/cambio para Punto/Proyecto aunque esté prendido.
@@ -5507,9 +5536,18 @@ function formulario(store, reg, ctx){
       omitirBtn[n]=omBtn;
     }
     fldPorCampo[n]=fld;
-    rowWrap.append(fld);
+    (grupoDe[n]?grupoDe[n].row:rowWrap).append(fld);
   });
-  cont.append(rowWrap);
+  if(grupos.length) grupos.forEach(g=>cont.append(g.nodo)); else cont.append(rowWrap);
+  // un grupo de familia se ve solo si alguno de sus campos está visible y habilitado
+  function actualizarGrupos(){
+    for(const g of grupos){
+      // pendiente del revelado progresivo = aún no se muestra: el grupo aparece con su primer campo
+      const vivo=[...g.row.children].some(fld=>{ if(fld.style.display==='none'||fld.classList.contains('fld-pendiente')) return false;
+        const i=fld.querySelector('input,select,textarea,.multichips'); return !(i&&i.disabled); });
+      g.nodo.style.display=vivo?'':'none';
+    }
+  }
 
   // habilita/oculta campos condicionales según los valores actuales
   function aplicarCondicionales(){
@@ -5561,13 +5599,15 @@ function formulario(store, reg, ctx){
       }
       else { const cd=cs.find(c=>c.nombre===cn); if(cd&&cd.obligatorio)inp.required=true; }
     }
+    actualizarGrupos();
   }
   // Revelado progresivo: capa aparte de aplicarCondicionales(), que ya decidió qué campo APLICA
   // (fld.style.display). Aquí solo se decide, de los que aplican, cuáles YA se muestran -- no
   // duplica ninguna regla de CONDICIONALES, así que ramas como Lava/Rocas piroclásticas (que
   // habilitan conjuntos de campos distintos) quedan correctas automáticamente en cualquier ficha.
   // Se corre siempre después de aplicarCondicionales(), nunca antes: necesita el display ya resuelto.
-  function actualizarRevelado(){
+  function actualizarRevelado(){ revelarPendientes(); actualizarGrupos(); }
+  function revelarPendientes(){
     if(!activaPiloto) return;
     if(btnMostrarTodo) btnMostrarTodo.style.display=mostrarTodo?'none':'';
     if(mostrarTodo){
