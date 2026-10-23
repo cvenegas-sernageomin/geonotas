@@ -112,9 +112,9 @@ async function sembrar(w){                // dataset con datos en AMBAS coleccio
   await w.put('punto_gabinete', {id:P+'pt-G', _parent:P+'pr', ID_PUNTO_CONTROL:'PC-G',
                                  [LAT]:'-33.500000', [LON]:'-70.700000'});
   await w.put('linea',          {id:P+'ln-T', _parent:P+'pr', CLASE_LINEA:'Contacto', TIPO_LINEA:'Estratigráfico',
-                                 CERTEZA_LINEA:'Observado', geom:[[-33.45,-70.65],[-33.46,-70.66]]});
+                                 TIPO_INFORMACION:'Observada', geom:[[-33.45,-70.65],[-33.46,-70.66]]});
   await w.put('linea_gabinete', {id:P+'ln-G', _parent:P+'pr', CLASE_LINEA:'Estructura tectónica', TIPO_LINEA:'Falla',
-                                 CERTEZA_LINEA:'Inferido', geom:[[-33.50,-70.70],[-33.51,-70.71]]});
+                                 TIPO_INFORMACION:'Inferida', geom:[[-33.50,-70.70],[-33.51,-70.71]]});
   await w.put('litologia',      {id:P+'li-T', _parent:P+'pt-T', TIPO_ROCA:'Volcánica', NOMBRE_ROCA:'Andesita',
                                  UNIDAD_GEOLOGICA:'Fm. Abanico'});
   await w.put('litologia',      {id:P+'li-G', _parent:P+'pt-G', TIPO_ROCA:'Intrusiva', NOMBRE_ROCA:'Granito'});
@@ -314,7 +314,7 @@ async function correr(){
         const q = s => { const st = db.prepare(s); const o = []; while(st.step()) o.push(st.getAsObject()); st.free(); return o; };
         try {
           const M = w.eval('MODELO'); const fam = M.familias_litologia;
-          ok(fam && fam.length === 9, 'el modelo no trae las 9 tablas de litología');
+          ok(fam && fam.length === 10, 'el modelo no trae las 10 tablas de litología');
           const hijas = fam.filter(f => !f.padre).map(f => f.tabla);
           const total = fam.reduce((n, f) => n + f.campos.length, 0);
           eq(total, M.tablas.TBL_LITOLOGIA.campos.length, 'las familias no cubren los campos de TBL_LITOLOGIA');
@@ -333,8 +333,8 @@ async function correr(){
           eq(q("SELECT TEXTURA_DUNHAM, TIPO_ALOQUIMICO FROM SED_NO_CLASTICA WHERE ID_REG='"+ids[3]+"'"), [{TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'}], 'caliza: fila en SED_NO_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[3]+"'"), [{n:0}], 'la caliza no debe llenar SED_SILICICLASTICA');
           eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[4]+"'"), [{n:0}], 'subtipo Mixto: sin nieta');
-          eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:8}], 'hijas sin registrar en gpkg_contents');
-          return 'TBL_LITOLOGIA + 8 hijas (sedimentaria con 2 nietas); las hijas solo traen fila si la ficha llenó esa familia';
+          eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:9}], 'hijas sin registrar en gpkg_contents');
+          return 'TBL_LITOLOGIA + 9 hijas (sedimentaria con 2 nietas); las hijas solo traen fila si la ficha llenó esa familia';
         } finally { db.close(); }
       } finally { for (const id of ids) await w.del('litologia', id); }
     });
@@ -1888,7 +1888,7 @@ async function correr(){
     // ---- v146: contacto medido = medida estructural vinculada ----
     await prueba('Contacto medido: la medida estructural copia rumbo/manteo al contacto y no se dibuja dos veces', async () => {
       const pt = P+'pt-T', c1 = P+'ct-1', c2 = P+'ct-2', e1 = P+'es-c1', e2 = P+'es-c2';
-      await w.put('contacto', {id:c1, _parent:pt, TIPO_CONTACTO:'Nítido', UNIDAD_TECHO:'A', UNIDAD_BASE:'B'});
+      await w.put('contacto', {id:c1, _parent:pt, TIPO_CONTACTO:'Nítido', LITOLOGIA_TECHO:'A', LITOLOGIA_BASE:'B'});
       await w.put('contacto', {id:c2, _parent:pt, TIPO_CONTACTO:'Gradual', RUMBO_CONTACTO:'200', MANTEO_CONTACTO:'20'});
       const est = {id:e1, _parent:pt, TIPO_ESTRUCTURA:'Estructura contacto', ID_CONTACTO:c1, AZIMUT:'120', MANTEO_BUZAMIENTO:'35'};
       try {
@@ -1937,6 +1937,100 @@ async function correr(){
         c = await w.get('contacto', c1); eq([c.RUMBO_CONTACTO, c.MANTEO_CONTACTO, c._medidaDe], ['', '', undefined], 'limpieza al borrar la medida');
         return 'copia, edición, varias medidas, contacto manual intacto, perfil sin dobles, join en GPKG, limpieza';
       } finally { for (const [s, id] of [['estructural', e1], ['estructural', e2], ['contacto', c1], ['contacto', c2]]) await w.del(s, id); }
+    });
+
+    // ---- v151: ajustes CDC (contacto, línea, muestra, granulometría de depósitos) ----
+    await prueba('v151: nombres CDC, migración de registros viejos y granulometrías de depósito', async () => {
+      const M = w.eval('MODELO');
+      const nom = t => M.tablas[t].campos.map(c => c.nombre);
+      eq(['ID_LITOLOGIA','LITOLOGIA_TECHO','LITOLOGIA_BASE'].filter(n => !nom('TBL_CONTACTO').includes(n)), [], 'faltan campos en contacto');
+      eq(['UNIDAD_TECHO','UNIDAD_BASE'].filter(n => nom('TBL_CONTACTO').includes(n)), [], 'quedaron UNIDAD_TECHO/BASE en contacto');
+      ok(nom('LINEA_CONTROL').includes('TIPO_INFORMACION') && !nom('LINEA_CONTROL').includes('CERTEZA_LINEA'), 'línea sin TIPO_INFORMACION');
+      eq(M.dominios.TIPO_INFORMACION.valores, ['Observada','Cubierta','Inferida'], 'dominio GB_TP_INFORMACION_2014');
+      eq(M.dominios.TIPO_MUESTRA.valores.length, 18, 'TIPO_MUESTRA debe ser GB_TP_MUESTRA_JULIO2014');
+      ok(M.relaciones.some(r => r.padre === 'TBL_LITOLOGIA' && r.hijo === 'TBL_CONTACTO' && r.campo === 'ID_LITOLOGIA'), 'falta la relación litología→contacto');
+      // migración (la misma del upgrade de la base y del import de respaldos)
+      const c = {UNIDAD_TECHO:'Fm. A', UNIDAD_BASE:'Fm. B'}, l = {CERTEZA_LINEA:'Cubierto'}, m = {TIPO_MUESTRA:'Depósito'};
+      ok(w.migrarRegistroV151('contacto', c) && w.migrarRegistroV151('linea', l) && w.migrarRegistroV151('muestreo', m), 'la migración no cambió nada');
+      eq([c.LITOLOGIA_TECHO, c.LITOLOGIA_BASE, c.UNIDAD_TECHO, l.TIPO_INFORMACION, m.TIPO_MUESTRA],
+         ['Fm. A', 'Fm. B', 'Fm. A', 'Cubierta', 'Deposito no consolidado'], 'valores migrados (el viejo se conserva)');
+      ok(!w.migrarRegistroV151('contacto', c), 'la migración debe ser idempotente');
+      // tipo + subtipo de contacto (lista del usuario): cascada, migración de la lista vieja y prosa
+      eq(w.opciones('SUBTIPO_CONTACTO', 'Estratigráfico').length, 6, 'subtipos estratigráficos');
+      eq(w.opciones('SUBTIPO_CONTACTO', 'Tectónico').map(o => o.value), ['Abrupto'], 'subtipo tectónico');
+      const viejos = ['Nítido','Gradual','Discordante erosiva','Tectónico','Intrusivo'].map(t => { const r = {TIPO_CONTACTO:t}; w.migrarRegistroV151('contacto', r); return r.TIPO_CONTACTO + '/' + (r.SUBTIPO_CONTACTO || ''); });
+      eq(viejos, ['Estratigráfico/Concordante abrupto','Estratigráfico/Concordante gradacional','Estratigráfico/Discordante erosivo','Tectónico/Abrupto','Intrusivo/'], 'migración de tipos de contacto');
+      const ptc = {id:'smoke-ct', ID_PUNTO_CONTROL:'smoke-ct'}; ptc[w.inLat] = -35.6; ptc[w.inLon] = -71.0;
+      const prosaC = (tipo, sub) => w.prosaPunto(ptc, {litos:[], aflora:[], geomorf:[], estr:[], mues:[],
+        cont:[{TIPO_CONTACTO:tipo, SUBTIPO_CONTACTO:sub, LITOLOGIA_TECHO:'la arenisca', LITOLOGIA_BASE:'la andesita'}]}, null, null, 500);
+      ok(/la arenisca se dispone en discordancia angular sobre la andesita/i.test(prosaC('Estratigráfico', 'Discordante angular')), 'prosa de discordancia angular');
+      ok(/la arenisca intruye a la andesita/i.test(prosaC('Intrusivo', 'Gradacional')), 'prosa de contacto intrusivo');
+      ok(/contacto metamórfico gradacional entre la arenisca y la andesita/i.test(prosaC('Metamórfico', 'Gradacional')), 'prosa de contacto metamórfico');
+      eq(w.eval('MODELO').dominios.REDONDEAMIENTO.valores[0], 'Muy anguloso', 'redondeamiento sin "Muy anguloso"');
+      ok(w.eval('MODELO').dominios.LITOLOGIA_CLASTOS_GRAVA.valores.includes('Pómez retrabajado'), 'faltan los clastos piroclásticos retrabajados');
+      // granulometría de clastos y de matriz: depósitos sí, arenisca no
+      const vis = (reg, n) => w.formulario('litologia', reg).node.querySelector('[name="'+n+'"]').closest('.fld').style.display;
+      eq(['GRANULOMETRIA_CLASTOS','GRANULOMETRIA_MATRIZ'].map(n => vis({TIPO_ROCA:'Depósito', NOMBRE_ROCA:'Aluviales'}, n)), ['', ''], 'ocultas en un depósito');
+      eq(vis({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'}, 'GRANULOMETRIA_CLASTOS'), 'none', 'granulometría de clastos visible en una arenisca');
+      eq(vis({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Conglomerado', TEXTURA:'Clástica (detrítica)', FABRICA_CLASTOS:'Matriz-soportada'}, 'GRANULOMETRIA_MATRIZ'), '', 'granulometría de matriz oculta en conglomerado matriz-soportado');
+      const fam = M.familias_litologia.find(f => f.tabla === 'LITO_CLASTICA').campos;
+      ok(fam.includes('GRANULOMETRIA_CLASTOS') && fam.includes('GRANULOMETRIA_MATRIZ'), 'LITO_CLASTICA no exporta las granulometrías');
+      // la ficha de contacto ofrece las litologías del punto
+      const litos = [{id:'L1', NOMBRE_ROCA:'Arenisca'}, {id:'L2', NOMBRE_ROCA:'Andesita'}];
+      const fc = w.formulario('contacto', {}, {litologias:litos}).node;
+      eq([...fc.querySelectorAll('[name="ID_LITOLOGIA"] option')].map(o => o.value), ['', 'L1', 'L2'], 'selector de litología del contacto');
+      ok(fc.querySelector('[name="LITOLOGIA_TECHO"]').list, 'LITOLOGIA_TECHO sin sugerencias');
+      return 'contacto, línea y muestra con nombres CDC; migración idempotente; granulometrías según tipo de roca';
+    });
+
+    await prueba('v151: rocas tectónicas (CDC Vol V) y texturas metamórficas de terreno', async () => {
+      const M = w.eval('MODELO');
+      ok(M.dominios.TIPO_ROCA.valores.includes('Tectónica'), 'falta TIPO_ROCA Tectónica');
+      const fam = M.familias_litologia.find(f => f.tabla === 'LITO_TECTONICA');
+      ok(fam && fam.campos.includes('MINERAL_PORFIROCLASTOS'), 'falta la familia LITO_TECTONICA');
+      eq(M.dominios.TEXTURA.mapa['Metamórfica'].filter(t => /Milonít|Catacl|Lepido|Nemato|Porfido/.test(t)), [], 'quedaron texturas de microscopio o de falla en metamórfica');
+      ok(!M.dominios.ESTRUCTURA_TIPO_ROCA.mapa['Metamórfica'].includes('Augen (ojos)'), 'Augen sigue en estructura metamórfica');
+      const vis = (reg, n) => w.formulario('litologia', reg).node.querySelector('[name="'+n+'"]').closest('.fld').style.display;
+      const regla = (n, v) => w.eval('CONDICIONALES')[n].regla(v);   // campos de chips: sin [name] en el DOM
+      eq([vis({TIPO_ROCA:'Tectónica'}, 'SUBTIPO_TECTONICA'), regla('ESTRUCTURA_TIPO_ROCA', {TIPO_ROCA:'Tectónica'})], ['', false], 'visibilidad en una roca tectónica');
+      eq(vis({TIPO_ROCA:'Metamórfica'}, 'SUBTIPO_TECTONICA'), 'none', 'subtipo tectónico visible en una metamórfica');
+      eq(['MINERAL_PORFIROCLASTOS','LITOLOGIA_FRAGMENTOS'].map(n => regla(n, {TIPO_ROCA:'Tectónica', SUBTIPO_TECTONICA:'Roca de cizalle dúctil'})), [true, false], 'milonita: porfiroclastos sí, fragmentos no');
+      eq(['MINERAL_PORFIROCLASTOS','LITOLOGIA_FRAGMENTOS'].map(n => regla(n, {TIPO_ROCA:'Tectónica', SUBTIPO_TECTONICA:'Roca de cizalle frágil'})), [false, true], 'brecha de falla: fragmentos sí, porfiroclastos no');
+      const nombres = [...w.formulario('litologia', {TIPO_ROCA:'Tectónica', SUBTIPO_TECTONICA:'Roca de cizalle dúctil'}).node.querySelectorAll('[name="NOMBRE_ROCA"] option')].map(o => o.value).filter(Boolean);
+      ok(nombres.includes('Protomilonita') && !nombres.includes('Salbanda de falla'), 'NOMBRE_ROCA no se acota por subtipo tectónico: ' + nombres.length);
+      const r = {TIPO_ROCA:'Metamórfica', TEXTURA:'Porfidoblástica'}; w.migrarRegistroV151('litologia', r);
+      const r2 = {TIPO_ROCA:'Metamórfica', ESTRUCTURA_TIPO_ROCA:'Clivaje pizarroso; Augen (ojos)'}; w.migrarRegistroV151('litologia', r2);
+      eq([r.TEXTURA, r2.TEXTURA], ['Porfiroblástica', 'Augen (ojos)'], 'migración de texturas metamórficas');
+      const pt = {id:'smoke-tc', ID_PUNTO_CONTROL:'smoke-tc'}; pt[w.inLat] = -35.6; pt[w.inLon] = -71.0;
+      const p = w.prosaPunto(pt, {aflora:[], geomorf:[], cont:[], estr:[], mues:[], litos:[{id:'t', TIPO_ROCA:'Tectónica', NOMBRE_ROCA:'Protomilonita',
+        TIPO_FOLIACION_TECTONICA:'Foliación milonítica continua', MINERAL_PORFIROCLASTOS:'Feldespato potasio (20%)', POTENCIA_ZONA_DEFORMACION:'1-3 m'}]}, null, null, 900);
+      ok(/porfiroclastos de feldespato potasio/i.test(p) && /zona de deformación de 1-3 m/.test(p), 'prosa de la roca tectónica: ' + p);
+      return 'familia LITO_TECTONICA, campos según subtipo, nombres acotados, migración y prosa';
+    });
+
+    await prueba('v151: anotar rumbo/manteo en el contacto crea o actualiza su medida estructural', async () => {
+      const pt = P+'pt-T', c1 = P+'ct-v151';
+      const c = {id:c1, _parent:pt, TIPO_CONTACTO:'Intrusivo', GRADO_CONFIANZA_CONTACTO:'ALTA', ID_LITOLOGIA:P+'li-T', RUMBO_CONTACTO:'40'};
+      let creada;
+      try {
+        await w.put('contacto', c);
+        eq(await w.sincronizarMedidaDeContacto(c), false, 'con solo el rumbo no debía crear la medida');
+        c.MANTEO_CONTACTO = '60';
+        eq(await w.sincronizarMedidaDeContacto(c), true, 'no creó la medida');
+        creada = await w.get('estructural', c._medidaDe);
+        eq([creada.ID_CONTACTO, creada.TIPO_ESTRUCTURA, creada.TIPO_MEDIDA_ESTRUCTURAL, creada.AZIMUT, creada.MANTEO_BUZAMIENTO, creada.ID_LITOLOGIA, creada.GRADO_CONFIANZA_ESTRUCTURA, creada._parent],
+           [c1, 'Estructura contacto', 'Contacto intrusivo', '40', '60', P+'li-T', 'ALTA', pt], 'medida creada desde el contacto');
+        await w.put('contacto', c);
+        c.RUMBO_CONTACTO = '45';
+        eq(await w.sincronizarMedidaDeContacto(c), true, 'no actualizó la medida');
+        eq((await w.childrenOf('estructural', pt)).filter(e => e.ID_CONTACTO === c1).length, 1, 'debía actualizar, no duplicar');
+        eq((await w.get('estructural', creada.id)).AZIMUT, '45', 'rumbo actualizado en la medida');
+        eq(await w.sincronizarMedidaDeContacto(c), false, 'sin cambios no debía reescribir');
+        c.MANTEO_CONTACTO = '';
+        eq(await w.sincronizarMedidaDeContacto(c), false, 'borrar el manteo no toca la medida');
+        eq(c.MANTEO_CONTACTO, '60', 'el contacto recupera el manteo de su medida');
+        return 'creada con tipo, litología y confianza del contacto; se actualiza sin duplicar';
+      } finally { if (creada) await w.del('estructural', creada.id); await w.del('contacto', c1); }
     });
 
     // ---- v135: grilla UTM ----

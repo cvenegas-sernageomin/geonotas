@@ -580,6 +580,12 @@ const MODELO = {
           "nota": "Texto libre sobre los clastos: litologias fuera de la lista, rango de tamanos si el maximo de CLASTOS_TAM_MAX_CM no basta, o cualquier observacion del tipo de clasto. El porcentaje de cada litologia ya NO va aca: tiene su casilla junto a cada valor."
         },
         {
+          "nombre": "GRANULOMETRIA_CLASTOS",
+          "obligatorio": false,
+          "dominio": "GRANULOMETRIA_CLASTOS",
+          "nota": "Granulometria promedio de los clastos (norma CDC 2016 Vol III, DDA Descripcion de Depositos Sedimentarios, campo 'GRANULOMETRIA CLASTOS'). Depositos y sedimentarias gravosas. Distinto de CLASTOS_TAM_MAX_CM (el clasto mayor)."
+        },
+        {
           "nombre": "FABRICA_CLASTOS",
           "obligatorio": false,
           "dominio": "FABRICA_CLASTOS",
@@ -590,6 +596,12 @@ const MODELO = {
           "obligatorio": false,
           "dominio": "COMPOSICION_CLASTICA",
           "nota": "Composición clástica de la matriz (norma CDC 2016 Vol III, campo 'COMPOSICION CLÁSTICA DEL MATRIZ', misma lista que COMPOSICION_CLASTICA). Solo cuando FABRICA_CLASTOS = 'Matriz-soportada'."
+        },
+        {
+          "nombre": "GRANULOMETRIA_MATRIZ",
+          "obligatorio": false,
+          "dominio": "GRANULOMETRIA_MATRIZ",
+          "nota": "Granulometria de la matriz de depositos mal seleccionados (norma CDC 2016 Vol III, campo 'GRANULOMETRIA MATRIZ'). Depositos, y sedimentarias con FABRICA_CLASTOS = Matriz-soportada."
         },
         {
           "nombre": "SUBTIPO_SEDIMENTARIO",
@@ -688,6 +700,82 @@ const MODELO = {
           "obligatorio": false,
           "dominio": null,
           "nota": "Texto libre: % y hábito de los minerales de COMPOSICION_MINERAL_PRINCIPAL (ej. \"biotita 5%, cristales gruesos\"). Solo Metamórfica."
+        },
+        {
+          "nombre": "SUBTIPO_TECTONICA",
+          "obligatorio": false,
+          "dominio": "SUBTIPO_TECTONICA",
+          "nota": "Subtipo de roca tectónica (csv_litologia GB_RXTECT_FRAGIL/DUCTIL/REGIONAL); acota NOMBRE_ROCA."
+        },
+        {
+          "nombre": "CONTEXTO_TECTONICA",
+          "obligatorio": false,
+          "dominio": "CONTEXTO_ROCA_TECTONICA",
+          "nota": "Contexto del afloramiento de la roca tectónica (Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'TIPO AFLORAMIENTO'.)"
+        },
+        {
+          "nombre": "POTENCIA_ZONA_DEFORMACION",
+          "obligatorio": false,
+          "dominio": "POTENCIA_ZONA_DEFORMACION",
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'POTENCIA DE LA ZONA DE DEFORMACIÓN'."
+        },
+        {
+          "nombre": "TIPO_FOLIACION_TECTONICA",
+          "obligatorio": false,
+          "dominio": "TIPO_FOLIACION_TECTONICA",
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'TIPO FOLIACION'. Términos de la Tabla 1 que se reconocen en afloramiento; los de grano fino (continua muy fina, de minerales) son de microscopio."
+        },
+        {
+          "nombre": "ESPACIAMIENTO_FOLIACION",
+          "obligatorio": false,
+          "dominio": "ESPACIAMIENTO_FOLIACION",
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'ESPACIAMIENTO DE FOLIACION'."
+        },
+        {
+          "nombre": "MINERAL_PORFIROCLASTOS",
+          "obligatorio": false,
+          "dominio": "MINERAL_PORFIROCLASTOS",
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'MINERAL PORFIROCLASTOS'. Rocas miloníticas; cada mineral admite su % (campo PORCENTAJE PORFIROCLASTOS).",
+          "multiple": true,
+          "numeros": [
+            {
+              "suf": "%",
+              "ph": "%",
+              "max": 100
+            }
+          ]
+        },
+        {
+          "nombre": "LITOLOGIA_FRAGMENTOS",
+          "obligatorio": false,
+          "dominio": "LITOLOGIA_CLASTOS_GRAVA",
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'LITOLOGIA DE LOS FRAGMENTOS DE ROCA'. Rocas tectónicas frágiles; fragmentos >0,1 mm; misma lista que la litología de clastos.",
+          "multiple": true,
+          "numeros": [
+            {
+              "suf": "%",
+              "ph": "%",
+              "max": 100
+            }
+          ]
+        },
+        {
+          "nombre": "TIPO_MATRIZ_TECTONICA",
+          "obligatorio": false,
+          "dominio": "TIPO_MATRIZ_TECTONICA",
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'TIPO DE MATRIZ CLÁSTICA'. Matriz = material <0,1 mm."
+        },
+        {
+          "nombre": "MATRIZ_TECTONICA_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'PORCENTAJE MATRIZ'."
+        },
+        {
+          "nombre": "AMBIENTE_TECTONICO",
+          "obligatorio": false,
+          "dominio": "AMBIENTE_TECTONICO",
+          "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'AMBIENTE TECTONICO ESTRUCTURAL'. Es interpretación."
         },
         {
           "nombre": "COMPOSICION_MINERAL_INTRUSIVA",
@@ -1088,7 +1176,7 @@ const MODELO = {
           "nombre": "ID_CONTACTO",
           "obligatorio": false,
           "dominio": null,
-          "nota": "Solo si TIPO_ESTRUCTURA = 'Estructura contacto': contacto del mismo punto al que pertenece esta medida. Un contacto puede tener varias medidas a lo largo de su traza; la PWA copia el AZIMUT/MANTEO_BUZAMIENTO de la ultima guardada en RUMBO_CONTACTO/MANTEO_CONTACTO del contacto."
+          "nota": "Solo si TIPO_ESTRUCTURA = 'Estructura contacto': contacto del mismo punto al que pertenece esta medida. Un contacto puede tener varias medidas; la PWA copia el AZIMUT/MANTEO_BUZAMIENTO de la ultima guardada en RUMBO_CONTACTO/MANTEO_CONTACTO, y crea la medida cuando el rumbo/manteo se escribe en la ficha de contacto."
         },
         {
           "nombre": "TIPO_ESTRUCTURA",
@@ -1188,22 +1276,34 @@ const MODELO = {
           "nota": null
         },
         {
+          "nombre": "ID_LITOLOGIA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Litologia del punto con la que se relaciona el contacto (selector de las litologias descritas en el mismo punto). Se copia a la medida estructural que la PWA crea desde el contacto."
+        },
+        {
           "nombre": "TIPO_CONTACTO",
           "obligatorio": true,
           "dominio": "TIPO_CONTACTO",
-          "nota": null
+          "nota": "Primer nivel; de este campo depende SUBTIPO_CONTACTO."
         },
         {
-          "nombre": "UNIDAD_TECHO",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": null
+          "nombre": "SUBTIPO_CONTACTO",
+          "obligatorio": false,
+          "dominio": "SUBTIPO_CONTACTO",
+          "nota": "La lista depende del campo TIPO_CONTACTO."
         },
         {
-          "nombre": "UNIDAD_BASE",
+          "nombre": "LITOLOGIA_TECHO",
           "obligatorio": true,
           "dominio": null,
-          "nota": null
+          "nota": "Litologia superior (techo) en el contacto (texto; sugiere las litologias del punto). La norma CDC (TBL_AF_CONTACTO) registra aqui la unidad geologica (UNIDAD_GEOL_SUP/INF); se cambio a litologia por decision del usuario (2026-10-23): la unidad se lee de la ficha de litologia."
+        },
+        {
+          "nombre": "LITOLOGIA_BASE",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": "Litologia inferior (base) en el contacto (texto; sugiere las litologias del punto). La norma CDC (TBL_AF_CONTACTO) registra aqui la unidad geologica (UNIDAD_GEOL_SUP/INF); se cambio a litologia por decision del usuario (2026-10-23): la unidad se lee de la ficha de litologia."
         },
         {
           "nombre": "GRADO_CONFIANZA_CONTACTO",
@@ -1221,13 +1321,13 @@ const MODELO = {
           "nombre": "RUMBO_CONTACTO",
           "obligatorio": false,
           "dominio": null,
-          "nota": "Opcional: muchos contactos no se pueden medir. Si una medida estructural apunta a este contacto (TBL_DATOS_ESTRUCTURALES.ID_CONTACTO), el valor se copia desde ella y no se edita aqui."
+          "nota": "Opcional: muchos contactos no se pueden medir. Se sincroniza con la medida estructural (TBL_DATOS_ESTRUCTURALES.ID_CONTACTO, TIPO_ESTRUCTURA='Estructura contacto'): si se escribe aqui y el contacto aun no tiene medida, la PWA la crea en el mismo punto; si ya la tiene, la actualiza. Lo medido en la ficha estructural se copia aqui."
         },
         {
           "nombre": "MANTEO_CONTACTO",
           "obligatorio": false,
           "dominio": null,
-          "nota": "Opcional: muchos contactos no se pueden medir. Si una medida estructural apunta a este contacto (TBL_DATOS_ESTRUCTURALES.ID_CONTACTO), el valor se copia desde ella y no se edita aqui."
+          "nota": "Opcional: muchos contactos no se pueden medir. Se sincroniza con la medida estructural (TBL_DATOS_ESTRUCTURALES.ID_CONTACTO, TIPO_ESTRUCTURA='Estructura contacto'): si se escribe aqui y el contacto aun no tiene medida, la PWA la crea en el mismo punto; si ya la tiene, la actualiza. Lo medido en la ficha estructural se copia aqui."
         },
         {
           "nombre": "DESCRIPCION_CONTACTO",
@@ -1378,10 +1478,10 @@ const MODELO = {
           "nota": "Tercer nivel: la lista depende del campo TIPO_LINEA. Se oculta si el tipo elegido no tiene subtipos."
         },
         {
-          "nombre": "CERTEZA_LINEA",
+          "nombre": "TIPO_INFORMACION",
           "obligatorio": true,
-          "dominio": "LINEA_CERTEZA",
-          "nota": null
+          "dominio": "TIPO_INFORMACION",
+          "nota": "Tipo de informacion de la traza (dominio CDC GB_TP_INFORMACION_2014). Antes CERTEZA_LINEA (Observado/Inferido/Cubierto, lista propia)."
         },
         {
           "nombre": "UNIDAD_TECHO_LINEA",
@@ -1616,6 +1716,11 @@ const MODELO = {
       "padre": "TBL_AFLORAMIENTO",
       "hijo": "TBL_LITOLOGIA",
       "campo": "ID_AFLORAMIENTO"
+    },
+    {
+      "padre": "TBL_LITOLOGIA",
+      "hijo": "TBL_CONTACTO",
+      "campo": "ID_LITOLOGIA"
     }
   ],
   "dominios": {
@@ -1626,6 +1731,7 @@ const MODELO = {
         "Volcánica",
         "Sedimentaria",
         "Metamórfica",
+        "Tectónica",
         "Intrusiva"
       ],
       "fuente": "Lista de Dominios.xlsx"
@@ -1899,6 +2005,30 @@ const MODELO = {
           "Eólicos",
           "Litorales",
           "Tefra, depósito volcánico"
+        ],
+        "Tectónica": [
+          "Brecha cohesiva de falla",
+          "Brecha no cohesiva de falla",
+          "Megabrecha cohesiva de falla",
+          "Megabrecha no cohesiva de falla",
+          "Mesocataclasita cohesiva",
+          "Mesocataclasita no cohesiva",
+          "Microbrecha cohesiva de falla",
+          "Microbrecha no cohesiva de falla",
+          "Pseudotaquilita",
+          "Salbanda de falla",
+          "Ultracataclasita cohesiva",
+          "Cataclasita indiferenciada",
+          "Blastomilonita",
+          "Filonita",
+          "Mesomilonita",
+          "Milonita de augen",
+          "Protomilonita",
+          "Ultramilonita",
+          "Milonita indiferenciada",
+          "Brecha tectónica",
+          "Formación quebrada",
+          "Melange tectónico"
         ]
       },
       "fuente": "Lista de Dominios.xlsx (+ piroclásticos propuestos)",
@@ -2050,6 +2180,36 @@ const MODELO = {
           "Sedimentita microcristalina de composición indeterminada",
           "Sedimentita de composición indeterminada",
           "Sedimentita de composición indeterminada por alteración"
+        ]
+      },
+      "por_subtipo_tectonico": {
+        "Roca de cizalle frágil": [
+          "Brecha cohesiva de falla",
+          "Brecha no cohesiva de falla",
+          "Megabrecha cohesiva de falla",
+          "Megabrecha no cohesiva de falla",
+          "Mesocataclasita cohesiva",
+          "Mesocataclasita no cohesiva",
+          "Microbrecha cohesiva de falla",
+          "Microbrecha no cohesiva de falla",
+          "Pseudotaquilita",
+          "Salbanda de falla",
+          "Ultracataclasita cohesiva",
+          "Cataclasita indiferenciada"
+        ],
+        "Roca de cizalle dúctil": [
+          "Blastomilonita",
+          "Filonita",
+          "Mesomilonita",
+          "Milonita de augen",
+          "Protomilonita",
+          "Ultramilonita",
+          "Milonita indiferenciada"
+        ],
+        "Roca de deformación regional": [
+          "Brecha tectónica",
+          "Formación quebrada",
+          "Melange tectónico"
         ]
       }
     },
@@ -2574,16 +2734,20 @@ const MODELO = {
           "Oolítica"
         ],
         "Metamórfica": [
-          "Milonítica",
-          "Foliada",
+          "Granofélsica (no foliada)",
+          "Cornificada (hornfélsica)",
           "Granoblástica",
-          "Cataclástica",
-          "Gnéisica",
-          "Lepidoblástica",
+          "Pizarrosa (clivaje pizarroso)",
+          "Filítica",
           "Esquistosa",
-          "Nematoblástica",
-          "No foliada (granoblástica)",
-          "Porfidoblástica"
+          "Gnéisica",
+          "Foliada (granularidad indeterminada)",
+          "Lineada (no foliada)",
+          "Migmatítica",
+          "Porfiroblástica",
+          "Nodular / manchada",
+          "Augen (ojos)",
+          "Indeterminada"
         ],
         "Depósito": [
           "Estratificada",
@@ -2591,10 +2755,21 @@ const MODELO = {
           "Gradada",
           "Matriz-soportada",
           "Clasto-soportada"
+        ],
+        "Tectónica": [
+          "Cataclástica",
+          "Cataclástica fina no foliada",
+          "Cataclástica gruesa (brechosa) no foliada",
+          "Cataclástica foliada",
+          "Cataclástica fina foliada",
+          "Cataclástica gruesa (brechosa) foliada",
+          "Vidriosa",
+          "Milonítica foliada",
+          "Milonítica foliada y lineada"
         ]
       },
       "fuente": "Rama Volcánica: norma CDC 2016 Vol IV, campo 'TEXTURA DE ROCA' (dividido Lava/Piroclástica), verificado término por término 2026-08-21. Corrección 2026-08-25: la familia porfírica (Porfírica/Glomeroporfídica/Microporfídica) se sacó de 'Rocas piroclásticas' -- aunque la norma la lista ahí, el corpus RAG (41.598 chunks de Cartas) muestra 0 casos reales de 'toba/ignimbrita porfírica'; todos los usos reales describen un cuerpo lávico/intrusivo vecino o líticos individuales dentro del depósito, nunca la textura de la roca piroclástica misma. Se agregó Vitrofírica (5 hits reales: 'toba vitrofírica'). El acotamiento por TIPO_VOLCANICA vive en TEXTURA_VOLCANICA/filtrarTexturaVolcanica() en index.html; esta lista es el fallback (unión) sin elegir Lava/Piroclástica/Tefra.",
-      "confirmar": true
+      "fuente_metamorfica_tectonica": "Metamórfica: lista de terreno (2026-10-23) desde la norma CDC 2016 Vol IV, Tabla 2 'TEXTURA AFLORAMIENTO' (B_TEXT_AF_META_REG_CON) y Tabla 7 'TEXTURA DE ROCA' (B_TEXT_METAMORFICAS), sin los términos de microscopio (decusada, lepido/nematoblástica, granoblástica poligonal..., blasto-..., textura de red) ni la Tabla 8. Tectónica: Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'TEXTURA DEL AFLORAMIENTO'."
     },
     "ESTRUCTURA_TIPO_ROCA": {
       "tipo": "cascada",
@@ -2723,7 +2898,6 @@ const MODELO = {
           "Lineación mineral",
           "Bandeamiento gnéisico",
           "Pliegues intrafoliales",
-          "Augen (ojos)",
           "Clivaje pizarroso",
           "Estructura milonítica",
           "Estructura S-C",
@@ -2883,15 +3057,12 @@ const MODELO = {
     "TIPO_CONTACTO": {
       "tipo": "simple",
       "valores": [
+        "Estratigráfico",
         "Intrusivo",
         "Tectónico",
-        "Gradual",
-        "Nítido",
-        "Discordante angular",
-        "Discordante erosiva"
+        "Metamórfico"
       ],
-      "fuente": "diagrama_v3 / estandar CDC (PROPUESTO)",
-      "confirmar": true
+      "fuente": "Lista del usuario (2026-10-23), basada en las categorias de TBL_AF_CONTACTO de la CDC 2016 ('Esquema Pts Afloramiento y muestras.xlsx'): estratigrafico (GB_CONTACTO_TP_ESTRAT), estructural, intrusivo (GB_CONTACTO_TP_INTRU) y metamorfico (GB_CONTACTO_TP_META). 'Tectonico' equivale a la categoria 'Contacto estructural' de la CDC."
     },
     "PROPOSITO_ANALISIS": {
       "tipo": "simple",
@@ -2911,11 +3082,26 @@ const MODELO = {
     "TIPO_MUESTRA": {
       "tipo": "simple",
       "valores": [
+        "Agua",
+        "Composito",
+        "Concentrado mineral",
+        "Deposito no consolidado",
+        "Desmonte",
+        "Fines Industriales",
+        "Fósil",
+        "Gas",
+        "Materia Orgánica",
+        "Menas",
+        "Mineral",
+        "Relaves",
+        "Residual",
         "Roca",
-        "Depósito"
+        "Sales",
+        "Sedimentos",
+        "Suelos",
+        "Tefra"
       ],
-      "fuente": "Acotado a los dos tipos que se usan en geología básica de terreno (decisión del usuario, 2026-08-17). El dominio oficial CDC es GB_TP_MUESTRA_JULIO2014 ('Esquema Pts Afloramiento y muestras.xlsx', hoja Listas), con 18 valores (Agua, Menas, Relaves, Gas, Sales...) pensados para exploración y minería, no para cartografía: se descartaron por ruido. 'Roca' calza literal con el dominio oficial; 'Depósito' se prefirió sobre el oficial 'Deposito no consolidado' para hablar igual que TIPO_ROCA en este mismo modelo. Si alguna vez hay que exportar al esquema institucional, ese es el mapeo.",
-      "confirmar": false
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', dominio GB_TP_MUESTRA_JULIO2014 (campo AF_MUESTRAS.TIPO_MUESTRA), verbatim: lista del sistema LIMS del Laboratorio. El texto del Vol III trae 16 de estos valores (sin Fosil ni Tefra) y el Vol V (geofisica) una variante de 14. Reemplaza la lista acotada Roca/Deposito (v151); 'Deposito' se migra a 'Deposito no consolidado'."
     },
     "LV_FUENTE_COORDENADA": {
       "tipo": "simple",
@@ -3032,15 +3218,6 @@ const MODELO = {
         "Otro"
       ],
       "fuente": "taxonomia_lineas.csv (validada por el usuario 2026-08-10)"
-    },
-    "LINEA_CERTEZA": {
-      "tipo": "simple",
-      "valores": [
-        "Observado",
-        "Inferido",
-        "Cubierto"
-      ],
-      "fuente": "capa de líneas geológicas preexistente en build_pwa.py (promovida al modelo canónico)"
     },
     "TIPO_LINEA": {
       "tipo": "cascada",
@@ -3441,13 +3618,15 @@ const MODELO = {
     "REDONDEAMIENTO": {
       "tipo": "simple",
       "valores": [
+        "Muy anguloso",
         "Anguloso",
         "Subanguloso",
         "Subredondeado",
         "Redondeado",
-        "Muy redondeado"
+        "Muy redondeado",
+        "Indeterminado"
       ],
-      "fuente": "campos_plantillas_litologicas.csv (RAG Generador de Cartas Geológicas, 33 litotipos) (escala de Powers, 1953)"
+      "fuente": "Lista del usuario (2026-10-23), ordenada de anguloso a redondeado: terminos simples de la norma CDC 2016 Vol III ('REDONDEAMIENTO CLASTOS', Powers 1953) sin los rangos ('Angulosos a subangulosos'...); 'Muy redondeado' reemplaza a 'Bien redondeados' de la norma."
     },
     "CEMENTO": {
       "tipo": "simple",
@@ -3764,6 +3943,11 @@ const MODELO = {
         "Clastos de granofels",
         "Clastos de migmatita",
         "Clastos de roca metamórfica indiferenciada",
+        "Pómez retrabajado",
+        "Escoria retrabajado",
+        "Piroclastos retrabajado",
+        "Bomba retrabajado",
+        "Bloque piroclástico retrabajado",
         "Clastos indiferenciados"
       ],
       "fuente": "Norma CDC 2016 Vol III, campo verbatim 'LITOLOGIA DE LOS CLASTOS DE TAMAÑO DE GRAVA' (>2 mm), agrupados por origen (sedimentaria/ígnea volcánica/ígnea plutónica/metamórfica/piroclástico retrabajado/indiferenciado). Orden de la norma preservado -- la frecuencia de frase exacta en el RAG no dio señal confiable para reordenar (la prosa real prefiere \"líticos de X\"/\"clastos andesíticos\" en vez de la frase exacta \"clastos de X\")."
@@ -4057,6 +4241,290 @@ const MODELO = {
         "litífero"
       ],
       "fuente": "Norma CDC 2016 Vol III, campo COMPONENTE SUBORDINADO (adjetivos; la norma los agrupa por tipo y los liga al nombre raíz)"
+    },
+    "TIPO_INFORMACION": {
+      "tipo": "simple",
+      "valores": [
+        "Observada",
+        "Cubierta",
+        "Inferida"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, dominio GB_TP_INFORMACION_2014 (INF-001..003), verbatim. Reemplaza a LINEA_CERTEZA (v151)."
+    },
+    "GRANULOMETRIA_CLASTOS": {
+      "tipo": "simple",
+      "valores": [
+        "macrolito (>33,6 km)",
+        "mesolito (33,6–1,0 km)",
+        "macrobolón (1048–65 m)",
+        "mesobolón muy grueso (65–33 m)",
+        "mesobolón grueso (33–16,4 m)",
+        "mesobolón medio (16,4–8,2 m)",
+        "mesobolón fino (8,2–4,1 m)",
+        "bolón muy grueso (4,1–2,0 m)",
+        "bolón grueso (2,0–1,0 m)",
+        "bolón medio (1,0–0,5 m)",
+        "bolón fino (0,5–0,25 m)",
+        "guijón grueso (256–128 mm)",
+        "guijón fino (128–64 mm)",
+        "guijarro muy grueso (64–32 mm)",
+        "guijarro grueso (32–16 mm)",
+        "guijarro medio (16–8 mm)",
+        "guijarro fino (8–4 mm)",
+        "guijarro muy fino (4–2 mm)",
+        "arena muy gruesa (2–1 mm)",
+        "arena gruesa (1–0,5 mm)",
+        "arena media (0,5–0,25 mm)",
+        "arena fina (0,25–0,125 mm)",
+        "arena muy fina (0,125–0,0625 mm)"
+      ],
+      "fuente": "Norma CDC 2016 Vol III, DDA Descripcion de Depositos Sedimentarios, escala de granulometria para depositos (GRANULOMETRIA CLASTOS, 23 terminos de clasto)."
+    },
+    "GRANULOMETRIA_MATRIZ": {
+      "tipo": "simple",
+      "valores": [
+        "bolón muy grueso (4,1–2,0 m)",
+        "bolón grueso (2,0–1,0 m)",
+        "bolón medio (1,0–0,5 m)",
+        "bolón fino (0,5–0,25 m)",
+        "guijón grueso (256–128 mm)",
+        "guijón fino (128–64 mm)",
+        "guijarro muy grueso (64–32 mm)",
+        "guijarro grueso (32–16 mm)",
+        "guijarro medio (16–8 mm)",
+        "guijarro fino (8–4 mm)",
+        "guijarro muy fino (4–2 mm)",
+        "arena muy gruesa (2–1 mm)",
+        "arena gruesa (1–0,5 mm)",
+        "arena media (0,5–0,25 mm)",
+        "arena fina (0,25–0,125 mm)",
+        "arena muy fina (0,125–0,0625 mm)",
+        "limo (0,0625–0,004 mm)",
+        "limo grueso (0,0625–0,031 mm)",
+        "limo medio (0,031–0,016 mm)",
+        "limo fino (0,016–0,008 mm)",
+        "limo muy fino (0,008–0,004 mm)",
+        "arcilla (<0,004 mm)"
+      ],
+      "fuente": "Norma CDC 2016 Vol III, DDA Descripcion de Depositos Sedimentarios, escala de granulometria para depositos (GRANULOMETRIA MATRIZ, 22 terminos)."
+    },
+    "SUBTIPO_CONTACTO": {
+      "tipo": "cascada",
+      "padre": "TIPO_CONTACTO",
+      "mapa": {
+        "Estratigráfico": [
+          "Concordante abrupto",
+          "Concordante gradacional",
+          "Paraconcordante",
+          "Discordante erosivo",
+          "Discordante angular",
+          "Inconformidad"
+        ],
+        "Intrusivo": [
+          "Abrupto",
+          "Gradacional"
+        ],
+        "Tectónico": [
+          "Abrupto"
+        ],
+        "Metamórfico": [
+          "Abrupto",
+          "Gradacional"
+        ]
+      },
+      "fuente": "Lista del usuario (2026-10-23). Diferencias con la CDC: Estratigrafico omite 'discordante angular y erosivo', 'discordante progresivo' e 'indeterminado' y escribe 'Inconformidad' (CDC: 'inconforme'); Intrusivo usa Abrupto/Gradacional (CDC: concordante/discordante/indeterminado); Metamorfico omite 'indeterminado'; Tectonico no tiene sublista en la CDC."
+    },
+    "SUBTIPO_TECTONICA": {
+      "tipo": "simple",
+      "valores": [
+        "Roca de cizalle frágil",
+        "Roca de cizalle dúctil",
+        "Roca de deformación regional"
+      ],
+      "fuente": "CDC 2016, csv_litologia GB_RXTECT_FRAGIL / GB_RXTECT_DUCTIL / GB_RXTECT_REGIONAL (Vol V). 'Brecha tectónico' de la norma se escribe 'Brecha tectónica'."
+    },
+    "CONTEXTO_ROCA_TECTONICA": {
+      "tipo": "simple",
+      "valores": [
+        "Zona de falla",
+        "Zona de cizalle dúctil en complejo metamórfico o epimetamórfico",
+        "Deformación difusa regional en complejo metamórfico o epimetamórfico",
+        "Zona de cizalle dúctil en cuerpo intrusivo",
+        "Zona de cizalle dúctil en aureola metamórfica",
+        "Enclave de roca tectónica",
+        "Mega-enclave de roca tectónica",
+        "Roof pendant o septa de roca tectónica",
+        "Fragmento de roca tectónica dentro de un depósito",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'TIPO AFLORAMIENTO'."
+    },
+    "POTENCIA_ZONA_DEFORMACION": {
+      "tipo": "simple",
+      "valores": [
+        ">10 km",
+        "3-10 km",
+        "1-3 km",
+        "300-1.000 m",
+        "100-300 m",
+        "30-100 m",
+        "10-30 m",
+        "3-10 m",
+        "1-3 m",
+        "0,3-1 m",
+        "0,1-0,3 m",
+        "0,03-0,1 m",
+        "0,01-0,03 m",
+        "<0,01 m",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'POTENCIA DE LA ZONA DE DEFORMACIÓN'."
+    },
+    "TIPO_FOLIACION_TECTONICA": {
+      "tipo": "simple",
+      "valores": [
+        "Foliación cataclástica",
+        "Foliación cataclástica con fábrica S-C",
+        "No foliada",
+        "Foliación milonítica indiferenciada",
+        "Foliación milonítica continua",
+        "Foliación milonítica espaciada",
+        "Foliación milonítica composicional",
+        "Foliación milonítica composicional bandeada",
+        "Foliación milonítica con bandas de cizalle",
+        "Foliación milonítica con bandas de cizalle tipo C",
+        "Foliación milonítica con bandas de cizalle tipo C'"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'TIPO FOLIACION, Tabla 1 (Passchier y Trouw 2005; Twiss y Moores 2007)'."
+    },
+    "ESPACIAMIENTO_FOLIACION": {
+      "tipo": "simple",
+      "valores": [
+        ">300 mm",
+        "100-300 mm",
+        "30-100 mm",
+        "10-30 mm",
+        "3-10 mm",
+        "1-3 mm",
+        "0,3-1 mm",
+        "0,1-0,3 mm",
+        "0,03-0,1 mm",
+        "0,01-0,03 mm",
+        "<0,01 mm, foliación continua"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'ESPACIAMIENTO DE FOLIACION'."
+    },
+    "MINERAL_PORFIROCLASTOS": {
+      "tipo": "simple",
+      "valores": [
+        "Actinolita",
+        "Albita",
+        "Almandino",
+        "Andalucita",
+        "Andesina",
+        "Andradita",
+        "Anfíbol",
+        "Anortita",
+        "Antigorita",
+        "Antofilita",
+        "Apatito",
+        "Aragonito",
+        "Arcillas",
+        "Augita",
+        "Barroisita",
+        "Biotita",
+        "Bitownita",
+        "Brucita",
+        "Calcita",
+        "Carfolita",
+        "Ceolita",
+        "Cianita",
+        "Clinopiroxeno",
+        "Clinozoisita",
+        "Clorita",
+        "Cloritoide",
+        "Cordierita",
+        "Corindón",
+        "Crisotilo",
+        "Crossita",
+        "Cuarzo",
+        "Diópsido",
+        "Dolomita",
+        "Epidota",
+        "Escapolita",
+        "Esperartina",
+        "Espinela",
+        "Estaurolita",
+        "Estilpnomelana",
+        "Fayalita",
+        "Feldespato potasio",
+        "Forsterita",
+        "Glaucofana",
+        "Grafito",
+        "Granate",
+        "Grosularia",
+        "Hiperstena",
+        "Hornblenda",
+        "Illita",
+        "Ilmenita",
+        "Lawsonita",
+        "Magnesita",
+        "Magnetita",
+        "Margarita",
+        "Micas",
+        "Monticelita",
+        "Mullita",
+        "Muscovita",
+        "Oligoclasa",
+        "Olivino",
+        "Ortopiroxeno",
+        "Paragonita",
+        "Pirofilita",
+        "Piropo",
+        "Piroxeno",
+        "Plagioclasa",
+        "Plagioclasa cálcica",
+        "Plagioclasa sódica",
+        "Prehnita",
+        "Pumpellyita",
+        "Sanidina",
+        "Serpentina",
+        "Sillimanita",
+        "Talco",
+        "Tremolita",
+        "Turmalina",
+        "Vesuvianita",
+        "Wollastonita",
+        "Zoisita"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'MINERAL PORFIROCLASTOS'."
+    },
+    "TIPO_MATRIZ_TECTONICA": {
+      "tipo": "simple",
+      "valores": [
+        "Arcillosa",
+        "Arenosa",
+        "Serpentinosa",
+        "Indeterminada"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'TIPO DE MATRIZ CLÁSTICA'."
+    },
+    "AMBIENTE_TECTONICO": {
+      "tipo": "simple",
+      "valores": [
+        "Zona de falla compresiva",
+        "Zona de falla extensional",
+        "Zona de falla transcurrente",
+        "Zona de falla transpresiva",
+        "Zona de falla transtensional",
+        "Zona de falla polifásica",
+        "Zona de cizalle asociado a un intrusivo",
+        "Zona de cizalle asociado a sistema volcánico",
+        "Complejo de subducción",
+        "Complejo metamórfico regional",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'AMBIENTE TECTONICO ESTRUCTURAL'."
     }
   },
   "avisos": [
@@ -4118,8 +4586,10 @@ const MODELO = {
         "COMPOSICION_CLASTICA",
         "LITOLOGIA_CLASTOS",
         "LITOLOGIA_CLASTOS_DETALLE",
+        "GRANULOMETRIA_CLASTOS",
         "FABRICA_CLASTOS",
         "COMPOSICION_CLASTICA_MATRIZ",
+        "GRANULOMETRIA_MATRIZ",
         "CEMENTO",
         "GRADO_CONSOLIDACION"
       ]
@@ -4164,8 +4634,10 @@ const MODELO = {
         "COMPOSICION_CLASTICA",
         "LITOLOGIA_CLASTOS",
         "LITOLOGIA_CLASTOS_DETALLE",
+        "GRANULOMETRIA_CLASTOS",
         "FABRICA_CLASTOS",
-        "COMPOSICION_CLASTICA_MATRIZ"
+        "COMPOSICION_CLASTICA_MATRIZ",
+        "GRANULOMETRIA_MATRIZ"
       ]
     },
     {
@@ -4232,13 +4704,31 @@ const MODELO = {
         "COMPOSICION_MINERAL_PRINCIPAL",
         "COMPOSICION_MINERAL_DETALLE"
       ]
+    },
+    {
+      "tabla": "LITO_TECTONICA",
+      "padre": false,
+      "descripcion": "Hija 1:1. Rocas tectonicas (norma CDC Vol V, TBL_AF_ROCA_TECTONICA): subtipo, contexto, zona de deformacion, foliacion, porfiroclastos, fragmentos, matriz y ambiente tectonico.",
+      "aplica_a": "Tectonica",
+      "campos": [
+        "SUBTIPO_TECTONICA",
+        "CONTEXTO_TECTONICA",
+        "POTENCIA_ZONA_DEFORMACION",
+        "TIPO_FOLIACION_TECTONICA",
+        "ESPACIAMIENTO_FOLIACION",
+        "MINERAL_PORFIROCLASTOS",
+        "LITOLOGIA_FRAGMENTOS",
+        "TIPO_MATRIZ_TECTONICA",
+        "MATRIZ_TECTONICA_PCT",
+        "AMBIENTE_TECTONICO"
+      ]
     }
   ]
 };
 </script>
 <script>
 "use strict";
-const APP_VER = 'v150';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v151';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4335,7 +4825,40 @@ function esDeProyecto(store,r,proyectoId,idsPuntos){
 function nombreArchivoProyecto(proyecto){return (proyecto&&proyecto.NOMBRE_PROYECTO||'proyecto').replace(/[\\/:*?"<>|]+/g,'_');}
 
 // ============================ IndexedDB ============================
-const DB='captura-terreno', VER=16;   // v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+// Campos renombrados en v151 (a pedido del usuario, norma CDC 2016). Copia el valor viejo al campo
+// nuevo; el campo viejo NO se borra (mismo criterio de las migraciones anteriores, y la light, que
+// comparte esta base, sigue leyendo los nombres viejos). Devuelve true si cambió algo. La usan el
+// upgrade de openDB (v17) e importBackup (respaldos de antes de v151).
+//   contacto: UNIDAD_TECHO/BASE -> LITOLOGIA_TECHO/BASE
+//   linea:    CERTEZA_LINEA (Observado/Inferido/Cubierto) -> TIPO_INFORMACION (GB_TP_INFORMACION_2014)
+//   muestreo: TIPO_MUESTRA 'Depósito' -> 'Deposito no consolidado' (GB_TP_MUESTRA_JULIO2014)
+//   contacto: TIPO_CONTACTO de la lista vieja -> TIPO_CONTACTO + SUBTIPO_CONTACTO (lista del usuario);
+//             'Nítido' se lee como estratigráfico concordante abrupto (era el caso de uso más común)
+const CONTACTO_V151={'Gradual':['Estratigráfico','Concordante gradacional'],'Nítido':['Estratigráfico','Concordante abrupto'],
+  'Discordante angular':['Estratigráfico','Discordante angular'],'Discordante erosiva':['Estratigráfico','Discordante erosivo'],
+  'Intrusivo':['Intrusivo',''],'Tectónico':['Tectónico','Abrupto']};
+//   litologia: TEXTURA metamórfica de la lista vieja -> forma CDC (Porfidoblástica, No foliada); 'Augen (ojos)'
+//             sale de ESTRUCTURA_TIPO_ROCA y pasa a TEXTURA si esta estaba vacía. Milonítica/Cataclástica
+//             (ahora texturas de TIPO_ROCA 'Tectónica') quedan como valor viejo: no se cambia el tipo de roca.
+const TEXTURA_META_V151={'Porfidoblástica':'Porfiroblástica','No foliada (granoblástica)':'Granofélsica (no foliada)'};
+const INFO_DE_CERTEZA={'Observado':'Observada','Inferido':'Inferida','Cubierto':'Cubierta'};
+function migrarRegistroV151(store,r){
+  if(!r) return false;
+  let cambio=false;
+  const copiar=(viejo,nuevo,mapa)=>{ if(r[viejo]==null||r[viejo]===''||(r[nuevo]!=null&&r[nuevo]!=='')) return;
+    r[nuevo]=mapa?(mapa[r[viejo]]||r[viejo]):r[viejo]; cambio=true; };
+  if(store==='contacto'){ copiar('UNIDAD_TECHO','LITOLOGIA_TECHO'); copiar('UNIDAD_BASE','LITOLOGIA_BASE');
+    const nuevo=CONTACTO_V151[r.TIPO_CONTACTO];
+    if(nuevo && !r.SUBTIPO_CONTACTO && !(r.TIPO_CONTACTO==='Intrusivo')){ [r.TIPO_CONTACTO,r.SUBTIPO_CONTACTO]=nuevo; cambio=true; } }
+  else if(store==='linea'||store==='linea_gabinete'){ copiar('CERTEZA_LINEA','TIPO_INFORMACION',INFO_DE_CERTEZA); }
+  else if(store==='muestreo' && r.TIPO_MUESTRA==='Depósito'){ r.TIPO_MUESTRA='Deposito no consolidado'; cambio=true; }
+  else if(store==='litologia' && r.TIPO_ROCA==='Metamórfica'){
+    if(TEXTURA_META_V151[r.TEXTURA]){ r.TEXTURA=TEXTURA_META_V151[r.TEXTURA]; cambio=true; }
+    if(!r.TEXTURA && /(^|;\s*)Augen \(ojos\)/.test(r.ESTRUCTURA_TIPO_ROCA||'')){ r.TEXTURA='Augen (ojos)'; cambio=true; }
+  }
+  return cambio;
+}
+const DB='captura-terreno', VER=17;   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -4512,6 +5035,22 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
           catch(e){ console.warn('Migración v12: no se pudo migrar la litología',li.id,e); }
         });
       };
+    }
+    // Migración v17 (app v151): campos renombrados según la norma CDC -- ver migrarRegistroV151.
+    {
+      const txM=r.transaction;
+      const noAbortar=req=>{req.onerror=ev=>{ev.preventDefault();console.warn('Migración v17: registro omitido',req.error);};return req;};
+      ['contacto','linea','linea_gabinete','muestreo','litologia'].forEach(storeName=>{
+        if(!d.objectStoreNames.contains(storeName)) return;
+        const q=noAbortar(txM.objectStore(storeName).getAll());
+        q.onsuccess=ev=>{
+          (ev.target.result||[]).forEach(reg=>{
+            if(!migrarRegistroV151(storeName,reg)) return;
+            try{ noAbortar(txM.objectStore(storeName).put(reg)); }
+            catch(e){ console.warn('Migración v17: no se pudo migrar',storeName,reg.id,e); }
+          });
+        };
+      });
     }
   };
   r.onsuccess=()=>{db=r.result;
@@ -4749,6 +5288,7 @@ async function importBackup(file, destinoColeccion = null) {
               if (record && typeof record[campoImg] === 'string' && record[campoImg].length > 100) fotosConImagen++;
             }
             try {
+              migrarRegistroV151(storeDestino, record);   // respaldo de antes de v151
               await put(storeDestino, record);
               totalInsertadas++;
             } catch (err) {
@@ -5735,6 +6275,8 @@ function revelarProgresivo(store){
 // desplazamiento ni un pliegue. TIPO_ESTRUCTURA='Estructura fractura' es el que agrupa
 // 'Diaclasa (plano)' y 'Set de diaclasas' en TIPO_MEDIDA_ESTRUCTURAL.
 const esFractura = v => v['TIPO_ESTRUCTURA']==='Estructura fractura';
+const esTectonica = v => v['TIPO_ROCA']==='Tectónica';
+const TECT_FRAGIL = new Set(['Roca de cizalle frágil','Roca de deformación regional']);
 const CONDICIONALES = {
   // Descriptores de un JUEGO de fracturas (v118, norma CDC 2016 Vol V / TBL_AF_FRACTURA):
   // solo tienen sentido si lo que se está describiendo es una fractura. Se ocultan, no se
@@ -5806,6 +6348,13 @@ const CONDICIONALES = {
   // Composición de la matriz: solo tiene sentido si la fábrica es matriz-soportada (norma CDC:
   // "se describe la matriz aparte... de depósitos sedimentarios mal seleccionados").
   COMPOSICION_CLASTICA_MATRIZ: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && v['FABRICA_CLASTOS']==='Matriz-soportada'},
+  // Granulometría de clastos y de matriz (v151, norma CDC Vol III, DDA Descripción de Depósitos
+  // Sedimentarios): clastos con el mismo alcance que LITOLOGIA_CLASTOS; matriz en todo depósito
+  // (la fábrica no se pide en depósitos) y en sedimentarias matriz-soportadas.
+  GRANULOMETRIA_CLASTOS: {modo:'ocultar', regla: v =>
+    v['TIPO_ROCA']==='Depósito' || (v['TIPO_ROCA']==='Sedimentaria' && SEDIMENTARIA_GRAVOSA.includes(v['NOMBRE_ROCA']))},
+  GRANULOMETRIA_MATRIZ: {modo:'ocultar', regla: v =>
+    v['TIPO_ROCA']==='Depósito' || (v['TIPO_ROCA']==='Sedimentaria' && v['FABRICA_CLASTOS']==='Matriz-soportada')},
   CEMENTO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' || v['TIPO_ROCA']==='Depósito'},
   // Clasificación de depósitos sedimentarios (norma CDC 2016 Vol III, DDA Clasificación y
   // Nomenclatura): el SUBTIPO decide qué se describe. Solo rocas sedimentarias.
@@ -5835,6 +6384,21 @@ const CONDICIONALES = {
   // implica textura porfídica de una roca ígnea coherente, ver CRISTALES_ESPECIE para piroclásticas.
   COMPOSICION_MINERAL_PRINCIPAL: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Metamórfica'},
   COMPOSICION_MINERAL_DETALLE:   {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Metamórfica'},
+  // Rocas tectónicas (v151, norma CDC Vol V, TBL_AF_ROCA_TECTONICA): porfiroclastos solo en las de
+  // cizalle dúctil (milonitas); fragmentos y matriz solo en las frágiles y de deformación regional.
+  // Sin subtipo elegido se ven todos. ESTRUCTURA_TIPO_ROCA no tiene rama tectónica: su foliación
+  // va en TIPO_FOLIACION_TECTONICA.
+  SUBTIPO_TECTONICA:         {modo:'ocultar', regla: esTectonica},
+  CONTEXTO_TECTONICA:        {modo:'ocultar', regla: esTectonica},
+  POTENCIA_ZONA_DEFORMACION: {modo:'ocultar', regla: esTectonica},
+  TIPO_FOLIACION_TECTONICA:  {modo:'ocultar', regla: esTectonica},
+  ESPACIAMIENTO_FOLIACION:   {modo:'ocultar', regla: v => esTectonica(v) && !!v['TIPO_FOLIACION_TECTONICA'] && v['TIPO_FOLIACION_TECTONICA']!=='No foliada'},
+  MINERAL_PORFIROCLASTOS:    {modo:'ocultar', regla: v => esTectonica(v) && !TECT_FRAGIL.has(v['SUBTIPO_TECTONICA'])},
+  LITOLOGIA_FRAGMENTOS:      {modo:'ocultar', regla: v => esTectonica(v) && v['SUBTIPO_TECTONICA']!=='Roca de cizalle dúctil'},
+  TIPO_MATRIZ_TECTONICA:     {modo:'ocultar', regla: v => esTectonica(v) && v['SUBTIPO_TECTONICA']!=='Roca de cizalle dúctil'},
+  MATRIZ_TECTONICA_PCT:      {modo:'ocultar', regla: v => esTectonica(v) && v['SUBTIPO_TECTONICA']!=='Roca de cizalle dúctil'},
+  AMBIENTE_TECTONICO:        {modo:'ocultar', regla: esTectonica},
+  ESTRUCTURA_TIPO_ROCA:      {modo:'ocultar', regla: v => !esTectonica(v)},
   COMPOSICION_MINERAL_INTRUSIVA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
   COMPOSICION_MINERAL_INTRUSIVA_DETALLE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
   FENOCRISTALES_ESPECIE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava'},
@@ -5964,7 +6528,7 @@ function formulario(store, reg, ctx){
   if(store==='litologia' && MODELO.familias_litologia){
     const TITULO={TBL_LITOLOGIA:'Datos generales', LITO_CLASTICA:'Clastos, matriz y cemento',
       LITO_SEDIMENTARIA:'Sedimentaria: clasificación y componentes', SED_NO_CLASTICA:'Sedimentaria no clástica (carbonato, fosfato…)', LITO_VOLCANICA:'Volcánica', LITO_PIROCLASTICA:'Componentes piroclásticos',
-      LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica'};
+      LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica'};
     const famDe={}; MODELO.familias_litologia.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
     famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre';
     const orden=MODELO.familias_litologia.map(f=>f.tabla).concat('__nombre');
@@ -6050,8 +6614,15 @@ function formulario(store, reg, ctx){
       inp=el('select');inp.name=n;
       inp.append(el('option',{value:''},ctx.contactos.length?'— (opcional) contacto que se midió —':'— crea primero el contacto en este punto —'));
       ctx.contactos.forEach((C,i)=>inp.append(el('option',{value:C.id},
-        'Contacto '+(i+1)+': '+(C.TIPO_CONTACTO||'sin tipo')+((C.UNIDAD_TECHO||C.UNIDAD_BASE)?' — '+(C.UNIDAD_TECHO||'?')+' / '+(C.UNIDAD_BASE||'?'):''))));
+        'Contacto '+(i+1)+': '+(C.TIPO_CONTACTO||'sin tipo')+(C.SUBTIPO_CONTACTO?' '+C.SUBTIPO_CONTACTO.toLowerCase():'')+((C.LITOLOGIA_TECHO||C.LITOLOGIA_BASE)?' — '+(C.LITOLOGIA_TECHO||'?')+' / '+(C.LITOLOGIA_BASE||'?'):''))));
       if(reg[n])inp.value=reg[n];
+    }
+    // LITOLOGIA_TECHO/BASE (v151): texto libre, con las litologías del punto como sugerencia
+    // (la del otro lado del contacto puede no estar descrita en este punto).
+    if((n==='LITOLOGIA_TECHO'||n==='LITOLOGIA_BASE') && store==='contacto' && ctx && ctx.litologias && ctx.litologias.length){
+      const dl=el('datalist',{id:'dl_'+n+'_'+(reg.id||'')});
+      [...new Set(ctx.litologias.map(L=>L.NOMBRE_ROCA||L.TIPO_ROCA).filter(Boolean))].forEach(v=>dl.append(el('option',{value:v})));
+      inp.setAttribute('list',dl.id); fld.append(dl);
     }
     // FK PUNTOS_APOYO -> multi-selección de puntos de control del proyecto activo
     if(n==='PUNTOS_APOYO' && ctx && ctx.puntos){
@@ -6252,10 +6823,13 @@ function formulario(store, reg, ctx){
   // lista en MODELO.dominios.NOMBRE_ROCA.por_subtipo). Mismo criterio que la volcánica: TIPO_ROCA
   // sigue siendo el padre de la cascada y el subtipo solo ESTRECHA la lista ya poblada. Sin subtipo
   // queda la lista completa de sedimentarias (compatible con registros guardados antes de v150).
-  function filtrarNombreRocaSedimentaria(esBuild){
-    const iST=inputs['SUBTIPO_SEDIMENTARIO'], iNR=inputs['NOMBRE_ROCA'], iTR=inputs['TIPO_ROCA'];
-    if(!iST||!iNR||!iTR||iTR.value!=='Sedimentaria')return;
-    const subset = iST.value ? (dominio('NOMBRE_ROCA').por_subtipo||{})[iST.value] : null;
+  // v151: el mismo mecanismo acota las rocas tectónicas por SUBTIPO_TECTONICA (por_subtipo_tectonico).
+  const filtrarNombreRocaSedimentaria=b=>filtrarNombreRocaPorSubtipo(b,'Sedimentaria','SUBTIPO_SEDIMENTARIO','por_subtipo');
+  const filtrarNombreRocaTectonica=b=>filtrarNombreRocaPorSubtipo(b,'Tectónica','SUBTIPO_TECTONICA','por_subtipo_tectonico');
+  function filtrarNombreRocaPorSubtipo(esBuild, tipoRoca, campoSub, clave){
+    const iST=inputs[campoSub], iNR=inputs['NOMBRE_ROCA'], iTR=inputs['TIPO_ROCA'];
+    if(!iST||!iNR||!iTR||iTR.value!==tipoRoca)return;
+    const subset = iST.value ? (dominio('NOMBRE_ROCA')[clave]||{})[iST.value] : null;
     if(!subset)return;
     const actual=iNR.value;
     iNR.innerHTML='';iNR.append(el('option',{value:''},'— seleccionar —'));
@@ -6308,6 +6882,7 @@ function formulario(store, reg, ctx){
   aplicarCondicionales();
   filtrarNombreRocaVolcanica(true);
   filtrarNombreRocaSedimentaria(true);
+  filtrarNombreRocaTectonica(true);
   filtrarTexturaVolcanica(true);
   filtrarEstructuraVolcanica(true);
   aplicarCondicionales();
@@ -6330,8 +6905,8 @@ function formulario(store, reg, ctx){
     // cuando el cambio viene de TIPO_ROCA o del propio TIPO_VOLCANICA (no en cada tecleo de
     // otro campo). MATRIZ_COMPOSICION ya no se recorta aquí (v84): pasó a multiselect y
     // Rocas piroclásticas/Tefra comparten el mismo dominio completo, sin nada que angostar.
-    if(changed==='TIPO_ROCA'||changed==='TIPO_VOLCANICA'||changed==='SUBTIPO_SEDIMENTARIO'){
-      filtrarNombreRocaVolcanica(false); filtrarNombreRocaSedimentaria(false); filtrarTexturaVolcanica(false);
+    if(changed==='TIPO_ROCA'||changed==='TIPO_VOLCANICA'||changed==='SUBTIPO_SEDIMENTARIO'||changed==='SUBTIPO_TECTONICA'){
+      filtrarNombreRocaVolcanica(false); filtrarNombreRocaSedimentaria(false); filtrarNombreRocaTectonica(false); filtrarTexturaVolcanica(false);
       filtrarEstructuraVolcanica(false);
       aplicarCondicionales();
     }
@@ -9174,7 +9749,7 @@ async function v3dDatosPlanares(){
         if(store==='contacto'&&reg._medidaDe) continue;   // ya se dibuja desde su medida estructural (v146)
         const ru=parseFloat(reg[c.rumbo]), ma=parseFloat(reg[c.manteo]);
         if(isNaN(ru)||isNaN(ma)) continue;
-        let tipo = store==='contacto' ? 'Contacto'+(reg.TIPO_CONTACTO?' '+String(reg.TIPO_CONTACTO).toLowerCase():'')
+        let tipo = store==='contacto' ? 'Contacto'+(reg.TIPO_CONTACTO?' '+String(reg.TIPO_CONTACTO).toLowerCase():'')+(reg.SUBTIPO_CONTACTO?' '+String(reg.SUBTIPO_CONTACTO).toLowerCase():'')
                                       : (reg.TIPO_ESTRUCTURA||'Estructura sin tipo');
         if(store==='estructural' && reg.TIPO_FALLA) tipo+=' ('+reg.TIPO_FALLA+')';
         out.push({store, reg, punto:p, lat, lon, ru, ma, tipo,
@@ -10740,6 +11315,33 @@ async function soltarContactoDeMedida(idContacto, idEst){
   await put('contacto', c); refrescarBloqueContacto(c);
 }
 function refrescarBloqueContacto(c){ const b=bloquesContacto.get(c.id); if(b&&b._vinculo) b._vinculo(c); }
+// Sentido inverso (v151, pedido del usuario: "si lleno contacto se llena estructura"): rumbo y manteo
+// escritos en la ficha de contacto CREAN la medida estructural del mismo punto (Estructura contacto,
+// con la litología, la confianza y el tipo de medida que se deducen del contacto) o ACTUALIZAN la que
+// ya es su fuente. Así la orientación queda en TBL_DATOS_ESTRUCTURALES, que es donde la leen los
+// estereogramas y el export, sin anotarla dos veces. Devuelve true si escribió la medida.
+const MEDIDA_DE_CONTACTO={'Intrusivo':'Contacto intrusivo','Tectónico':'Contacto por falla',
+  'Estratigráfico':'Contacto depositacional / discordancia','Metamórfico':'Contacto geológico (plano)'};
+async function sincronizarMedidaDeContacto(c){
+  const lleno=v=>v!=null&&String(v).trim()!=='';
+  let e=c._medidaDe?await get('estructural',c._medidaDe):null;
+  if(c._medidaDe&&!e) delete c._medidaDe;
+  if(!lleno(c.RUMBO_CONTACTO)||!lleno(c.MANTEO_CONTACTO)){
+    // a medio llenar o borrado: la medida existente manda (no se borra una medida desde aquí)
+    if(e){ c.RUMBO_CONTACTO=e.AZIMUT??''; c.MANTEO_CONTACTO=e.MANTEO_BUZAMIENTO??''; }
+    return false;
+  }
+  if(!e) e={id:uid(),_parent:c._parent,ID_CONTACTO:c.id,TIPO_ESTRUCTURA:'Estructura contacto',
+    TIPO_MEDIDA_ESTRUCTURAL:MEDIDA_DE_CONTACTO[c.TIPO_CONTACTO]||'Contacto geológico (plano)',
+    GRADO_CONFIANZA_ESTRUCTURA:c.GRADO_CONFIANZA_CONTACTO||'',
+    DESCRIPCION_ESTRUCTURA:'Medida del contacto'+[c.TIPO_CONTACTO,c.SUBTIPO_CONTACTO].filter(Boolean).map(v=>' '+v.toLowerCase()).join('')+' (registrada en la ficha de contacto).'};
+  else if(String(e.AZIMUT??'')===String(c.RUMBO_CONTACTO)&&String(e.MANTEO_BUZAMIENTO??'')===String(c.MANTEO_CONTACTO)
+          &&(e.ID_LITOLOGIA||!c.ID_LITOLOGIA)) return false;
+  e.AZIMUT=c.RUMBO_CONTACTO; e.MANTEO_BUZAMIENTO=c.MANTEO_CONTACTO;
+  if(c.ID_LITOLOGIA&&!e.ID_LITOLOGIA) e.ID_LITOLOGIA=c.ID_LITOLOGIA;
+  await put('estructural',e); c._medidaDe=e.id;
+  return true;
+}
 
 function bloqueHijo(h,reg,i,litos,conts){
   const b=el('div',{class:'child-block'+(h.clase==='lito'?' lito':''),'data-store':h.store});
@@ -10747,6 +11349,8 @@ function bloqueHijo(h,reg,i,litos,conts){
   hd.append(el('span',{class:'n'},h.unico?h.titulo:h.titulo+' '+(i+1)));
   hd.append(el('button',{class:'btn del mini',onclick:async()=>{if(bloqueoGabineteActivo())return;
     if(h.store==='estructural'&&reg.ID_CONTACTO) await soltarContactoDeMedida(reg.ID_CONTACTO, reg.id);
+    if(h.store==='contacto')   // sus medidas quedan (son datos medidos), solo pierden el vínculo
+      for(const e of (await childrenOf('estructural',reg._parent)).filter(e=>e.ID_CONTACTO===reg.id)){ delete e.ID_CONTACTO; await put('estructural',e); }
     await del(h.store,reg.id);renderPunto($('#app'));}},'Eliminar'));
   b.append(hd);
   if(h.store==='foto'){ b.append(bloqueFoto(reg,litos)); }
@@ -10756,7 +11360,8 @@ function bloqueHijo(h,reg,i,litos,conts){
     b.append(f.node);
     const barra=barraMedicion(h.store,f);
     if(h.store==='contacto'){
-      // números copiados desde la medida vinculada: solo lectura y sin barra de medición
+      // rumbo/manteo sincronizados con la medida vinculada en los dos sentidos (v151: antes eran
+      // de solo lectura aquí); la medida se crea sola al anotarlos (sincronizarMedidaDeContacto)
       const notaMedida=el('div',{class:'nota'});
       b._vinculo=c=>{
         const ligado=!!c._medidaDe;
@@ -10764,9 +11369,9 @@ function bloqueHijo(h,reg,i,litos,conts){
         reg.RUMBO_CONTACTO=c.RUMBO_CONTACTO; reg.MANTEO_CONTACTO=c.MANTEO_CONTACTO;
         if(ligado) reg._medidaDe=c._medidaDe; else delete reg._medidaDe;
         ['RUMBO_CONTACTO','MANTEO_CONTACTO'].forEach(n=>{const inp=f.node.querySelector('[name="'+n+'"]');
-          if(!inp)return; if(ligado||inp.readOnly) inp.value=reg[n]??''; inp.readOnly=ligado;});
-        if(barra) barra.style.display=ligado?'none':'';
-        notaMedida.textContent=ligado?'Rumbo/manteo copiados desde la medida estructural vinculada (se editan allá).':'';
+          if(inp) inp.value=reg[n]??'';});
+        notaMedida.textContent=ligado?'Rumbo/manteo sincronizados con la medida estructural del contacto.'
+                                     :'Al anotar rumbo y manteo se crea la medida estructural del contacto.';
       };
       const anclaN=f.node.querySelector('[name="RUMBO_CONTACTO"]'); const fldN=anclaN&&anclaN.closest('.fld');
       if(fldN) fldN.parentNode.insertBefore(notaMedida, fldN); else b.append(notaMedida);
@@ -10788,13 +11393,19 @@ function bloqueHijo(h,reg,i,litos,conts){
     b._save=async()=>{
       const antes=reg.ID_CONTACTO;
       Object.assign(reg,f.getData());
-      if(h.store==='contacto'){   // el vínculo vive en disco: no pisar la copia con lo que había en pantalla
+      let medidaEscrita=false, teniaMedida=false;
+      if(h.store==='contacto'){   // el vínculo vive en disco; lo anotado aquí pasa a la medida
         const cur=await get('contacto',reg.id);
-        if(cur&&cur._medidaDe){ reg._medidaDe=cur._medidaDe; reg.RUMBO_CONTACTO=cur.RUMBO_CONTACTO; reg.MANTEO_CONTACTO=cur.MANTEO_CONTACTO; }
-        else delete reg._medidaDe;
+        if(cur&&cur._medidaDe) reg._medidaDe=cur._medidaDe; else delete reg._medidaDe;
+        teniaMedida=!!reg._medidaDe;
+        medidaEscrita=await sincronizarMedidaDeContacto(reg);
       }
       await put(h.store,reg);
       if(h.store==='estructural' && (antes||reg.ID_CONTACTO)) await sincronizarContactoDeMedida(reg, antes);
+      if(medidaEscrita){   // la ficha de la medida en pantalla quedó vieja: redibujar sin perder el lugar
+        toast('Medida estructural del contacto '+(teniaMedida?'actualizada':'creada'));
+        secAbiertas.add('estructural'); const y=window.scrollY; await renderPunto($('#app')); window.scrollTo(0,y);
+      }
     };
     // guardar al vuelo (blur)
     f.node.addEventListener('change',()=>b._save());
@@ -12001,15 +12612,15 @@ function svgEstructura(e,cx,cy,giro){
 // 100+ entradas); el punteado sigue yendo por certeza, igual que antes.
 // Siempre 6 dígitos hex: toKmlColor() del export KMZ trocea de a 2 y con #abc produce basura.
 const LINEA_CLASE_COLOR={'Contacto':'#1a1a1a','Estructura tectónica':'#c0392b','Cuerpo tabular':'#8e44ad','Geomorfología':'#16739e','Otro':'#666666'};
-const LINEA_DASH={'Observado':null,'Inferido':'10,7','Cubierto':'2,7'};
+const LINEA_DASH={'Observada':null,'Inferida':'10,7','Cubierta':'2,7'};   // TIPO_INFORMACION (v151; antes CERTEZA_LINEA)
 // Una línea importada de KMZ conserva su color original MIENTRAS no tenga CLASE_LINEA: en
 // cuanto el geólogo la clasifica, manda la simbología geológica de la app.
 function colorKmlLinea(l){ return !l.CLASE_LINEA && l._estiloKml ? hexSeguro(l._estiloKml.linea) : null; }
 function estiloLinea(l){
   const ck=colorKmlLinea(l);
   if(ck){ const k=l._estiloKml, w=parseFloat(k.ancho), op=parseFloat(k.lineaOp);
-    return {color:ck, weight:w>0?Math.min(8,Math.max(2,w)):3.5, opacity:op>=0?Math.max(.35,op):.95, dashArray:LINEA_DASH[l.CERTEZA_LINEA]||null}; }
-  return {color:LINEA_CLASE_COLOR[l.CLASE_LINEA]||'#666666', weight:3.5, opacity:.95, dashArray:LINEA_DASH[l.CERTEZA_LINEA]||null};
+    return {color:ck, weight:w>0?Math.min(8,Math.max(2,w)):3.5, opacity:op>=0?Math.max(.35,op):.95, dashArray:LINEA_DASH[l.TIPO_INFORMACION]||null}; }
+  return {color:LINEA_CLASE_COLOR[l.CLASE_LINEA]||'#666666', weight:3.5, opacity:.95, dashArray:LINEA_DASH[l.TIPO_INFORMACION]||null};
 }
 // Categoría es dominio abierto (el usuario puede agregar valores sobre la marcha): el
 // fallback '#666666' cubre cualquier categoría nueva sin color predefinido.
@@ -12124,7 +12735,7 @@ function iniciarDibujoLinea(){ if(!mapaVista)return; salirModosMapa(); dibujando
 function cancelarDibujo(){ salirModosMapa(); }
 function terminarDibujo(){
   if(_verts.length<2){toast('Traza al menos 2 puntos');return;}
-  const l={id:uid(),_parent:curProyecto.id,geom:_verts.slice(),CLASE_LINEA:'Contacto',CERTEZA_LINEA:'Observado',NOTA:''};
+  const l={id:uid(),_parent:curProyecto.id,geom:_verts.slice(),CLASE_LINEA:'Contacto',TIPO_INFORMACION:'Observada',NOTA:''};
   const b=document.getElementById('drawbanner');if(b)b.remove();
   dibujando=false; limpiarTemp(); if(mapaVista)mapaVista.getContainer().style.cursor='';
   formLinea(l, async()=>{await put(storeLineaActivo(),l);initMapaVista(_puntosMapa);toast('Línea guardada');}, null);
@@ -12501,7 +13112,7 @@ async function exportKMZ(proyectoId){
   // salía con <name> vacío y en Google Earth aparecía como una entrada en blanco.
   const rotuloLinea=l=>([l.CLASE_LINEA,l.TIPO_LINEA].filter(Boolean).join(' — ')
     +(l.SUBTIPO_LINEA?' '+l.SUBTIPO_LINEA:'')
-    +(l.CERTEZA_LINEA?' ('+l.CERTEZA_LINEA+')':'')).trim()
+    +(l.TIPO_INFORMACION?' ('+l.TIPO_INFORMACION+')':'')).trim()
     || (l.NOTA||'Línea sin clasificar');
   const placemarksLinea=async(store)=>{
     let s='';
@@ -12879,22 +13490,26 @@ const EXPO_FRASE={
 // discordancia angular / etc.), TECHO->BASE porque son los dos únicos lados que registra la
 // ficha (la unidad físicamente arriba vs. abajo en el afloramiento).
 // Cada funcion devuelve la clausula completa (sujeto+verbo+objeto) en minuscula inicial;
-// prosaPunto la capitaliza al armar la oracion. "Nítido" no tiene verbo relacional propio
-// en el corpus, así que queda como observación ("se observó un contacto nítido entre...").
+// prosaPunto la capitaliza al armar la oracion. Desde v151 la clave es "TIPO|SUBTIPO" (lista
+// tipo/subtipo del usuario); si el par no está, se prueba el tipo solo y, si tampoco, queda como
+// observación ("se observó un contacto metamórfico abrupto entre...").
 // esPlural: heurística acotada a "Depósitos..." (plural), el caso real más común en la
 // nomenclatura chilena de unidades cuaternarias (el propio corpus lo usa así: "Depósitos
 // Aluviales del Pleistoceno afloran..."); el resto de nombres de unidad son singulares.
-// También cuenta el artículo plural inicial: UNIDAD_TECHO/UNIDAD_BASE son texto libre y el
+// También cuenta el artículo plural inicial: LITOLOGIA_TECHO/LITOLOGIA_BASE son texto libre y el
 // geólogo escribe "Los depósitos aluviales", no el nombre pelado -- con el patrón anterior,
 // anclado en "Depósitos", esa forma caía al singular y salía "Los depósitos … se dispone".
 const esPlural=s=>{const t=(s||'').trim(); return /^(los|las)\s/i.test(t)||/^dep[oó]sitos\b/i.test(t);};
+const sobreCon=(rel)=>(t,b)=>t+(esPlural(t)?' se disponen ':' se dispone ')+rel+' sobre '+b;
 const CONTACTO_VERBO={
-  'Gradual':(t,b)=>t+(esPlural(t)?' gradan a ':' grada a ')+b,
-  'Nítido':(t,b)=>'se observó un contacto nítido entre '+t+' y '+b,
+  'Estratigráfico|Concordante abrupto':sobreCon('en contacto concordante y abrupto'),
+  'Estratigráfico|Concordante gradacional':(t,b)=>t+(esPlural(t)?' gradan a ':' grada a ')+b,
+  'Estratigráfico|Paraconcordante':sobreCon('en paraconcordancia'),
+  'Estratigráfico|Discordante erosivo':sobreCon('en discordancia erosiva'),
+  'Estratigráfico|Discordante angular':sobreCon('en discordancia angular'),
+  'Estratigráfico|Inconformidad':sobreCon('en inconformidad'),
   'Intrusivo':(t,b)=>t+(esPlural(t)?' intruyen a ':' intruye a ')+b,
   'Tectónico':(t,b)=>t+(esPlural(t)?' se encuentran en contacto tectónico con ':' se encuentra en contacto tectónico con ')+b,
-  'Discordante angular':(t,b)=>t+(esPlural(t)?' se disponen en discordancia angular sobre ':' se dispone en discordancia angular sobre ')+b,
-  'Discordante erosiva':(t,b)=>t+(esPlural(t)?' se disponen en discordancia erosiva sobre ':' se dispone en discordancia erosiva sobre ')+b,
 };
 // ---- Afloramiento (TBL_AFLORAMIENTO): carácter del conjunto a MESOESCALA ----
 // Los valores del dominio están en femenino porque describen "la roca/la sucesión"; el
@@ -13098,7 +13713,7 @@ const SELECCION_FRASE={
   'Mala':'mal seleccionados','Muy mala':'muy mal seleccionados',
 };
 const REDONDEAMIENTO_FRASE={
-  'Anguloso':'angulosos','Subanguloso':'subangulosos','Subredondeado':'subredondeados',
+  'Muy anguloso':'muy angulosos','Anguloso':'angulosos','Subanguloso':'subangulosos','Subredondeado':'subredondeados',
   'Redondeado':'redondeados','Muy redondeado':'muy redondeados',
 };
 // Esfericidad (norma CDC Vol III "FORMA CLASTOS", Zingg 1935) -- adjetivo plural para fundirse
@@ -13330,7 +13945,8 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     if(litoClastos.length){
       const enumL=lista(litoClastos.map(c=>{
         const p=parseValorNumerado(c);
-        const limpio=p.valor.replace(/^Clastos de(l)? /i,'').replace(/^Clastos /i,'');
+        const limpio=/^Clastos /i.test(p.valor)?p.valor.replace(/^Clastos de(l)? /i,'').replace(/^Clastos /i,'')
+                    :minuscula(p.valor);   // 'Pómez retrabajado' y demás piroclásticos retrabajados (v151)
         return mineralNum(fmtValorNumerado(limpio,p.nums));
       }));
       // Si la cláusula anterior ya nombró los clastos ("de clastos mal seleccionados…"),
@@ -13356,6 +13972,21 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     const compMinDetalle=l.COMPOSICION_MINERAL_PRINCIPAL?l.COMPOSICION_MINERAL_DETALLE:l.COMPOSICION_MINERAL_INTRUSIVA_DETALLE;
     if(compMin.length) frag.push(CONFORMAR[generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA))]+' por '+lista(compMin.map(minuscula))
       +parentesis(compMinDetalle));
+    // Roca tectónica (v151): foliación, porfiroclastos, fragmentos, matriz y potencia de la zona
+    // de deformación, en el orden en que se describe una roca de falla en el afloramiento.
+    if(l.TIPO_ROCA==='Tectónica'){
+      const fol=l.TIPO_FOLIACION_TECTONICA;
+      if(fol && fol!=='No foliada') frag.push('con '+minuscula(fol)+(l.ESPACIAMIENTO_FOLIACION?' (espaciamiento '+l.ESPACIAMIENTO_FOLIACION+')':''));
+      const num=(c,limpiar)=>{const p=parseValorNumerado(c);return mineralNum(fmtValorNumerado(limpiar(p.valor),p.nums));};
+      const porf=multi(l.MINERAL_PORFIROCLASTOS);
+      if(porf.length) frag.push('con porfiroclastos de '+lista(porf.map(c=>num(c,minuscula))));
+      const frs=multi(l.LITOLOGIA_FRAGMENTOS);
+      if(frs.length) frag.push('con fragmentos de '+lista(frs.map(c=>num(c,v=>/^Clastos /i.test(v)?v.replace(/^Clastos de(l)? /i,'').replace(/^Clastos /i,''):minuscula(v)))));
+      const tm=l.TIPO_MATRIZ_TECTONICA&&l.TIPO_MATRIZ_TECTONICA!=='Indeterminada'?' '+minuscula(l.TIPO_MATRIZ_TECTONICA):'';
+      if(tm||l.MATRIZ_TECTONICA_PCT) frag.push('en matriz'+tm+(l.MATRIZ_TECTONICA_PCT?' ('+l.MATRIZ_TECTONICA_PCT+'%)':''));
+      if(l.POTENCIA_ZONA_DEFORMACION&&l.POTENCIA_ZONA_DEFORMACION!=='Indeterminado')
+        frag.push('en una zona de deformación de '+l.POTENCIA_ZONA_DEFORMACION+' de potencia');
+    }
     if(l.TIPO_ALTERACION_LITO){
       // los valores del dominio TIPO_ALTERACION ya son sustantivos ("Silicificación",
       // "Argilización"...): "con alteración silicificación" apilaba dos sustantivos.
@@ -13584,9 +14215,9 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
   if(cont.length){
     const capitalizar=s=>s.charAt(0).toUpperCase()+s.slice(1);
     for(const c of cont){
-      const techo=c.UNIDAD_TECHO||'la unidad superior', base=c.UNIDAD_BASE||'la unidad inferior';
-      const verbo=CONTACTO_VERBO[c.TIPO_CONTACTO];
-      const clausula=verbo?verbo(techo,base):('se observó un contacto'+(c.TIPO_CONTACTO?' '+minuscula(c.TIPO_CONTACTO):'')+' entre '+techo+' y '+base);
+      const techo=c.LITOLOGIA_TECHO||'la litología superior', base=c.LITOLOGIA_BASE||'la litología inferior';
+      const verbo=CONTACTO_VERBO[c.TIPO_CONTACTO+'|'+(c.SUBTIPO_CONTACTO||'')]||CONTACTO_VERBO[c.TIPO_CONTACTO];
+      const clausula=verbo?verbo(techo,base):('se observó un contacto'+[c.TIPO_CONTACTO,c.SUBTIPO_CONTACTO].filter(Boolean).map(v=>' '+v.toLowerCase()).join('')+' entre '+techo+' y '+base);
       // La ficha de contacto pide rumbo y manteo del plano y su grado de exposición, y hasta v90
       // NADA de eso salía en el escrito: la orientación de un contacto es dato de mapa (con ella
       // se traza el límite entre unidades) y se perdía igual que si no se hubiera medido.
