@@ -592,6 +592,72 @@ const MODELO = {
           "nota": "Composición clástica de la matriz (norma CDC 2016 Vol III, campo 'COMPOSICION CLÁSTICA DEL MATRIZ', misma lista que COMPOSICION_CLASTICA). Solo cuando FABRICA_CLASTOS = 'Matriz-soportada'."
         },
         {
+          "nombre": "SUBTIPO_SEDIMENTARIO",
+          "obligatorio": false,
+          "dominio": "SUBTIPO_SEDIMENTARIO",
+          "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_SILICICLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_NO_CLASTICA; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
+        },
+        {
+          "nombre": "COMPOSICION_MINERALOGICA",
+          "obligatorio": false,
+          "dominio": "COMPOSICION_MINERALOGICA",
+          "nota": "Solo SUBTIPO Siliciclástico (arcillosos) o Carbonato. Norma CDC 2016 Vol III."
+        },
+        {
+          "nombre": "TIPO_ALOQUIMICO",
+          "obligatorio": false,
+          "dominio": "TIPO_ALOQUIMICO",
+          "nota": "Solo SUBTIPO Carbonato o Fosfato: grano aloquímico más abundante o que mejor caracteriza la roca. Norma CDC 2016 Vol III."
+        },
+        {
+          "nombre": "COMPONENTE_TUFITICO",
+          "obligatorio": false,
+          "dominio": "COMPONENTE_TUFITICO",
+          "nota": "Solo SUBTIPO Siliciclástico o Volcanosedimentario: material piroclástico juvenil vítreo retrabajado. Norma CDC 2016 Vol III."
+        },
+        {
+          "nombre": "COMPONENTE_TUFITICO_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% estimado del componente tufítico."
+        },
+        {
+          "nombre": "COMPONENTE_SUBORDINADO_1",
+          "obligatorio": false,
+          "dominio": "COMPONENTE_SUBORDINADO",
+          "nota": "Componente subordinado nº 1, de mayor a menor abundancia (norma CDC 2016 Vol III; adjetivo que califica el nombre raíz, ej. arenisca calcárea)."
+        },
+        {
+          "nombre": "COMPONENTE_SUBORDINADO_1_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% estimado del componente subordinado nº 1; por ser subordinado debe ser <50%."
+        },
+        {
+          "nombre": "COMPONENTE_SUBORDINADO_2",
+          "obligatorio": false,
+          "dominio": "COMPONENTE_SUBORDINADO",
+          "nota": "Componente subordinado nº 2, de mayor a menor abundancia (norma CDC 2016 Vol III; adjetivo que califica el nombre raíz, ej. arenisca calcárea)."
+        },
+        {
+          "nombre": "COMPONENTE_SUBORDINADO_2_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% estimado del componente subordinado nº 2; por ser subordinado debe ser <50%."
+        },
+        {
+          "nombre": "COMPONENTE_SUBORDINADO_3",
+          "obligatorio": false,
+          "dominio": "COMPONENTE_SUBORDINADO",
+          "nota": "Componente subordinado nº 3, de mayor a menor abundancia (norma CDC 2016 Vol III; adjetivo que califica el nombre raíz, ej. arenisca calcárea)."
+        },
+        {
+          "nombre": "COMPONENTE_SUBORDINADO_3_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% estimado del componente subordinado nº 3; por ser subordinado debe ser <50%."
+        },
+        {
           "nombre": "CEMENTO",
           "obligatorio": false,
           "dominio": "CEMENTO",
@@ -1703,7 +1769,118 @@ const MODELO = {
           "Brecha sedimentaria",
           "Arcillolita",
           "Conglomerado megaclástico",
-          "Sedimentita siliciclástica indiferenciada"
+          "Sedimentita siliciclástica indiferenciada",
+          "Boundstone",
+          "Framestone",
+          "Bindstone",
+          "Bafflestone",
+          "Biocementstone",
+          "Calcirudita",
+          "Rudstone",
+          "Floatstone",
+          "Calcarenita",
+          "Grainstone",
+          "Packstone",
+          "Wackestone",
+          "Calcifangolita",
+          "Calcilutita",
+          "Calcilimolita",
+          "Micrita",
+          "Espeleotema",
+          "Dripstone",
+          "Flowstone",
+          "Tufa calcárea",
+          "Travertino",
+          "Esparita",
+          "Microesparita",
+          "Dismicrita",
+          "Caliza indiferenciada",
+          "Sulfatos cálcicos",
+          "Yeso",
+          "Anhidrita",
+          "Sulfatos sódicos",
+          "Tenardita-Mirabilita",
+          "Tenardita",
+          "Mirabilita",
+          "Halita",
+          "Silvita",
+          "Ulexita",
+          "Bindstone de sulfato",
+          "Brecha de sulfato",
+          "Brecha de yeso",
+          "Brecha de anhidrita",
+          "Brecha de halita",
+          "Conglomerado de sulfato",
+          "Conglomerado de yeso",
+          "Conglomerado de anhidrita",
+          "Conglomerado de halita",
+          "Arenisca de sulfato",
+          "Arenisca de yeso",
+          "Arenisca de anhidrita",
+          "Arenisca de halita",
+          "Lutita de sulfato",
+          "Lutita de yeso",
+          "Lutita de anhidrita",
+          "Lutita de halita",
+          "Limolita de sulfato",
+          "Limolita de yeso",
+          "Limolita de anhidrita",
+          "Limolita de halita",
+          "Sedimentita salina indiferenciada",
+          "Fosfobindstone",
+          "Fosforudita",
+          "Fosforudstone",
+          "Fosfofloatstone",
+          "Fosfoarenita",
+          "Fosfograinstone",
+          "Fosfopackstone",
+          "Fosfowackestone",
+          "Fosfolutita",
+          "Fosfofangolita",
+          "Fosfolimolita",
+          "Microsforita",
+          "Fosforita indiferenciada",
+          "Lignito",
+          "Carbón subbituminoso",
+          "Carbón bituminoso",
+          "Semiantracita",
+          "Antracita",
+          "Lignito impuro",
+          "Carbón subbituminoso impuro",
+          "Carbón bituminoso impuro",
+          "Semiantracita impura",
+          "Antracita impura",
+          "Lignito sapropélico",
+          "Carbón sapropélico",
+          "Carbón cannel",
+          "Carbón 'boghead'",
+          "Carbón indiferenciado",
+          "Lutita bituminosa indiferenciada",
+          "Calcilutita bituminosa",
+          "Lutita bituminosa",
+          "Lutita cannel",
+          "Roca orgánica indiferenciada",
+          "Diatomita",
+          "Radiolarita",
+          "Espiculita",
+          "Chert de diatomeas",
+          "Chert de radiolarios",
+          "Chert de espículas",
+          "Sinter",
+          "Chert",
+          "Porcelanita",
+          "Jaspe",
+          "Pedernal",
+          "Ágata",
+          "Sedimentita silícea indiferenciada",
+          "Marga",
+          "Roca sedimentaria mixta",
+          "Sedimentita mixta indiferenciada",
+          "Sedimentita clástica de composición indeterminada",
+          "Sedimentita cristalina de composición indeterminada",
+          "Sedimentita microcristalina de composición indeterminada",
+          "Sedimentita de composición indeterminada",
+          "Sedimentita de composición indeterminada por alteración"
         ],
         "Metamórfica": [
           "Esquisto",
@@ -1724,7 +1901,157 @@ const MODELO = {
           "Tefra, depósito volcánico"
         ]
       },
-      "fuente": "Lista de Dominios.xlsx (+ piroclásticos propuestos)"
+      "fuente": "Lista de Dominios.xlsx (+ piroclásticos propuestos)",
+      "por_subtipo": {
+        "Siliciclástico": [
+          "Arenisca",
+          "Conglomerado",
+          "Brecha sedimentaria",
+          "Limolita",
+          "Lutita",
+          "Fangolita",
+          "Arcillolita",
+          "Conglomerado megaclástico",
+          "Sedimentita siliciclástica indiferenciada"
+        ],
+        "Volcanosedimentario": [
+          "Arenisca",
+          "Conglomerado",
+          "Brecha sedimentaria",
+          "Limolita",
+          "Lutita",
+          "Fangolita",
+          "Arcillolita",
+          "Conglomerado megaclástico",
+          "Sedimentita siliciclástica indiferenciada"
+        ],
+        "Carbonato": [
+          "Caliza",
+          "Boundstone",
+          "Framestone",
+          "Bindstone",
+          "Bafflestone",
+          "Biocementstone",
+          "Calcirudita",
+          "Rudstone",
+          "Floatstone",
+          "Calcarenita",
+          "Grainstone",
+          "Packstone",
+          "Wackestone",
+          "Calcifangolita",
+          "Calcilutita",
+          "Calcilimolita",
+          "Micrita",
+          "Espeleotema",
+          "Dripstone",
+          "Flowstone",
+          "Tufa calcárea",
+          "Travertino",
+          "Esparita",
+          "Microesparita",
+          "Dismicrita",
+          "Caliza indiferenciada"
+        ],
+        "Salino no carbonatado": [
+          "Sulfatos cálcicos",
+          "Yeso",
+          "Anhidrita",
+          "Sulfatos sódicos",
+          "Tenardita-Mirabilita",
+          "Tenardita",
+          "Mirabilita",
+          "Halita",
+          "Silvita",
+          "Ulexita",
+          "Bindstone de sulfato",
+          "Brecha de sulfato",
+          "Brecha de yeso",
+          "Brecha de anhidrita",
+          "Brecha de halita",
+          "Conglomerado de sulfato",
+          "Conglomerado de yeso",
+          "Conglomerado de anhidrita",
+          "Conglomerado de halita",
+          "Arenisca de sulfato",
+          "Arenisca de yeso",
+          "Arenisca de anhidrita",
+          "Arenisca de halita",
+          "Lutita de sulfato",
+          "Lutita de yeso",
+          "Lutita de anhidrita",
+          "Lutita de halita",
+          "Limolita de sulfato",
+          "Limolita de yeso",
+          "Limolita de anhidrita",
+          "Limolita de halita",
+          "Sedimentita salina indiferenciada"
+        ],
+        "Fosfato": [
+          "Fosfobindstone",
+          "Fosforudita",
+          "Fosforudstone",
+          "Fosfofloatstone",
+          "Fosfoarenita",
+          "Fosfograinstone",
+          "Fosfopackstone",
+          "Fosfowackestone",
+          "Fosfolutita",
+          "Fosfofangolita",
+          "Fosfolimolita",
+          "Microsforita",
+          "Fosforita indiferenciada"
+        ],
+        "Rico en material orgánico": [
+          "Lignito",
+          "Carbón subbituminoso",
+          "Carbón bituminoso",
+          "Semiantracita",
+          "Antracita",
+          "Lignito impuro",
+          "Carbón subbituminoso impuro",
+          "Carbón bituminoso impuro",
+          "Semiantracita impura",
+          "Antracita impura",
+          "Lignito sapropélico",
+          "Carbón sapropélico",
+          "Carbón cannel",
+          "Carbón 'boghead'",
+          "Carbón indiferenciado",
+          "Lutita bituminosa indiferenciada",
+          "Calcilutita bituminosa",
+          "Lutita bituminosa",
+          "Lutita cannel",
+          "Roca orgánica indiferenciada"
+        ],
+        "Silíceo no clástico": [
+          "Diatomita",
+          "Radiolarita",
+          "Espiculita",
+          "Chert de diatomeas",
+          "Chert de radiolarios",
+          "Chert de espículas",
+          "Sinter",
+          "Chert",
+          "Porcelanita",
+          "Jaspe",
+          "Pedernal",
+          "Ágata",
+          "Sedimentita silícea indiferenciada"
+        ],
+        "Mixto": [
+          "Marga",
+          "Roca sedimentaria mixta",
+          "Sedimentita mixta indiferenciada"
+        ],
+        "Composición indeterminada": [
+          "Sedimentita clástica de composición indeterminada",
+          "Sedimentita cristalina de composición indeterminada",
+          "Sedimentita microcristalina de composición indeterminada",
+          "Sedimentita de composición indeterminada",
+          "Sedimentita de composición indeterminada por alteración"
+        ]
+      }
     },
     "GRANULOMETRIA": {
       "tipo": "cascada",
@@ -3577,6 +3904,159 @@ const MODELO = {
         "No determinada"
       ],
       "fuente": "Norma CDC 2016 Vol V, tabla TBL_AF_FRACTURA (\"DDA Descripción de Fracturas\"), campo 'TEXTURA SUPERFICIE': textura más típica del juego descrito. Plumosa = marcas 'hackle' que irradian del origen de la fractura; corrugada = 'rib marks' concéntricas; estriada = 'slickenlines' de cizalle (si el desplazamiento es apreciable, la estructura es una falla, no una fractura). Lista NOMINAL, pero se conserva el orden de la norma, que agrupa por familia."
+    },
+    "SUBTIPO_SEDIMENTARIO": {
+      "tipo": "simple",
+      "valores": [
+        "Siliciclástico",
+        "Volcanosedimentario",
+        "Carbonato",
+        "Salino no carbonatado",
+        "Fosfato",
+        "Rico en material orgánico",
+        "Silíceo no clástico",
+        "Mixto",
+        "Composición indeterminada"
+      ],
+      "fuente": "Norma CDC 2016 Vol III, DDA Clasificación y Nomenclatura de Depósitos Sedimentarios (campo SUBTIPO, 9 subtipos del nivel 4; se acortó 'Depósito de X' a 'X')"
+    },
+    "COMPOSICION_MINERALOGICA": {
+      "tipo": "cascada",
+      "padre": "SUBTIPO_SEDIMENTARIO",
+      "mapa": {
+        "Siliciclástico": [
+          "caolinítica",
+          "esmectítica",
+          "illítica",
+          "clorítica",
+          "sepiolítica",
+          "No determinado"
+        ],
+        "Carbonato": [
+          "calcítica",
+          "calcítica de bajo Mg",
+          "calcítica de alto Mg",
+          "aragonítica",
+          "dolomítica",
+          "ankerítica",
+          "siderítica",
+          "No determinado"
+        ]
+      },
+      "fuente": "Norma CDC 2016 Vol III, campo COMPOSICION MINERALOGICA (siliciclásticos arcillosos y carbonatos)"
+    },
+    "TIPO_ALOQUIMICO": {
+      "tipo": "cascada",
+      "padre": "SUBTIPO_SEDIMENTARIO",
+      "mapa": {
+        "Carbonato": [
+          "bioclástica",
+          "oolítica",
+          "pisolítica",
+          "peloidal",
+          "oncolitica (nodular)",
+          "cortoidal",
+          "litoclástica",
+          "intraclástica",
+          "extraclástica",
+          "de granos compuestos",
+          "de corales",
+          "de briozoos",
+          "de braquiópodos",
+          "de bivalvos",
+          "de gastrópodos",
+          "de cefalópodos",
+          "de poliquetos",
+          "de foraminíferos",
+          "de ostrácodos",
+          "de macroalgas",
+          "crinoidal",
+          "de placas de equinodermos",
+          "estromatolítica"
+        ],
+        "Fosfato": [
+          "bioclástica",
+          "oolítica",
+          "pisolítica",
+          "peloidal",
+          "oncolitica (nodular)",
+          "cortoidal",
+          "litoclástica",
+          "intraclástica",
+          "extraclástica",
+          "de granos compuestos",
+          "de fragmentos de esqueletos vertebrados",
+          "de braquiópodos inarticulados",
+          "de conodontos",
+          "de fragmentos de fósiles de carbonato fosfatados"
+        ]
+      },
+      "fuente": "Norma CDC 2016 Vol III, 'Para depósitos de carbonatos y fosfatos' (granos aloquímicos), campo COMPOSICIÓN CLÁSTICA-ALOQUÍMICA"
+    },
+    "COMPONENTE_TUFITICO": {
+      "tipo": "simple",
+      "valores": [
+        "tufítica",
+        "escoriácea",
+        "pumícea"
+      ],
+      "fuente": "Norma CDC 2016 Vol III, campo COMPONENTE TUFITICO"
+    },
+    "COMPONENTE_SUBORDINADO": {
+      "tipo": "simple",
+      "valores": [
+        "gravoso",
+        "bolonoso",
+        "guijonoso",
+        "guijarroso",
+        "arenoso",
+        "fangoso",
+        "limoso",
+        "arcilloso",
+        "calciclástico",
+        "calcibioclastico",
+        "calcioolítico",
+        "calcipisolítico",
+        "calcipeloidal",
+        "calcioncolítico",
+        "micritico",
+        "con clastos de sulfato",
+        "con clastos de yeso",
+        "con clastos de anhidrita",
+        "con clastos de tenardita",
+        "con clastos de mirabilita",
+        "con clastos de halita",
+        "con clastos de borato",
+        "fosfoclástico",
+        "fosfobioclástico",
+        "fosfooolítico",
+        "fosfopisolítico",
+        "fosfopeloidal",
+        "fosfooncolítico",
+        "microsforitico",
+        "glaucoclástico",
+        "glaucooolítico",
+        "glaucopeloidal",
+        "ferruginoclástico",
+        "ferruginooolítico",
+        "ferruginopeloidal",
+        "ferruginopisolítico",
+        "carbonoso",
+        "kerógenoso",
+        "sapropelico",
+        "con material orgánico",
+        "diatomáceo",
+        "radiolariano",
+        "espiculítico",
+        "con porcelana",
+        "con pedernal",
+        "con jaspe",
+        "silíceo",
+        "titanífero",
+        "con minerales pesados",
+        "litífero"
+      ],
+      "fuente": "Norma CDC 2016 Vol III, campo COMPONENTE SUBORDINADO (adjetivos; la norma los agrupa por tipo y los liga al nombre raíz)"
     }
   },
   "avisos": [
@@ -3590,7 +4070,9 @@ const MODELO = {
     "TIPO_CONTACTO: poblada desde diagrama v3 / estandar (CONFIRMAR).",
     "PROPOSITO_ANALISIS: poblada desde diagrama v3 / estandar (CONFIRMAR).",
     "LV_FUENTE_COORDENADA: poblada desde diagrama v3 / estandar (CONFIRMAR).",
-    "TIPO_DEPOSITO: poblada desde diagrama v3 / estandar (CONFIRMAR)."
+    "TIPO_DEPOSITO: poblada desde diagrama v3 / estandar (CONFIRMAR).",
+    "SUBTIPO_SEDIMENTARIO y campos de clasificación sedimentaria agregados desde la norma CDC 2016 Vol III (agregar_subtipo_sedimentario.py).",
+    "NOMBRE_ROCA Sedimentaria ampliado por SUBTIPO_SEDIMENTARIO desde la norma CDC 2016 Vol III (agregar_nombres_sedimentarios.py)."
   ],
   "familias_litologia": [
     {
@@ -3645,13 +4127,57 @@ const MODELO = {
     {
       "tabla": "LITO_SEDIMENTARIA",
       "padre": false,
-      "descripcion": "Hija 1:1. Rasgos propios de rocas sedimentarias (fosiles, textura Dunham de calizas).",
+      "descripcion": "Hija 1:1. Clasificacion y rasgos comunes de toda roca sedimentaria: subtipo (norma CDC), composicion, componentes tufitico y subordinados, cemento (copia) y fosiles.",
       "aplica_a": "Sedimentaria",
       "campos": [
+        "SUBTIPO_SEDIMENTARIO",
+        "COMPOSICION_MINERALOGICA",
+        "COMPONENTE_TUFITICO",
+        "COMPONENTE_TUFITICO_PCT",
+        "COMPONENTE_SUBORDINADO_1",
+        "COMPONENTE_SUBORDINADO_1_PCT",
+        "COMPONENTE_SUBORDINADO_2",
+        "COMPONENTE_SUBORDINADO_2_PCT",
+        "COMPONENTE_SUBORDINADO_3",
+        "COMPONENTE_SUBORDINADO_3_PCT",
         "CONTENIDO_FOSIL",
-        "CONTENIDO_FOSIL_DETALLE",
-        "TEXTURA_DUNHAM"
+        "CONTENIDO_FOSIL_DETALLE"
+      ],
+      "hija_de": "TBL_LITOLOGIA",
+      "campos_extra": [
+        "CEMENTO"
       ]
+    },
+    {
+      "tabla": "SED_SILICICLASTICA",
+      "padre": false,
+      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Sedimentaria siliciclastica y volcanosedimentaria: copia de los campos clasticos de LITO_CLASTICA.",
+      "aplica_a": "Sedimentaria, SUBTIPO Siliciclastico o Volcanosedimentario (o NOMBRE_ROCA clastico si no hay subtipo)",
+      "campos": [],
+      "hija_de": "LITO_SEDIMENTARIA",
+      "campos_extra": [
+        "GRANULOMETRIA",
+        "SELECCION",
+        "REDONDEAMIENTO",
+        "ESFERICIDAD",
+        "CLASTOS_TAM_MAX_CM",
+        "COMPOSICION_CLASTICA",
+        "LITOLOGIA_CLASTOS",
+        "LITOLOGIA_CLASTOS_DETALLE",
+        "FABRICA_CLASTOS",
+        "COMPOSICION_CLASTICA_MATRIZ"
+      ]
+    },
+    {
+      "tabla": "SED_NO_CLASTICA",
+      "padre": false,
+      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Sedimentaria no clastica: carbonato, salino, fosfato, organico, siliceo.",
+      "aplica_a": "Sedimentaria, SUBTIPO distinto de Siliciclastico/Volcanosedimentario/Mixto/Indeterminado",
+      "campos": [
+        "TEXTURA_DUNHAM",
+        "TIPO_ALOQUIMICO"
+      ],
+      "hija_de": "LITO_SEDIMENTARIA"
     },
     {
       "tabla": "LITO_VOLCANICA",
@@ -3712,7 +4238,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v149';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v150';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -5172,6 +5698,24 @@ function esClastico(v){
   return false;
 }
 
+// Qué tablas hijas de litología se llenan al EXPORTAR (v150). Las clásticas se copian: depósitos y
+// piroclásticas van a LITO_CLASTICA; las sedimentarias a SED_SILICICLASTICA (si son siliciclásticas o
+// volcanosedimentarias) o SED_NO_CLASTICA (carbonato, salino, fosfato, orgánico, silíceo). Mixto e
+// indeterminado solo llenan LITO_SEDIMENTARIA. Sin SUBTIPO se deduce de NOMBRE_ROCA (datos previos).
+// Declaraciones (no const) para que smoke.html las alcance desde el iframe.
+function sedimentariaClasticaExport(v){
+  const st=v['SUBTIPO_SEDIMENTARIO'];
+  if(st) return st==='Siliciclástico'||st==='Volcanosedimentario';
+  return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
+}
+function familiaAplica(tabla, v){
+  const sed=v['TIPO_ROCA']==='Sedimentaria', st=v['SUBTIPO_SEDIMENTARIO'];
+  if(tabla==='LITO_CLASTICA') return !sed;
+  if(tabla==='SED_SILICICLASTICA') return sed && sedimentariaClasticaExport(v);
+  if(tabla==='SED_NO_CLASTICA') return sed && !sedimentariaClasticaExport(v) && st!=='Mixto' && st!=='Composición indeterminada';
+  return true;
+}
+
 // ============ Revelado progresivo de campos (2026-09-01) ============
 // A pedido del usuario: en vez de mostrar TODOS los campos que aplican a la vez (una roca
 // Volcánica llega a tener ~15-20 simultáneos: color, textura, estructura, alteración,
@@ -5263,6 +5807,19 @@ const CONDICIONALES = {
   // "se describe la matriz aparte... de depósitos sedimentarios mal seleccionados").
   COMPOSICION_CLASTICA_MATRIZ: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && v['FABRICA_CLASTOS']==='Matriz-soportada'},
   CEMENTO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' || v['TIPO_ROCA']==='Depósito'},
+  // Clasificación de depósitos sedimentarios (norma CDC 2016 Vol III, DDA Clasificación y
+  // Nomenclatura): el SUBTIPO decide qué se describe. Solo rocas sedimentarias.
+  SUBTIPO_SEDIMENTARIO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
+  COMPOSICION_MINERALOGICA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Siliciclástico','Carbonato'].includes(v['SUBTIPO_SEDIMENTARIO'])},
+  TIPO_ALOQUIMICO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Carbonato','Fosfato'].includes(v['SUBTIPO_SEDIMENTARIO'])},
+  COMPONENTE_TUFITICO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Siliciclástico','Volcanosedimentario'].includes(v['SUBTIPO_SEDIMENTARIO'])},
+  COMPONENTE_TUFITICO_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Siliciclástico','Volcanosedimentario'].includes(v['SUBTIPO_SEDIMENTARIO'])},
+  COMPONENTE_SUBORDINADO_1: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
+  COMPONENTE_SUBORDINADO_1_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
+  COMPONENTE_SUBORDINADO_2: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_1']},
+  COMPONENTE_SUBORDINADO_2_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_1']},
+  COMPONENTE_SUBORDINADO_3: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_2']},
+  COMPONENTE_SUBORDINADO_3_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_2']},
   // Contenido fósil (2026-08-31, a pedido del usuario): NO es un campo normativo CDC 2016 --
   // verificado contra la norma antes de diseñar (Vol III): lo más cercano es la rama carbonatada
   // de COMPOSICION_CLASTICA (clasificación litológica, no nota de contenido), que sigue sin
@@ -5353,7 +5910,7 @@ const CONDICIONALES = {
   // del usuario. Tefra ya no aplica aquí (2026-08-25): es Depósito, no Volcánica.
   CRISTALINIDAD: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica'},
   MASA_FUNDAMENTAL: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava'},
-  TEXTURA_DUNHAM:   {modo:'ocultar', regla: v => v['NOMBRE_ROCA']==='Caliza'},
+  TEXTURA_DUNHAM:   {modo:'ocultar', regla: v => v['NOMBRE_ROCA']==='Caliza' || (v['TIPO_ROCA']==='Sedimentaria' && v['SUBTIPO_SEDIMENTARIO']==='Carbonato')},
   SOLDADURA:        {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas'},
   GRADO_CONSOLIDACION: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Depósito'},
   // Tipo de falla solo cuando la estructura medida es una falla (formulario de punto).
@@ -5406,7 +5963,7 @@ function formulario(store, reg, ctx){
   const grupos=[], grupoDe={};
   if(store==='litologia' && MODELO.familias_litologia){
     const TITULO={TBL_LITOLOGIA:'Datos generales', LITO_CLASTICA:'Clastos, matriz y cemento',
-      LITO_SEDIMENTARIA:'Sedimentaria', LITO_VOLCANICA:'Volcánica', LITO_PIROCLASTICA:'Componentes piroclásticos',
+      LITO_SEDIMENTARIA:'Sedimentaria: clasificación y componentes', SED_NO_CLASTICA:'Sedimentaria no clástica (carbonato, fosfato…)', LITO_VOLCANICA:'Volcánica', LITO_PIROCLASTICA:'Componentes piroclásticos',
       LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica'};
     const famDe={}; MODELO.familias_litologia.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
     famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre';
@@ -5691,6 +6248,25 @@ function formulario(store, reg, ctx){
     // silenciosamente una granulometría ya elegida, sin que nada relevante haya cambiado).
     if(nuevo!==actual) repoblarHijosDe('NOMBRE_ROCA', nuevo);
   }
+  // NOMBRE_ROCA de sedimentarias acotado por SUBTIPO_SEDIMENTARIO (v150, norma CDC 2016 Vol III;
+  // lista en MODELO.dominios.NOMBRE_ROCA.por_subtipo). Mismo criterio que la volcánica: TIPO_ROCA
+  // sigue siendo el padre de la cascada y el subtipo solo ESTRECHA la lista ya poblada. Sin subtipo
+  // queda la lista completa de sedimentarias (compatible con registros guardados antes de v150).
+  function filtrarNombreRocaSedimentaria(esBuild){
+    const iST=inputs['SUBTIPO_SEDIMENTARIO'], iNR=inputs['NOMBRE_ROCA'], iTR=inputs['TIPO_ROCA'];
+    if(!iST||!iNR||!iTR||iTR.value!=='Sedimentaria')return;
+    const subset = iST.value ? (dominio('NOMBRE_ROCA').por_subtipo||{})[iST.value] : null;
+    if(!subset)return;
+    const actual=iNR.value;
+    iNR.innerHTML='';iNR.append(el('option',{value:''},'— seleccionar —'));
+    subset.forEach(v=>iNR.append(el('option',{value:v},v)));
+    let nuevo;
+    if(subset.includes(actual)) nuevo=actual;
+    else if(esBuild){ preservarValor(iNR, actual); nuevo=actual; }
+    else nuevo='';
+    iNR.value = nuevo;
+    if(nuevo!==actual) repoblarHijosDe('NOMBRE_ROCA', nuevo);
+  }
   // Mismo mecanismo que filtrarNombreRocaVolcanica(), para el campo TEXTURA: nada cuelga de
   // TEXTURA como padre de cascada, así que no hace falta repoblar hijos, solo acotar/preservar.
   function filtrarTexturaVolcanica(esBuild){
@@ -5731,6 +6307,7 @@ function formulario(store, reg, ctx){
   }
   aplicarCondicionales();
   filtrarNombreRocaVolcanica(true);
+  filtrarNombreRocaSedimentaria(true);
   filtrarTexturaVolcanica(true);
   filtrarEstructuraVolcanica(true);
   aplicarCondicionales();
@@ -5753,8 +6330,8 @@ function formulario(store, reg, ctx){
     // cuando el cambio viene de TIPO_ROCA o del propio TIPO_VOLCANICA (no en cada tecleo de
     // otro campo). MATRIZ_COMPOSICION ya no se recorta aquí (v84): pasó a multiselect y
     // Rocas piroclásticas/Tefra comparten el mismo dominio completo, sin nada que angostar.
-    if(changed==='TIPO_ROCA'||changed==='TIPO_VOLCANICA'){
-      filtrarNombreRocaVolcanica(false); filtrarTexturaVolcanica(false);
+    if(changed==='TIPO_ROCA'||changed==='TIPO_VOLCANICA'||changed==='SUBTIPO_SEDIMENTARIO'){
+      filtrarNombreRocaVolcanica(false); filtrarNombreRocaSedimentaria(false); filtrarTexturaVolcanica(false);
       filtrarEstructuraVolcanica(false);
       aplicarCondicionales();
     }
@@ -12131,7 +12708,7 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
     // intrusiva, metamórfica). IndexedDB no cambia. Cada hija lleva ID_LITOLOGIA (clave 1:1 con el
     // padre) y solo existe si la ficha llenó algún campo de esa familia.
     const fams=(s==='litologia'&&MODELO.familias_litologia)||null;
-    const defs=fams?fams.map(f=>({tbl:f.tabla,padre:f.padre,cs:f.campos}))
+    const defs=fams?fams.map(f=>({tbl:f.tabla,padre:f.padre,cs:f.campos.concat(f.campos_extra||[])}))
                     :[{tbl,padre:true,cs}];
     const lleno=v=>v!=null&&v!==''&&!(Array.isArray(v)&&!v.length);
     for(const d of defs){
@@ -12139,7 +12716,7 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
       const csD=d.padre?d.cs:['ID_LITOLOGIA'].concat(d.cs);
       const st=crear(d.tbl,csD,d.padre?extras:[],false);
       for(const r of regsS){
-        if(!d.padre&&!d.cs.some(c=>lleno(r[c])))continue;
+        if(!d.padre&&(!familiaAplica(d.tbl,r)||!d.cs.some(c=>lleno(r[c]))))continue;
         const fila=d.padre?r:Object.assign({},r,{ID_LITOLOGIA:r.ID_LITOLOGIA||r.id});
         st.run([txt(r.id),txt(d.padre?r._parent:r.id)].concat(csD.map(c=>txt(fila[c])),(d.padre?extras:[]).map(e=>e[1](r))));
       }

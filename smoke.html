@@ -295,11 +295,18 @@ async function correr(){
     });
 
     await prueba('El GeoPackage reparte la litología en padre + hijas 1:1 por familia', async () => {
-      const ids = [P+'li-fam-pir', P+'li-fam-int'];
+      const ids = [P+'li-fam-pir', P+'li-fam-int', P+'li-fam-are', P+'li-fam-cal', P+'li-fam-mix'];
       await w.put('litologia', {id:ids[0], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-1', TIPO_ROCA:'Volcánica',
                                 TIPO_VOLCANICA:'Rocas piroclásticas', NOMBRE_ROCA:'Toba', POMEZ_PCT:'30', SELECCION:'Mala'});
       await w.put('litologia', {id:ids[1], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-2', TIPO_ROCA:'Intrusiva',
                                 NOMBRE_ROCA:'Granito', COMPOSICION_MINERAL_INTRUSIVA:'Biotita'});
+      // sedimentarias (v150): la clástica va a SED_SILICICLASTICA (no a LITO_CLASTICA), la caliza a SED_NO_CLASTICA
+      await w.put('litologia', {id:ids[2], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-3', TIPO_ROCA:'Sedimentaria',
+                                NOMBRE_ROCA:'Arenisca', SELECCION:'Buena', CEMENTO:'Calcáreo', COMPONENTE_SUBORDINADO_1:'arcilloso'});
+      await w.put('litologia', {id:ids[3], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-4', TIPO_ROCA:'Sedimentaria',
+                                SUBTIPO_SEDIMENTARIO:'Carbonato', NOMBRE_ROCA:'Caliza', TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'});
+      await w.put('litologia', {id:ids[4], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-5', TIPO_ROCA:'Sedimentaria',
+                                SUBTIPO_SEDIMENTARIO:'Mixto', NOMBRE_ROCA:'Sedimentita siliciclástica indiferenciada', SELECCION:'Mala'});
       try {
         const r = await w.construirGPKG();
         const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
@@ -307,7 +314,7 @@ async function correr(){
         const q = s => { const st = db.prepare(s); const o = []; while(st.step()) o.push(st.getAsObject()); st.free(); return o; };
         try {
           const M = w.eval('MODELO'); const fam = M.familias_litologia;
-          ok(fam && fam.length === 7, 'el modelo no trae las 7 tablas de litología');
+          ok(fam && fam.length === 9, 'el modelo no trae las 9 tablas de litología');
           const hijas = fam.filter(f => !f.padre).map(f => f.tabla);
           const total = fam.reduce((n, f) => n + f.campos.length, 0);
           eq(total, M.tablas.TBL_LITOLOGIA.campos.length, 'las familias no cubren los campos de TBL_LITOLOGIA');
@@ -319,9 +326,15 @@ async function correr(){
           eq(q("SELECT ID_LITOLOGIA FROM LITO_INTRUSIVA WHERE ID_REG='"+ids[1]+"'"), [{ID_LITOLOGIA:'LIT-SMK-2'}], 'fila intrusiva');
           eq(q("SELECT COUNT(*) n FROM LITO_PIROCLASTICA WHERE ID_REG='"+ids[1]+"'"), [{n:0}], 'la intrusiva no debe tener fila piroclástica');
           eq(q("SELECT COUNT(*) n FROM LITO_CLASTICA WHERE ID_REG='"+ids[0]+"'"), [{n:1}], 'la toba (SELECCION) debe tener fila clástica');
-          eq(q("SELECT COUNT(*) n FROM TBL_LITOLOGIA WHERE ID_REG IN ('"+ids.join("','")+"')"), [{n:2}], 'padre: una fila por litología');
-          eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:6}], 'hijas sin registrar en gpkg_contents');
-          return 'TBL_LITOLOGIA + 6 hijas; las hijas solo traen fila si la ficha llenó esa familia';
+          eq(q("SELECT COUNT(*) n FROM TBL_LITOLOGIA WHERE ID_REG IN ('"+ids.join("','")+"')"), [{n:5}], 'padre: una fila por litología');
+          eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[2]+"'"), [{n:1}], 'arenisca: fila en SED_SILICICLASTICA');
+          eq(q("SELECT COUNT(*) n FROM LITO_CLASTICA WHERE ID_REG IN ('"+ids[2]+"','"+ids[3]+"','"+ids[4]+"')"), [{n:0}], 'las sedimentarias no deben llenar LITO_CLASTICA');
+          eq(q("SELECT CEMENTO, COMPONENTE_SUBORDINADO_1 FROM LITO_SEDIMENTARIA WHERE ID_REG='"+ids[2]+"'"), [{CEMENTO:'Calcáreo', COMPONENTE_SUBORDINADO_1:'arcilloso'}], 'arenisca: LITO_SEDIMENTARIA con cemento y subordinado');
+          eq(q("SELECT TEXTURA_DUNHAM, TIPO_ALOQUIMICO FROM SED_NO_CLASTICA WHERE ID_REG='"+ids[3]+"'"), [{TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'}], 'caliza: fila en SED_NO_CLASTICA');
+          eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[3]+"'"), [{n:0}], 'la caliza no debe llenar SED_SILICICLASTICA');
+          eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[4]+"'"), [{n:0}], 'subtipo Mixto: sin nieta');
+          eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:8}], 'hijas sin registrar en gpkg_contents');
+          return 'TBL_LITOLOGIA + 8 hijas (sedimentaria con 2 nietas); las hijas solo traen fila si la ficha llenó esa familia';
         } finally { db.close(); }
       } finally { for (const id of ids) await w.del('litologia', id); }
     });
@@ -355,6 +368,32 @@ async function correr(){
         eq(orden[orden.length - 1], 'NOMBRE_ROCA', 'NOMBRE_ROCA debe seguir al final');
       } finally { f.node.remove(); }
       return 'grupos por tipo de roca = reglas de aplicabilidad; se abren/cierran al cambiar el tipo';
+    });
+
+    await prueba('NOMBRE_ROCA sedimentaria se acota por SUBTIPO_SEDIMENTARIO (v150, norma CDC Vol III)', async () => {
+      const opts = f => [...f.node.querySelector('[name="NOMBRE_ROCA"]').options].map(o => o.value).filter(Boolean);
+      const mk = reg => { const f = w.formulario('litologia', reg, {}); w.document.body.append(f.node); return f; };
+      let f = mk({TIPO_ROCA:'Sedimentaria'});
+      try {
+        const todos = opts(f);
+        ok(todos.includes('Arenisca') && todos.includes('Grainstone') && todos.includes('Yeso'), 'sin subtipo debe verse la lista completa');
+        const st = f.node.querySelector('[name="SUBTIPO_SEDIMENTARIO"]');
+        const poner = v => { st.value = v; st.dispatchEvent(new w.Event('change', {bubbles:true})); };
+        poner('Carbonato');
+        ok(opts(f).includes('Grainstone') && opts(f).includes('Caliza') && !opts(f).includes('Arenisca'), 'carbonato: Grainstone/Caliza sí, Arenisca no');
+        poner('Salino no carbonatado');
+        ok(opts(f).includes('Yeso') && opts(f).includes('Arenisca de yeso') && !opts(f).includes('Grainstone'), 'salino: Yeso sí, Grainstone no');
+        poner('Siliciclástico');
+        eq(opts(f).length, 9, 'siliciclástico: los 9 nombres raíz');
+        poner('Volcanosedimentario');
+        ok(opts(f).includes('Arenisca'), 'volcanosedimentario comparte los nombres raíz');
+      } finally { f.node.remove(); }
+      // un registro guardado con un nombre fuera de la lista del subtipo no se pierde al abrir la ficha
+      f = mk({TIPO_ROCA:'Sedimentaria', SUBTIPO_SEDIMENTARIO:'Carbonato', NOMBRE_ROCA:'Arenisca'});
+      try { eq(f.node.querySelector('[name="NOMBRE_ROCA"]').value, 'Arenisca', 'el valor guardado se perdió'); } finally { f.node.remove(); }
+      const nr = w.eval('MODELO').dominios.NOMBRE_ROCA;
+      eq(Object.keys(nr.por_subtipo).length, 9, 'faltan subtipos en por_subtipo');
+      return 'lista por subtipo; sin subtipo, completa; valor histórico preservado';
     });
 
     await prueba('Afloramiento v147: campos que salieron, espesores en litología e ID_AFLORAMIENTO en el export', async () => {
