@@ -418,7 +418,7 @@ const MODELO = {
           "nombre": "LITIFICACION",
           "obligatorio": false,
           "dominio": "LITIFICACION",
-          "nota": "Roca o depósito. Solo Sedimentaria y Volcánica; con «Depósito» se describe el depósito (LITO_DEPOSITO)."
+          "nota": "Roca o depósito. Se pregunta en la sedimentaria (LITO_SEDIMENTARIA) y en la piroclástica (VOL_PIROCLASTICA); con «Depósito» aparecen los campos del depósito de esa tabla."
         },
         {
           "nombre": "TIPO_VOLCANICA",
@@ -607,7 +607,7 @@ const MODELO = {
           "nombre": "SUBTIPO_SEDIMENTARIO",
           "obligatorio": false,
           "dominio": "SUBTIPO_SEDIMENTARIO",
-          "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_SILICICLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_NO_CLASTICA; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
+          "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_CLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_NO_CLASTICA; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
         },
         {
           "nombre": "COMPOSICION_MINERALOGICA",
@@ -837,7 +837,7 @@ const MODELO = {
           "nombre": "GRADO_CONSOLIDACION",
           "obligatorio": false,
           "dominio": "GRADO_CONSOLIDACION",
-          "nota": "Solo con LITIFICACION = Depósito."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito."
         },
         {
           "nombre": "CRISTALES_ESPECIE",
@@ -937,91 +937,91 @@ const MODELO = {
           "nombre": "CONTEXTO_DEPOSITO",
           "obligatorio": false,
           "dominio": "CONTEXTO_DEPOSITO",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Lista según TIPO_ROCA (Vol III / Vol IV)."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). Vol III."
         },
         {
           "nombre": "GEOMETRIA_DEPOSITO",
           "obligatorio": false,
           "dominio": "GEOMETRIA_CUERPO",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). GEOMETRÍA DE ESTRATIFICACIÓN (Vol III) / GEOMETRÍA DEL DEPÓSITO (Vol IV), Stow 2005."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). GEOMETRÍA DE ESTRATIFICACIÓN (Vol III), Stow 2005."
         },
         {
           "nombre": "ARREGLO_ESTRATOS",
           "obligatorio": false,
           "dominio": "ARREGLO_ESTRATOS",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). ARREGLO DE ESTRATOS SEGÚN ESPESOR (Vol III)."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). ARREGLO DE ESTRATOS SEGÚN ESPESOR (Vol III)."
         },
         {
           "nombre": "GRADACION_INTERNA",
           "obligatorio": false,
           "dominio": "GRADACION_INTERNA",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). TIPO DE GRADACIÓN INTERNA AL DEPÓSITO (Vol III / Vol IV)."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). TIPO DE GRADACIÓN INTERNA AL DEPÓSITO (Vol III)."
         },
         {
           "nombre": "LIMITE_INFERIOR_DEPOSITO",
           "obligatorio": false,
           "dominio": "TIPO_LIMITE_INFERIOR",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). TIPO DE LÍMITE INFERIOR DEL DEPÓSITO."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). TIPO DE LÍMITE INFERIOR DEL DEPÓSITO."
         },
         {
           "nombre": "LIMITE_SUPERIOR_DEPOSITO",
           "obligatorio": false,
           "dominio": "TIPO_LIMITE_SUPERIOR",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). TIPO DE LÍMITE SUPERIOR DEL DEPÓSITO."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). TIPO DE LÍMITE SUPERIOR DEL DEPÓSITO."
         },
         {
           "nombre": "UBICACION_DEPOSITO",
           "obligatorio": false,
           "dominio": "UBICACION_DEPOSITO",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Sedimentaria: posición en un depósito multilitológico; volcánica: facies dentro del depósito."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). Posición en un depósito multilitológico."
         },
         {
           "nombre": "FABRICA_GRAVOSA",
           "obligatorio": false,
           "dominio": "FABRICA_GRAVOSA",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo sedimentaria: FÁBRICA DE AFLORAMIENTOS GRAVOSOS (Vol III)."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). FÁBRICA DE AFLORAMIENTOS GRAVOSOS (Vol III)."
         },
         {
           "nombre": "AMBIENTE_DEPOSITACIONAL",
           "obligatorio": false,
           "dominio": "AMBIENTE_DEPOSITACIONAL",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Interpretación: lista según TIPO_ROCA."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). Interpretación."
         },
         {
           "nombre": "PROCESO_SEDIMENTARIO",
           "obligatorio": false,
           "dominio": "PROCESO_SEDIMENTARIO",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo sedimentaria (incluye lahares y avalanchas volcánicas)."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). Incluye lahares y avalanchas volcánicas."
         },
         {
           "nombre": "FACIES_SEDIMENTARIA",
           "obligatorio": false,
           "dominio": "FACIES_SEDIMENTARIA",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo sedimentaria."
+          "nota": "Solo sedimentaria con LITIFICACION = Depósito (LITO_SEDIMENTARIA). "
         },
         {
           "nombre": "TIPO_DEPOSITO_VOLCANICO",
           "obligatorio": false,
           "dominio": "TIPO_DEPOSITO_VOLCANICO",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). "
         },
         {
           "nombre": "POSICION_CENTRO_ERUPTIVO",
           "obligatorio": false,
           "dominio": "POSICION_CENTRO_ERUPTIVO",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). "
         },
         {
           "nombre": "TIPO_ERUPCION",
           "obligatorio": false,
           "dominio": "TIPO_ERUPCION",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). "
         },
         {
           "nombre": "TIPO_CENTRO_EMISION",
           "obligatorio": false,
           "dominio": "TIPO_CENTRO_EMISION",
-          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). "
         },
         {
           "nombre": "TIPO_ANTROPICO",
@@ -1040,6 +1040,48 @@ const MODELO = {
           "obligatorio": false,
           "dominio": null,
           "nota": "Texto libre: material, origen, edad aproximada, estado."
+        },
+        {
+          "nombre": "CONTEXTO_DEPOSITO_VOLC",
+          "obligatorio": false,
+          "dominio": "CONTEXTO_DEPOSITO_VOLC",
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). Vol IV."
+        },
+        {
+          "nombre": "GEOMETRIA_DEPOSITO_VOLC",
+          "obligatorio": false,
+          "dominio": "GEOMETRIA_CUERPO",
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). GEOMETRÍA DEL DEPÓSITO (Vol IV), Stow 2005."
+        },
+        {
+          "nombre": "GRADACION_INTERNA_VOLC",
+          "obligatorio": false,
+          "dominio": "GRADACION_INTERNA",
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). TIPO DE GRADACIÓN INTERNA DEL DEPÓSITO (Vol IV)."
+        },
+        {
+          "nombre": "LIMITE_INFERIOR_VOLC",
+          "obligatorio": false,
+          "dominio": "TIPO_LIMITE_INFERIOR",
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). TIPO DE LÍMITE INFERIOR DEL DEPÓSITO."
+        },
+        {
+          "nombre": "LIMITE_SUPERIOR_VOLC",
+          "obligatorio": false,
+          "dominio": "TIPO_LIMITE_SUPERIOR",
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). TIPO DE LÍMITE SUPERIOR DEL DEPÓSITO."
+        },
+        {
+          "nombre": "UBICACION_DEPOSITO_VOLC",
+          "obligatorio": false,
+          "dominio": "UBICACION_DEPOSITO_VOLC",
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). Facies dentro del depósito volcánico."
+        },
+        {
+          "nombre": "AMBIENTE_DEPOSITO_VOLC",
+          "obligatorio": false,
+          "dominio": "AMBIENTE_DEPOSITO_VOLC",
+          "nota": "Solo piroclástica con LITIFICACION = Depósito (VOL_PIROCLASTICA). AMBIENTE DE DEPOSICIÓN (Vol IV)."
         }
       ],
       "geometria": null,
@@ -5475,36 +5517,22 @@ const MODELO = {
         "Roca",
         "Depósito"
       ],
-      "fuente": "Norma CDC 2016 Vol III (subtipos en pares sedimento/roca, Tabla 1) y Norma CDC 2016 Vol IV (tefra frente a roca piroclástica). Con «Depósito» se despliega LITO_DEPOSITO."
+      "fuente": "Norma CDC 2016 Vol III (subtipos en pares sedimento/roca, Tabla 1) y Norma CDC 2016 Vol IV (tefra frente a roca piroclástica). Se pregunta en la sedimentaria y en la piroclástica; con «Depósito» se despliegan los campos del depósito de esa tabla."
     },
     "CONTEXTO_DEPOSITO": {
-      "tipo": "cascada",
-      "padre": "TIPO_ROCA",
-      "mapa": {
-        "Sedimentaria": [
-          "Depósito sedimentario interestratificado en sucesión principalmente sedimentaria",
-          "Depósito sedimentario interestratificado en sucesión volcanosedimentaria",
-          "Depósito sedimentario intercalado en sucesión principalmente volcánica",
-          "Depósito sedimentario aislado",
-          "Enclave de roca sedimentaria",
-          "Mega-enclave de roca sedimentaria",
-          "Roof pendant o septa de roca sedimentaria",
-          "Fragmento o clasto de roca sedimentaria dentro de un depósito",
-          "Indeterminado"
-        ],
-        "Volcánica": [
-          "Depósito volcánico interestratificado en sucesión principalmente volcánica",
-          "Depósito volcánico interestratificado en sucesión volcanosedimentaria",
-          "Depósito volcánico intercalado en sucesión principalmente sedimentaria",
-          "Depósito volcánico aislado",
-          "Enclave de roca volcánica",
-          "Mega-enclave de roca volcánica",
-          "Roof pendant o septa de roca volcánica",
-          "Fragmento de roca volcánica dentro de un depósito",
-          "Indeterminado"
-        ]
-      },
-      "fuente": "Norma CDC 2016 Vol III p. 56 y Norma CDC 2016 Vol IV p. 25, campo CONTEXTO DEL DEPÓSITO DENTRO DEL AFLORAMIENTO (columna de subtipos)"
+      "tipo": "simple",
+      "valores": [
+        "Depósito sedimentario interestratificado en sucesión principalmente sedimentaria",
+        "Depósito sedimentario interestratificado en sucesión volcanosedimentaria",
+        "Depósito sedimentario intercalado en sucesión principalmente volcánica",
+        "Depósito sedimentario aislado",
+        "Enclave de roca sedimentaria",
+        "Mega-enclave de roca sedimentaria",
+        "Roof pendant o septa de roca sedimentaria",
+        "Fragmento o clasto de roca sedimentaria dentro de un depósito",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol III p. 56, campo CONTEXTO DEL DEPÓSITO DENTRO DEL AFLORAMIENTO (columna de subtipos)"
     },
     "TIPO_LIMITE_SUPERIOR": {
       "tipo": "simple",
@@ -5517,70 +5545,44 @@ const MODELO = {
       "fuente": "Norma CDC 2016 Vol III p. 62, campo TIPO DE LÍMITE SUPERIOR DEL DEPÓSITO"
     },
     "UBICACION_DEPOSITO": {
-      "tipo": "cascada",
-      "padre": "TIPO_ROCA",
-      "mapa": {
-        "Sedimentaria": [
-          "Sección inferior de un depósito multilitológico",
-          "Sección media del depósito multilitológico",
-          "Sección superior del depósito multilitológico"
-        ],
-        "Volcánica": [
-          "Proximal",
-          "Media",
-          "Distal",
-          "Lateral",
-          "Base",
-          "Techo",
-          "Frontal"
-        ]
-      },
-      "fuente": "Norma CDC 2016 Vol III p. 63, UBICACIÓN DENTRO DE UN DEPÓSITO MULTILITOLÓGICO; Norma CDC 2016 Vol IV p. 63, UBICACIÓN DENTRO DEL DEPÓSITO VOLCÁNICO"
+      "tipo": "simple",
+      "valores": [
+        "Sección inferior de un depósito multilitológico",
+        "Sección media del depósito multilitológico",
+        "Sección superior del depósito multilitológico"
+      ],
+      "fuente": "Norma CDC 2016 Vol III p. 63, UBICACIÓN DENTRO DE UN DEPÓSITO MULTILITOLÓGICO"
     },
     "AMBIENTE_DEPOSITACIONAL": {
-      "tipo": "cascada",
-      "padre": "TIPO_ROCA",
-      "mapa": {
-        "Sedimentaria": [
-          "Ambiente sedimentario indiferenciado",
-          "Sedimentario continental indiferenciado",
-          "Aluvial",
-          "Cavernoso",
-          "Coluvial",
-          "De salar",
-          "Desértico",
-          "Eólico",
-          "Fluvial",
-          "Glaciar",
-          "Lacustre",
-          "Palustre",
-          "Remoción en masa",
-          "Sedimentario transicional indiferenciado",
-          "Costa (litoral)",
-          "Deltaico",
-          "Estuario",
-          "Lagunar costero",
-          "Planicie de marea",
-          "Sedimentario marino indiferenciado",
-          "Plataforma carbonatada",
-          "Rampa carbonatada",
-          "Plataforma continental",
-          "Talud continental",
-          "Zona abisal"
-        ],
-        "Volcánica": [
-          "Ambiente volcánico continental",
-          "Ambiente volcánico continental subaéreo",
-          "Ambiente volcánico continental subacuático",
-          "Ambiente volcánico continental subglacial",
-          "Ambiente volcánico litoral",
-          "Ambiente volcánico marino",
-          "Ambiente volcánico marino somero",
-          "Ambiente volcánico marino profundo",
-          "Ambiente volcánico indeterminado"
-        ]
-      },
-      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' LV_AMB_SEDIMENTARIO_1 (tildes según Norma CDC 2016 Vol III p. 81, que agrega «Remoción en masa»; «Antrópico» es TIPO_ROCA propio); Norma CDC 2016 Vol IV p. 68, AMBIENTE DE DEPOSICIÓN"
+      "tipo": "simple",
+      "valores": [
+        "Ambiente sedimentario indiferenciado",
+        "Sedimentario continental indiferenciado",
+        "Aluvial",
+        "Cavernoso",
+        "Coluvial",
+        "De salar",
+        "Desértico",
+        "Eólico",
+        "Fluvial",
+        "Glaciar",
+        "Lacustre",
+        "Palustre",
+        "Remoción en masa",
+        "Sedimentario transicional indiferenciado",
+        "Costa (litoral)",
+        "Deltaico",
+        "Estuario",
+        "Lagunar costero",
+        "Planicie de marea",
+        "Sedimentario marino indiferenciado",
+        "Plataforma carbonatada",
+        "Rampa carbonatada",
+        "Plataforma continental",
+        "Talud continental",
+        "Zona abisal"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' LV_AMB_SEDIMENTARIO_1 (tildes según Norma CDC 2016 Vol III p. 81, que agrega «Remoción en masa»; «Antrópico» es TIPO_ROCA propio)"
     },
     "PROCESO_SEDIMENTARIO": {
       "tipo": "simple",
@@ -6533,6 +6535,49 @@ const MODELO = {
         "Indeterminada"
       ],
       "fuente": "Norma CDC 2016 Vol IV p. 60, campo GÉNESIS DEL FRAGMENTO O ENCLAVE (columna de términos)"
+    },
+    "CONTEXTO_DEPOSITO_VOLC": {
+      "tipo": "simple",
+      "valores": [
+        "Depósito volcánico interestratificado en sucesión principalmente volcánica",
+        "Depósito volcánico interestratificado en sucesión volcanosedimentaria",
+        "Depósito volcánico intercalado en sucesión principalmente sedimentaria",
+        "Depósito volcánico aislado",
+        "Enclave de roca volcánica",
+        "Mega-enclave de roca volcánica",
+        "Roof pendant o septa de roca volcánica",
+        "Fragmento de roca volcánica dentro de un depósito",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV p. 25, campo CONTEXTO DEL DEPÓSITO DENTRO DEL AFLORAMIENTO (columna de subtipos)"
+    },
+    "UBICACION_DEPOSITO_VOLC": {
+      "tipo": "simple",
+      "valores": [
+        "Proximal",
+        "Media",
+        "Distal",
+        "Lateral",
+        "Base",
+        "Techo",
+        "Frontal"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV p. 63, UBICACIÓN DENTRO DEL DEPÓSITO VOLCÁNICO"
+    },
+    "AMBIENTE_DEPOSITO_VOLC": {
+      "tipo": "simple",
+      "valores": [
+        "Ambiente volcánico continental",
+        "Ambiente volcánico continental subaéreo",
+        "Ambiente volcánico continental subacuático",
+        "Ambiente volcánico continental subglacial",
+        "Ambiente volcánico litoral",
+        "Ambiente volcánico marino",
+        "Ambiente volcánico marino somero",
+        "Ambiente volcánico marino profundo",
+        "Ambiente volcánico indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV p. 68, AMBIENTE DE DEPOSICIÓN"
     }
   },
   "avisos": [
@@ -6550,7 +6595,7 @@ const MODELO = {
     "SUBTIPO_SEDIMENTARIO y campos de clasificación sedimentaria agregados desde la norma CDC 2016 Vol III (agregar_subtipo_sedimentario.py).",
     "NOMBRE_ROCA Sedimentaria ampliado por SUBTIPO_SEDIMENTARIO desde la norma CDC 2016 Vol III (agregar_nombres_sedimentarios.py).",
     "NOMBRE_ROCA Volcánica sincronizado con ROCAS_VOLCANICAS de la PWA (Lava + Rocas piroclásticas, sincronizar_nombres_volcanicos.py); salen Ignimbrita, Toba, Lapillita y Aglomerado volcánico.",
-    "v152 (2026-10-26): estructuras en árbol (EST_FALLA/EST_PLIEGUE/EST_FRACTURA), Depósito pasa de TIPO_ROCA a LITIFICACION con hija LITO_DEPOSITO, TIPO_ROCA Antrópico con LITO_ANTROPICO, y TBL_COMPONENTE (COMP_CLASTO/COMP_FRAGMENTO). Ver modelo/reestructurar_v152.py."
+    "v152 (2026-10-26): estructuras en árbol (EST_FALLA/EST_PLIEGUE/EST_FRACTURA), Depósito pasa de TIPO_ROCA a LITIFICACION con los campos de depósito en LITO_SEDIMENTARIA y VOL_PIROCLASTICA, TIPO_ROCA Antrópico con LITO_ANTROPICO, y TBL_COMPONENTE (COMP_CLASTO/COMP_FRAGMENTO). Ver modelo/reestructurar_v152.py."
   ],
   "familias_litologia": [
     {
@@ -6563,7 +6608,6 @@ const MODELO = {
         "ID_LITOLOGIA",
         "ID_AFLORAMIENTO",
         "TIPO_ROCA",
-        "LITIFICACION",
         "NOMBRE_ROCA",
         "UNIDAD_GEOLOGICA",
         "ESPESOR_ESTRATO_MIN_CM",
@@ -6583,32 +6627,12 @@ const MODELO = {
       ]
     },
     {
-      "tabla": "LITO_CLASTICA",
-      "padre": false,
-      "descripcion": "Hija 1:1. Rocas y depositos piroclasticos formados por clastos: tamano, forma, composicion, matriz y cemento (v152: los depositos sedimentarios van en SED_SILICICLASTICA).",
-      "aplica_a": "Volcanica, rocas piroclasticas (roca o deposito)",
-      "campos": [
-        "GRANULOMETRIA",
-        "SELECCION",
-        "REDONDEAMIENTO",
-        "ESFERICIDAD",
-        "CLASTOS_TAM_MAX_CM",
-        "COMPOSICION_CLASTICA",
-        "LITOLOGIA_CLASTOS",
-        "LITOLOGIA_CLASTOS_DETALLE",
-        "GRANULOMETRIA_CLASTOS",
-        "FABRICA_CLASTOS",
-        "COMPOSICION_CLASTICA_MATRIZ",
-        "GRANULOMETRIA_MATRIZ",
-        "CEMENTO"
-      ]
-    },
-    {
       "tabla": "LITO_SEDIMENTARIA",
       "padre": false,
-      "descripcion": "Hija 1:1. Clasificacion y rasgos comunes de toda roca sedimentaria: subtipo (norma CDC), composicion, componentes tufitico y subordinados, cemento (copia) y fosiles.",
-      "aplica_a": "Sedimentaria",
+      "descripcion": "Hija 1:1. Roca o deposito sedimentario: roca o deposito (LITIFICACION), subtipo (norma CDC), composicion, componentes tufitico y subordinados, cemento, fosiles y, si es deposito, su descripcion e interpretacion (CDC TBL_AF_DEP_SEDIMENTARIO).",
+      "aplica_a": "Sedimentaria (roca o deposito)",
       "campos": [
+        "LITIFICACION",
         "SUBTIPO_SEDIMENTARIO",
         "COMPOSICION_MINERALOGICA",
         "COMPONENTE_TUFITICO",
@@ -6619,22 +6643,29 @@ const MODELO = {
         "COMPONENTE_SUBORDINADO_2_PCT",
         "COMPONENTE_SUBORDINADO_3",
         "COMPONENTE_SUBORDINADO_3_PCT",
+        "CEMENTO",
         "CONTENIDO_FOSIL",
-        "CONTENIDO_FOSIL_DETALLE"
-      ],
-      "hija_de": "TBL_LITOLOGIA",
-      "campos_extra": [
-        "CEMENTO"
+        "CONTENIDO_FOSIL_DETALLE",
+        "CONTEXTO_DEPOSITO",
+        "GEOMETRIA_DEPOSITO",
+        "ARREGLO_ESTRATOS",
+        "GRADACION_INTERNA",
+        "LIMITE_INFERIOR_DEPOSITO",
+        "LIMITE_SUPERIOR_DEPOSITO",
+        "UBICACION_DEPOSITO",
+        "FABRICA_GRAVOSA",
+        "GRADO_CONSOLIDACION",
+        "AMBIENTE_DEPOSITACIONAL",
+        "PROCESO_SEDIMENTARIO",
+        "FACIES_SEDIMENTARIA"
       ]
     },
     {
-      "tabla": "SED_SILICICLASTICA",
+      "tabla": "SED_CLASTICA",
       "padre": false,
-      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Sedimentaria siliciclastica y volcanosedimentaria: copia de los campos clasticos de LITO_CLASTICA.",
-      "aplica_a": "Sedimentaria, SUBTIPO Siliciclastico o Volcanosedimentario (o NOMBRE_ROCA clastico si no hay subtipo)",
-      "campos": [],
-      "hija_de": "LITO_SEDIMENTARIA",
-      "campos_extra": [
+      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Roca sedimentaria clastica o deposito sedimentario clastico (siliciclastico y volcanosedimentario): granulometria, seleccion, forma, composicion, clastos y matriz.",
+      "aplica_a": "Sedimentaria, SUBTIPO Siliciclastico o Volcanosedimentario (o NOMBRE_ROCA clastico si no hay subtipo), roca o deposito",
+      "campos": [
         "GRANULOMETRIA",
         "SELECCION",
         "REDONDEAMIENTO",
@@ -6647,12 +6678,13 @@ const MODELO = {
         "FABRICA_CLASTOS",
         "COMPOSICION_CLASTICA_MATRIZ",
         "GRANULOMETRIA_MATRIZ"
-      ]
+      ],
+      "hija_de": "LITO_SEDIMENTARIA"
     },
     {
       "tabla": "SED_NO_CLASTICA",
       "padre": false,
-      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Sedimentaria no clastica: carbonato, salino, fosfato, organico, siliceo.",
+      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Roca o deposito sedimentario no clastico: carbonato, salino, fosfato, organico, siliceo.",
       "aplica_a": "Sedimentaria, SUBTIPO distinto de Siliciclastico/Volcanosedimentario/Mixto/Indeterminado",
       "campos": [
         "TEXTURA_DUNHAM",
@@ -6663,21 +6695,30 @@ const MODELO = {
     {
       "tabla": "LITO_VOLCANICA",
       "padre": false,
-      "descripcion": "Hija 1:1. Rasgos de rocas volcanicas: lavas (fenocristales, masa fundamental) y cristalinidad (lava y piroclastica).",
-      "aplica_a": "Volcanica (lava y rocas piroclasticas)",
+      "descripcion": "Hija 1:1. Datos comunes de rocas volcanicas: tipo (lava o piroclastica) y cristalinidad.",
+      "aplica_a": "Volcanica (lava y rocas o depositos piroclasticos)",
       "campos": [
         "TIPO_VOLCANICA",
-        "CRISTALINIDAD",
-        "FENOCRISTALES_ESPECIE",
-        "FENOCRISTALES_DETALLE",
-        "MASA_FUNDAMENTAL"
+        "CRISTALINIDAD"
       ]
     },
     {
-      "tabla": "LITO_PIROCLASTICA",
+      "tabla": "VOL_LAVA",
       "padre": false,
-      "descripcion": "Hija 1:1. Componentes de depositos piroclasticos (liticos, pomez, cristaloclastos, vidrio, matriz, soldadura).",
-      "aplica_a": "Rocas piroclasticas y Tefra",
+      "descripcion": "Nieta 1:1 (de LITO_VOLCANICA). Lavas: fenocristales y masa fundamental.",
+      "aplica_a": "Volcanica, TIPO_VOLCANICA = Lava",
+      "campos": [
+        "FENOCRISTALES_ESPECIE",
+        "FENOCRISTALES_DETALLE",
+        "MASA_FUNDAMENTAL"
+      ],
+      "hija_de": "LITO_VOLCANICA"
+    },
+    {
+      "tabla": "VOL_PIROCLASTICA",
+      "padre": false,
+      "descripcion": "Nieta 1:1 (de LITO_VOLCANICA). Roca o deposito piroclastico: roca o deposito (LITIFICACION, copia), componentes (liticos, pomez, cristaloclastos, vidrio, matriz), soldadura, seleccion y, si es deposito (tefra), su descripcion e interpretacion (CDC TBL_AF_DEP_VOLCANICO).",
+      "aplica_a": "Volcanica, TIPO_VOLCANICA = Rocas piroclasticas (roca o deposito)",
       "campos": [
         "SOLDADURA",
         "LITICOS_PCT",
@@ -6691,7 +6732,25 @@ const MODELO = {
         "TIPO_FRAGMENTO_VITREO_DETALLE",
         "MATRIZ_COMPOSICION",
         "MATRIZ_PCT",
-        "MATRIZ_DETALLE"
+        "MATRIZ_DETALLE",
+        "CONTEXTO_DEPOSITO_VOLC",
+        "GEOMETRIA_DEPOSITO_VOLC",
+        "GRADACION_INTERNA_VOLC",
+        "LIMITE_INFERIOR_VOLC",
+        "LIMITE_SUPERIOR_VOLC",
+        "UBICACION_DEPOSITO_VOLC",
+        "AMBIENTE_DEPOSITO_VOLC",
+        "TIPO_DEPOSITO_VOLCANICO",
+        "POSICION_CENTRO_ERUPTIVO",
+        "TIPO_ERUPCION",
+        "TIPO_CENTRO_EMISION"
+      ],
+      "hija_de": "LITO_VOLCANICA",
+      "campos_extra": [
+        "LITIFICACION",
+        "GRANULOMETRIA",
+        "SELECCION",
+        "CLASTOS_TAM_MAX_CM"
       ]
     },
     {
@@ -6733,33 +6792,9 @@ const MODELO = {
       ]
     },
     {
-      "tabla": "LITO_DEPOSITO",
-      "padre": false,
-      "descripcion": "Hija 1:1 (v152). Descripcion e interpretacion del deposito: contexto, geometria, limites, gradacion, ubicacion, ambiente, proceso y facies (CDC TBL_AF_DEP_SEDIMENTARIO) o tipo de deposito, centro y erupcion (CDC TBL_AF_DEP_VOLCANICO).",
-      "aplica_a": "Sedimentaria o Volcanica con LITIFICACION = Deposito",
-      "campos": [
-        "CONTEXTO_DEPOSITO",
-        "GEOMETRIA_DEPOSITO",
-        "ARREGLO_ESTRATOS",
-        "GRADACION_INTERNA",
-        "LIMITE_INFERIOR_DEPOSITO",
-        "LIMITE_SUPERIOR_DEPOSITO",
-        "UBICACION_DEPOSITO",
-        "FABRICA_GRAVOSA",
-        "GRADO_CONSOLIDACION",
-        "AMBIENTE_DEPOSITACIONAL",
-        "PROCESO_SEDIMENTARIO",
-        "FACIES_SEDIMENTARIA",
-        "TIPO_DEPOSITO_VOLCANICO",
-        "POSICION_CENTRO_ERUPTIVO",
-        "TIPO_ERUPCION",
-        "TIPO_CENTRO_EMISION"
-      ]
-    },
-    {
       "tabla": "LITO_ANTROPICO",
       "padre": false,
-      "descripcion": "Hija 1:1 (v152). Depositos antropicos: desmonte, relave, pila de lixiviacion, relleno u otro.",
+      "descripcion": "Hija 1:1. Depositos antropicos (mismo nivel que las demas familias): desmonte, relave, pila de lixiviacion, relleno u otro.",
       "aplica_a": "Antropico",
       "campos": [
         "TIPO_ANTROPICO",
@@ -8506,22 +8541,25 @@ function esClastico(v){
   if (tipo === 'Sedimentaria') return sedimentariaClasticaExport(v);
   return false;
 }
-function esDeposito(v){ return v['LITIFICACION']==='Depósito' && (v['TIPO_ROCA']==='Sedimentaria' || v['TIPO_ROCA']==='Volcánica'); }
 function esPiroclastica(v){ return v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas'; }
+// Roca o depósito se pregunta en la sedimentaria y en la piroclástica (la lava siempre es roca).
+function esDeposito(v){ return v['LITIFICACION']==='Depósito' && (v['TIPO_ROCA']==='Sedimentaria' || esPiroclastica(v)); }
+const esDepositoSed = v => esDeposito(v) && v['TIPO_ROCA']==='Sedimentaria';
+const esDepositoPiro = v => esDeposito(v) && esPiroclastica(v);
 // Clastos tamaño grava: las 3 rocas gravosas y todo depósito sedimentario clástico (sus nombres CDC, como
 // "Arena" o "Grava arenosa", no dicen si traen clastos >2 mm: se deja anotarlos).
 function esGravosa(v){
   return v['TIPO_ROCA']==='Sedimentaria' && (SEDIMENTARIA_GRAVOSA.includes(v['NOMBRE_ROCA']) || (v['LITIFICACION']==='Depósito' && sedimentariaClasticaExport(v)));
 }
 
-// Qué tablas hijas de litología se llenan al EXPORTAR (v150). Las clásticas se copian: depósitos y
-// piroclásticas van a LITO_CLASTICA; las sedimentarias a SED_SILICICLASTICA (si son siliciclásticas o
-// volcanosedimentarias) o SED_NO_CLASTICA (carbonato, salino, fosfato, orgánico, silíceo). Mixto e
-// indeterminado solo llenan LITO_SEDIMENTARIA. Sin SUBTIPO se deduce de NOMBRE_ROCA (datos previos).
+// Qué tablas hijas de litología se llenan al EXPORTAR. v152: árbol por camino de elecciones -- la sedimentaria
+// llena LITO_SEDIMENTARIA y, según el subtipo, SED_CLASTICA (siliciclástica o volcanosedimentaria, roca o
+// depósito) o SED_NO_CLASTICA (carbonato, salino, fosfato, orgánico, silíceo); mixto e indeterminado solo la
+// madre. La volcánica llena LITO_VOLCANICA y VOL_LAVA o VOL_PIROCLASTICA. Sin SUBTIPO se deduce de NOMBRE_ROCA.
 // Declaraciones (no const) para que smoke.html las alcance desde el iframe.
 // Sin subtipo, un depósito (LITIFICACION = Depósito) cuenta como clástico salvo que su nombre sea de un
 // sedimento no clástico: así los aluviales, coluviales… migrados de v151 y los sedimentos CDC siliciclásticos
-// y volcanosedimentarios llenan SED_SILICICLASTICA.
+// y volcanosedimentarios llenan SED_CLASTICA.
 function sedimentariaClasticaExport(v){
   const st=v['SUBTIPO_SEDIMENTARIO'];
   if(st) return st==='Siliciclástico'||st==='Volcanosedimentario';
@@ -8535,10 +8573,13 @@ const esFalla = v => v['TIPO_ESTRUCTURA']==='Estructura falla';
 const esPliegue = v => v['TIPO_ESTRUCTURA']==='Estructura pliegue mayor' || v['TIPO_ESTRUCTURA']==='Estructura pliegue menor';
 function familiaAplica(tabla, v){
   const sed=v['TIPO_ROCA']==='Sedimentaria', st=v['SUBTIPO_SEDIMENTARIO'];
-  if(tabla==='LITO_CLASTICA') return esPiroclastica(v);
-  if(tabla==='SED_SILICICLASTICA') return sed && sedimentariaClasticaExport(v);
+  // v152: árbol por camino de elecciones (sedimentaria -> clástica / no clástica; volcánica -> lava / piroclástica)
+  if(tabla==='LITO_SEDIMENTARIA') return sed;
+  if(tabla==='SED_CLASTICA') return sed && sedimentariaClasticaExport(v);
   if(tabla==='SED_NO_CLASTICA') return sed && !sedimentariaClasticaExport(v) && st!=='Mixto' && st!=='Composición indeterminada';
-  if(tabla==='LITO_DEPOSITO') return esDeposito(v);
+  if(tabla==='LITO_VOLCANICA') return v['TIPO_ROCA']==='Volcánica';
+  if(tabla==='VOL_LAVA') return v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava';
+  if(tabla==='VOL_PIROCLASTICA') return esPiroclastica(v);
   if(tabla==='LITO_ANTROPICO') return v['TIPO_ROCA']==='Antrópico';
   if(tabla==='EST_FALLA') return esFalla(v);
   if(tabla==='EST_PLIEGUE') return esPliegue(v);
@@ -8584,7 +8625,7 @@ const CONDICIONALES = {
   ABERTURA_FRACTURA:           {modo:'ocultar', regla: esFractura},
   TEXTURA_SUPERFICIE_FRACTURA: {modo:'ocultar', regla: esFractura},
   // v152: roca o depósito, solo en sedimentarias y volcánicas (los pares sedimento/roca de la CDC).
-  LITIFICACION: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' || v['TIPO_ROCA']==='Volcánica'},
+  LITIFICACION: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' || esPiroclastica(v)},
   // Lava/Rocas piroclásticas solo aplica a rocas volcánicas (acota NOMBRE_ROCA, ver filtrarNombreRocaVolcanica).
   TIPO_VOLCANICA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica'},
   // Granulometría solo para: (1) todos los depósitos (incluida "Tefra, depósito volcánico",
@@ -8740,23 +8781,31 @@ const CONDICIONALES = {
   MASA_FUNDAMENTAL: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava'},
   TEXTURA_DUNHAM:   {modo:'ocultar', regla: v => v['NOMBRE_ROCA']==='Caliza' || (v['TIPO_ROCA']==='Sedimentaria' && v['SUBTIPO_SEDIMENTARIO']==='Carbonato')},
   SOLDADURA:        {modo:'ocultar', regla: v => esPiroclastica(v) && v['LITIFICACION']!=='Depósito'},
-  // --- v152: depósito (LITIFICACION = Depósito, hija LITO_DEPOSITO; norma CDC Vol III y IV) ---
-  GRADO_CONSOLIDACION:      {modo:'ocultar', regla: esDeposito},
-  CONTEXTO_DEPOSITO:        {modo:'ocultar', regla: esDeposito},
-  GEOMETRIA_DEPOSITO:       {modo:'ocultar', regla: esDeposito},
-  ARREGLO_ESTRATOS:         {modo:'ocultar', regla: esDeposito},
-  GRADACION_INTERNA:        {modo:'ocultar', regla: esDeposito},
-  LIMITE_INFERIOR_DEPOSITO: {modo:'ocultar', regla: esDeposito},
-  LIMITE_SUPERIOR_DEPOSITO: {modo:'ocultar', regla: esDeposito},
-  UBICACION_DEPOSITO:       {modo:'ocultar', regla: esDeposito},
-  AMBIENTE_DEPOSITACIONAL:  {modo:'ocultar', regla: esDeposito},
-  FABRICA_GRAVOSA:          {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Sedimentaria'},
-  PROCESO_SEDIMENTARIO:     {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Sedimentaria'},
-  FACIES_SEDIMENTARIA:      {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Sedimentaria'},
-  TIPO_DEPOSITO_VOLCANICO:  {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
-  POSICION_CENTRO_ERUPTIVO: {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
-  TIPO_ERUPCION:            {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
-  TIPO_CENTRO_EMISION:      {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
+  // --- v152: depósito (LITIFICACION = Depósito): sedimentario en LITO_SEDIMENTARIA (Vol III), piroclástico en
+  // VOL_PIROCLASTICA (Vol IV); los campos que la CDC repite en las dos tablas llevan _VOLC en la volcánica ---
+  GRADO_CONSOLIDACION:      {modo:'ocultar', regla: esDepositoSed},
+  CONTEXTO_DEPOSITO:        {modo:'ocultar', regla: esDepositoSed},
+  GEOMETRIA_DEPOSITO:       {modo:'ocultar', regla: esDepositoSed},
+  ARREGLO_ESTRATOS:         {modo:'ocultar', regla: esDepositoSed},
+  GRADACION_INTERNA:        {modo:'ocultar', regla: esDepositoSed},
+  LIMITE_INFERIOR_DEPOSITO: {modo:'ocultar', regla: esDepositoSed},
+  LIMITE_SUPERIOR_DEPOSITO: {modo:'ocultar', regla: esDepositoSed},
+  UBICACION_DEPOSITO:       {modo:'ocultar', regla: esDepositoSed},
+  AMBIENTE_DEPOSITACIONAL:  {modo:'ocultar', regla: esDepositoSed},
+  FABRICA_GRAVOSA:          {modo:'ocultar', regla: esDepositoSed},
+  PROCESO_SEDIMENTARIO:     {modo:'ocultar', regla: esDepositoSed},
+  FACIES_SEDIMENTARIA:      {modo:'ocultar', regla: esDepositoSed},
+  CONTEXTO_DEPOSITO_VOLC:   {modo:'ocultar', regla: esDepositoPiro},
+  GEOMETRIA_DEPOSITO_VOLC:  {modo:'ocultar', regla: esDepositoPiro},
+  GRADACION_INTERNA_VOLC:   {modo:'ocultar', regla: esDepositoPiro},
+  LIMITE_INFERIOR_VOLC:     {modo:'ocultar', regla: esDepositoPiro},
+  LIMITE_SUPERIOR_VOLC:     {modo:'ocultar', regla: esDepositoPiro},
+  UBICACION_DEPOSITO_VOLC:  {modo:'ocultar', regla: esDepositoPiro},
+  AMBIENTE_DEPOSITO_VOLC:   {modo:'ocultar', regla: esDepositoPiro},
+  TIPO_DEPOSITO_VOLCANICO:  {modo:'ocultar', regla: esDepositoPiro},
+  POSICION_CENTRO_ERUPTIVO: {modo:'ocultar', regla: esDepositoPiro},
+  TIPO_ERUPCION:            {modo:'ocultar', regla: esDepositoPiro},
+  TIPO_CENTRO_EMISION:      {modo:'ocultar', regla: esDepositoPiro},
   // --- v152: antrópico (hija LITO_ANTROPICO). No lleva nombre de roca, textura ni estructura.
   TIPO_ANTROPICO:        {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Antrópico'},
   TIPO_ANTROPICO_OTRO:   {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Antrópico' && v['TIPO_ANTROPICO']==='Otro'},
@@ -8873,19 +8922,23 @@ function formulario(store, reg, ctx){
   const fam=familiasDe(store);
   if(fam){
     const lito=store==='litologia', padre=fam.lista[0].tabla;
-    const TITULO=lito?{TBL_LITOLOGIA:'Datos generales', LITO_CLASTICA:'Clastos, matriz y cemento',
-      LITO_SEDIMENTARIA:'Sedimentaria: clasificación y componentes', SED_NO_CLASTICA:'Sedimentaria no clástica (carbonato, fosfato…)', LITO_VOLCANICA:'Volcánica', LITO_PIROCLASTICA:'Componentes piroclásticos',
+    const TITULO=lito?{TBL_LITOLOGIA:'Datos generales', LITO_SEDIMENTARIA:'Roca o depósito sedimentario',
+      SED_CLASTICA:'Clastos y matriz (sedimentaria clástica y piroclástica)', SED_NO_CLASTICA:'Sedimentaria no clástica (carbonato, fosfato…)',
+      LITO_VOLCANICA:'Volcánica', VOL_LAVA:'Lava', VOL_PIROCLASTICA:'Roca o depósito piroclástico',
       LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica',
-      LITO_DEPOSITO:'Depósito: descripción e interpretación', LITO_ANTROPICO:'Depósito antrópico'}
+      LITO_ANTROPICO:'Depósito antrópico'}
       :Object.fromEntries(fam.lista.filter(f=>!f.padre).map(f=>[f.tabla,f.titulo||f.tabla]));
     const famDe={}; fam.lista.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
-    if(lito){ famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre'; }
+    // TIPO_VOLCANICA y LITIFICACION se exportan en su rama pero se eligen junto a TIPO_ROCA: deciden qué rama se abre
+    if(lito){ famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.LITIFICACION='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre'; }
     const orden=fam.lista.map(f=>f.tabla).concat(lito?['__nombre']:[]);
     const pos=n=>{const k=orden.indexOf(famDe[n]); return k<0?0:k;};
     // orden estable: dentro de cada grupo se respeta el orden previo; TIPO_VOLCANICA tras TIPO_ROCA
     cs=cs.map((c,i)=>({c,i})).sort((a,b)=>pos(a.c.nombre)-pos(b.c.nombre)||a.i-b.i).map(x=>x.c);
     const iv=cs.findIndex(c=>c.nombre==='TIPO_VOLCANICA'), ir=cs.findIndex(c=>c.nombre==='TIPO_ROCA');
     if(iv>=0&&ir>=0){const tv=cs.splice(iv,1)[0]; cs.splice(cs.findIndex(c=>c.nombre==='TIPO_ROCA')+1,0,tv);}
+    const il=cs.findIndex(c=>c.nombre==='LITIFICACION');
+    if(il>=0){const lt=cs.splice(il,1)[0]; const k=cs.findIndex(c=>c.nombre==='TIPO_VOLCANICA'); cs.splice((k>=0?k:cs.findIndex(c=>c.nombre==='TIPO_ROCA'))+1,0,lt);}
     for(const t of orden){
       const g={tabla:t, nodo:el('div',{class:'grupo-lito','data-familia':t}), row:el('div',{class:'row'})};
       if(TITULO[t]) g.nodo.append(el('h4',{},TITULO[t]));

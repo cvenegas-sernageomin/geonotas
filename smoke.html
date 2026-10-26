@@ -314,27 +314,27 @@ async function correr(){
         const q = s => { const st = db.prepare(s); const o = []; while(st.step()) o.push(st.getAsObject()); st.free(); return o; };
         try {
           const M = w.eval('MODELO'); const fam = M.familias_litologia;
-          ok(fam && fam.length === 12, 'el modelo no trae las 12 tablas de litología (v152: + LITO_DEPOSITO y LITO_ANTROPICO)');
+          ok(fam && fam.length === 11, 'el modelo no trae las 11 tablas de litología (v152: árbol por camino de elecciones)');
           const hijas = fam.filter(f => !f.padre).map(f => f.tabla);
           const total = fam.reduce((n, f) => n + f.campos.length, 0);
           eq(total, M.tablas.TBL_LITOLOGIA.campos.length, 'las familias no cubren los campos de TBL_LITOLOGIA');
           const cols = t => q("SELECT name FROM pragma_table_info('" + t + "')").map(x => x.name);
           ok(!cols('TBL_LITOLOGIA').includes('POMEZ_PCT') && !cols('TBL_LITOLOGIA').includes('COMPOSICION_MINERAL_INTRUSIVA'),
              'el padre aún trae columnas de familia');
-          ok(cols('LITO_PIROCLASTICA').includes('POMEZ_PCT') && cols('LITO_PIROCLASTICA').includes('ID_LITOLOGIA'), 'LITO_PIROCLASTICA sin POMEZ_PCT/ID_LITOLOGIA');
-          eq(q("SELECT ID_LITOLOGIA, POMEZ_PCT FROM LITO_PIROCLASTICA WHERE ID_REG='"+ids[0]+"'"), [{ID_LITOLOGIA:'LIT-SMK-1', POMEZ_PCT:'30'}], 'fila piroclástica');
+          ok(cols('VOL_PIROCLASTICA').includes('POMEZ_PCT') && cols('VOL_PIROCLASTICA').includes('ID_LITOLOGIA'), 'VOL_PIROCLASTICA sin POMEZ_PCT/ID_LITOLOGIA');
+          eq(q("SELECT ID_LITOLOGIA, POMEZ_PCT, SELECCION FROM VOL_PIROCLASTICA WHERE ID_REG='"+ids[0]+"'"), [{ID_LITOLOGIA:'LIT-SMK-1', POMEZ_PCT:'30', SELECCION:'Mala'}], 'fila piroclástica (con la copia de SELECCION)');
           eq(q("SELECT ID_LITOLOGIA FROM LITO_INTRUSIVA WHERE ID_REG='"+ids[1]+"'"), [{ID_LITOLOGIA:'LIT-SMK-2'}], 'fila intrusiva');
-          eq(q("SELECT COUNT(*) n FROM LITO_PIROCLASTICA WHERE ID_REG='"+ids[1]+"'"), [{n:0}], 'la intrusiva no debe tener fila piroclástica');
-          eq(q("SELECT COUNT(*) n FROM LITO_CLASTICA WHERE ID_REG='"+ids[0]+"'"), [{n:1}], 'la toba (SELECCION) debe tener fila clástica');
+          eq(q("SELECT COUNT(*) n FROM VOL_PIROCLASTICA WHERE ID_REG='"+ids[1]+"'"), [{n:0}], 'la intrusiva no debe tener fila piroclástica');
+          eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[0]+"'"), [{n:0}], 'la toba no debe llenar SED_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM TBL_LITOLOGIA WHERE ID_REG IN ('"+ids.join("','")+"')"), [{n:5}], 'padre: una fila por litología');
-          eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[2]+"'"), [{n:1}], 'arenisca: fila en SED_SILICICLASTICA');
-          eq(q("SELECT COUNT(*) n FROM LITO_CLASTICA WHERE ID_REG IN ('"+ids[2]+"','"+ids[3]+"','"+ids[4]+"')"), [{n:0}], 'las sedimentarias no deben llenar LITO_CLASTICA');
+          eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[2]+"'"), [{n:1}], 'arenisca: fila en SED_CLASTICA');
+          eq(q("SELECT COUNT(*) n FROM VOL_PIROCLASTICA WHERE ID_REG IN ('"+ids[2]+"','"+ids[3]+"','"+ids[4]+"')"), [{n:0}], 'las sedimentarias no deben llenar VOL_PIROCLASTICA');
           eq(q("SELECT CEMENTO, COMPONENTE_SUBORDINADO_1 FROM LITO_SEDIMENTARIA WHERE ID_REG='"+ids[2]+"'"), [{CEMENTO:'Calcáreo', COMPONENTE_SUBORDINADO_1:'arcilloso'}], 'arenisca: LITO_SEDIMENTARIA con cemento y subordinado');
           eq(q("SELECT TEXTURA_DUNHAM, TIPO_ALOQUIMICO FROM SED_NO_CLASTICA WHERE ID_REG='"+ids[3]+"'"), [{TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'}], 'caliza: fila en SED_NO_CLASTICA');
-          eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[3]+"'"), [{n:0}], 'la caliza no debe llenar SED_SILICICLASTICA');
-          eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[4]+"'"), [{n:0}], 'subtipo Mixto: sin nieta');
-          eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:11}], 'hijas sin registrar en gpkg_contents');
-          return 'TBL_LITOLOGIA + 11 hijas (sedimentaria con 2 nietas); las hijas solo traen fila si la ficha llenó esa familia';
+          eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[3]+"'"), [{n:0}], 'la caliza no debe llenar SED_CLASTICA');
+          eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[4]+"'"), [{n:0}], 'subtipo Mixto: sin nieta');
+          eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:10}], 'hijas sin registrar en gpkg_contents');
+          return 'TBL_LITOLOGIA + 10 hijas (sedimentaria y volcánica con 2 nietas cada una); las hijas solo traen fila si la ficha llenó esa familia';
         } finally { db.close(); }
       } finally { for (const id of ids) await w.del('litologia', id); }
     });
@@ -349,15 +349,15 @@ async function correr(){
           .map(g => g.dataset.familia).filter(t => t !== '__nombre'); } finally { f.node.remove(); } };
       eq(grupos({TIPO_ROCA:'Intrusiva'}), ['TBL_LITOLOGIA','LITO_INTRUSIVA'], 'intrusiva');
       eq(grupos({TIPO_ROCA:'Metamórfica'}), ['TBL_LITOLOGIA','LITO_METAMORFICA'], 'metamórfica');
-      eq(grupos({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}), ['TBL_LITOLOGIA','LITO_VOLCANICA'], 'lava');
+      eq(grupos({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}), ['TBL_LITOLOGIA','LITO_VOLCANICA','VOL_LAVA'], 'lava');
       eq(grupos({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas'}),
-         ['TBL_LITOLOGIA','LITO_CLASTICA','LITO_VOLCANICA','LITO_PIROCLASTICA'], 'piroclástica');
-      eq(grupos({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'}), ['TBL_LITOLOGIA','LITO_CLASTICA','LITO_SEDIMENTARIA'], 'arenisca');
+         ['TBL_LITOLOGIA','SED_CLASTICA','LITO_VOLCANICA','VOL_PIROCLASTICA'], 'piroclástica');
+      eq(grupos({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'}), ['TBL_LITOLOGIA','LITO_SEDIMENTARIA','SED_CLASTICA'], 'arenisca');
       // v152: el depósito es una sedimentaria o volcánica con LITIFICACION = Depósito, y suma su ficha LITO_DEPOSITO
       eq(grupos({TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito', NOMBRE_ROCA:'Aluviales'}),
-         ['TBL_LITOLOGIA','LITO_CLASTICA','LITO_SEDIMENTARIA','LITO_DEPOSITO'], 'depósito aluvial');
+         ['TBL_LITOLOGIA','LITO_SEDIMENTARIA','SED_CLASTICA'], 'depósito aluvial');
       eq(grupos({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', LITIFICACION:'Depósito', NOMBRE_ROCA:'Lapilli'}),
-         ['TBL_LITOLOGIA','LITO_CLASTICA','LITO_VOLCANICA','LITO_PIROCLASTICA','LITO_DEPOSITO'], 'tefra');
+         ['TBL_LITOLOGIA','SED_CLASTICA','LITO_VOLCANICA','VOL_PIROCLASTICA'], 'tefra');
       eq(grupos({TIPO_ROCA:'Antrópico'}), ['TBL_LITOLOGIA','LITO_ANTROPICO'], 'antrópico');
       eq(grupos({}), ['TBL_LITOLOGIA'], 'sin tipo de roca solo se ven los datos generales');
       eq(grupos({TIPO_ROCA:'Intrusiva'}, false), ['TBL_LITOLOGIA'], 'con revelado progresivo, un grupo sin campos revelados no debe verse');
@@ -1983,8 +1983,8 @@ async function correr(){
       eq(['GRANULOMETRIA_CLASTOS','GRANULOMETRIA_MATRIZ'].map(n => vis({TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito', NOMBRE_ROCA:'Aluviales'}, n)), ['', ''], 'ocultas en un depósito');
       eq(vis({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'}, 'GRANULOMETRIA_CLASTOS'), 'none', 'granulometría de clastos visible en una arenisca');
       eq(vis({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Conglomerado', TEXTURA:'Clástica (detrítica)', FABRICA_CLASTOS:'Matriz-soportada'}, 'GRANULOMETRIA_MATRIZ'), '', 'granulometría de matriz oculta en conglomerado matriz-soportado');
-      const fam = M.familias_litologia.find(f => f.tabla === 'LITO_CLASTICA').campos;
-      ok(fam.includes('GRANULOMETRIA_CLASTOS') && fam.includes('GRANULOMETRIA_MATRIZ'), 'LITO_CLASTICA no exporta las granulometrías');
+      const fam = M.familias_litologia.find(f => f.tabla === 'SED_CLASTICA').campos;
+      ok(fam.includes('GRANULOMETRIA_CLASTOS') && fam.includes('GRANULOMETRIA_MATRIZ'), 'SED_CLASTICA no exporta las granulometrías');
       // la ficha de contacto ofrece las litologías del punto
       const litos = [{id:'L1', NOMBRE_ROCA:'Arenisca'}, {id:'L2', NOMBRE_ROCA:'Andesita'}];
       const fc = w.formulario('contacto', {}, {litologias:litos}).node;
@@ -2393,9 +2393,14 @@ async function correr(){
         return i ? i.closest('.fld').style.display : 'falta'; };
       eq(['PROCESO_SEDIMENTARIO','TIPO_ERUPCION','LITIFICACION'].map(n => vis('litologia', {TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito'}, n)),
          ['', 'none', ''], 'depósito sedimentario');
-      eq(['PROCESO_SEDIMENTARIO','TIPO_ERUPCION','CONTEXTO_DEPOSITO'].map(n => vis('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', LITIFICACION:'Depósito'}, n)),
-         ['none', '', ''], 'depósito volcánico');
-      eq(['CONTEXTO_DEPOSITO','LITIFICACION'].map(n => vis('litologia', {TIPO_ROCA:'Intrusiva'}, n)), ['none', 'none'], 'intrusiva sin ficha de depósito');
+      eq(['PROCESO_SEDIMENTARIO','TIPO_ERUPCION','CONTEXTO_DEPOSITO_VOLC','CONTEXTO_DEPOSITO'].map(n => vis('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', LITIFICACION:'Depósito'}, n)),
+         ['none', '', '', 'none'], 'depósito piroclástico');
+      eq(['CONTEXTO_DEPOSITO','LITIFICACION'].map(n => vis('litologia', {TIPO_ROCA:'Intrusiva'}, n)), ['none', 'none'], 'intrusiva sin depósito');
+      eq(vis('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}, 'LITIFICACION'), 'none', 'la lava no pregunta roca o depósito');
+      eq(M.familias_litologia.map(f => f.tabla), ['TBL_LITOLOGIA','LITO_SEDIMENTARIA','SED_CLASTICA','SED_NO_CLASTICA','LITO_VOLCANICA',
+         'VOL_LAVA','VOL_PIROCLASTICA','LITO_INTRUSIVA','LITO_METAMORFICA','LITO_TECTONICA','LITO_ANTROPICO'], 'árbol de litología');
+      eq(['SED_CLASTICA','SED_NO_CLASTICA','VOL_LAVA','VOL_PIROCLASTICA'].map(t => M.familias_litologia.find(f => f.tabla === t).hija_de),
+         ['LITO_SEDIMENTARIA','LITO_SEDIMENTARIA','LITO_VOLCANICA','LITO_VOLCANICA'], 'nietas bajo su rama');
       eq(['TIPO_ANTROPICO','TIPO_ANTROPICO_OTRO','NOMBRE_ROCA'].map(n => vis('litologia', {TIPO_ROCA:'Antrópico', TIPO_ANTROPICO:'Otro'}, n)),
          ['', '', 'none'], 'antrópico');
       eq(['CATEGORIA_FALLA','TIPO_FALLA','CATEGORIA_PLIEGUE','TIPO_FRACTURA'].map(n => vis('estructural', {TIPO_ESTRUCTURA:'Estructura falla', CATEGORIA_FALLA:'Falla Normal'}, n)),
@@ -2430,8 +2435,10 @@ async function correr(){
         const db = new SQL.Database(r.bytes);
         const q = s => { const st = db.prepare(s); const o = []; while(st.step()) o.push(st.getAsObject()); st.free(); return o; };
         try {
-          eq(q("SELECT AMBIENTE_DEPOSITACIONAL FROM LITO_DEPOSITO WHERE ID_REG='"+ids[0]+"'"), [{AMBIENTE_DEPOSITACIONAL:'Aluvial'}], 'fila LITO_DEPOSITO');
-          eq(q("SELECT COUNT(*) n FROM SED_SILICICLASTICA WHERE ID_REG='"+ids[0]+"'"), [{n:1}], 'el depósito siliciclástico llena SED_SILICICLASTICA');
+          eq(q("SELECT LITIFICACION, AMBIENTE_DEPOSITACIONAL FROM LITO_SEDIMENTARIA WHERE ID_REG='"+ids[0]+"'"),
+             [{LITIFICACION:'Depósito', AMBIENTE_DEPOSITACIONAL:'Aluvial'}], 'el depósito va en LITO_SEDIMENTARIA');
+          eq(q("SELECT SELECCION FROM SED_CLASTICA WHERE ID_REG='"+ids[0]+"'"), [{SELECCION:'Mala'}], 'el depósito clástico llena SED_CLASTICA');
+          ok(!q("SELECT name FROM pragma_table_info('TBL_LITOLOGIA')").map(x => x.name).includes('LITIFICACION'), 'LITIFICACION no debe ir en el padre');
           eq(q("SELECT TIPO_ANTROPICO FROM LITO_ANTROPICO WHERE ID_REG='"+ids[1]+"'"), [{TIPO_ANTROPICO:'Relave minero'}], 'fila LITO_ANTROPICO');
           eq(q("SELECT ID_ESTRUCTURA, TIPO_FALLA, CRITERIO_CINEMATICO FROM EST_FALLA WHERE ID_REG='"+ids[2]+"'"),
              [{ID_ESTRUCTURA:ids[2], TIPO_FALLA:'Falla normal', CRITERIO_CINEMATICO:'Escarpe; Fracturas tipo T'}], 'fila EST_FALLA');
