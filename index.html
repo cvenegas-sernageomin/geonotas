@@ -415,16 +415,16 @@ const MODELO = {
           "nota": null
         },
         {
+          "nombre": "LITIFICACION",
+          "obligatorio": false,
+          "dominio": "LITIFICACION",
+          "nota": "Roca o depósito. Solo Sedimentaria y Volcánica; con «Depósito» se describe el depósito (LITO_DEPOSITO)."
+        },
+        {
           "nombre": "TIPO_VOLCANICA",
           "obligatorio": true,
           "dominio": "TIPO_VOLCANICA",
           "nota": "solo aplica si TIPO_ROCA = Volcánica; acota la lista de NOMBRE_ROCA a lavas o rocas piroclásticas"
-        },
-        {
-          "nombre": "TIPO_DEPOSITO",
-          "obligatorio": true,
-          "dominio": "TIPO_DEPOSITO",
-          "nota": null
         },
         {
           "nombre": "COLOR_FRESCO",
@@ -527,7 +527,7 @@ const MODELO = {
           "nombre": "NOMBRE_ROCA",
           "obligatorio": true,
           "dominio": "NOMBRE_ROCA",
-          "nota": "la lista depende del campo TIPO_ROCA"
+          "nota": "La lista depende de TIPO_ROCA, LITIFICACION y el subtipo. No aplica a Antrópico."
         },
         {
           "nombre": "SELECCION",
@@ -837,7 +837,7 @@ const MODELO = {
           "nombre": "GRADO_CONSOLIDACION",
           "obligatorio": false,
           "dominio": "GRADO_CONSOLIDACION",
-          "nota": "Solo depósitos (TIPO_ROCA = Depósito)."
+          "nota": "Solo con LITIFICACION = Depósito."
         },
         {
           "nombre": "CRISTALES_ESPECIE",
@@ -932,6 +932,114 @@ const MODELO = {
           "obligatorio": false,
           "dominio": "CRISTALINIDAD",
           "nota": "Rocas volcánicas (Lava o rocas piroclásticas): grado de cristalinidad de la roca. Campo verbatim CDC 2016 Vol IV, tabla TBL_AF_DEP_IGNEO_VOLCANICO."
+        },
+        {
+          "nombre": "CONTEXTO_DEPOSITO",
+          "obligatorio": false,
+          "dominio": "CONTEXTO_DEPOSITO",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Lista según TIPO_ROCA (Vol III / Vol IV)."
+        },
+        {
+          "nombre": "GEOMETRIA_DEPOSITO",
+          "obligatorio": false,
+          "dominio": "GEOMETRIA_CUERPO",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). GEOMETRÍA DE ESTRATIFICACIÓN (Vol III) / GEOMETRÍA DEL DEPÓSITO (Vol IV), Stow 2005."
+        },
+        {
+          "nombre": "ARREGLO_ESTRATOS",
+          "obligatorio": false,
+          "dominio": "ARREGLO_ESTRATOS",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). ARREGLO DE ESTRATOS SEGÚN ESPESOR (Vol III)."
+        },
+        {
+          "nombre": "GRADACION_INTERNA",
+          "obligatorio": false,
+          "dominio": "GRADACION_INTERNA",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). TIPO DE GRADACIÓN INTERNA AL DEPÓSITO (Vol III / Vol IV)."
+        },
+        {
+          "nombre": "LIMITE_INFERIOR_DEPOSITO",
+          "obligatorio": false,
+          "dominio": "TIPO_LIMITE_INFERIOR",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). TIPO DE LÍMITE INFERIOR DEL DEPÓSITO."
+        },
+        {
+          "nombre": "LIMITE_SUPERIOR_DEPOSITO",
+          "obligatorio": false,
+          "dominio": "TIPO_LIMITE_SUPERIOR",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). TIPO DE LÍMITE SUPERIOR DEL DEPÓSITO."
+        },
+        {
+          "nombre": "UBICACION_DEPOSITO",
+          "obligatorio": false,
+          "dominio": "UBICACION_DEPOSITO",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Sedimentaria: posición en un depósito multilitológico; volcánica: facies dentro del depósito."
+        },
+        {
+          "nombre": "FABRICA_GRAVOSA",
+          "obligatorio": false,
+          "dominio": "FABRICA_GRAVOSA",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo sedimentaria: FÁBRICA DE AFLORAMIENTOS GRAVOSOS (Vol III)."
+        },
+        {
+          "nombre": "AMBIENTE_DEPOSITACIONAL",
+          "obligatorio": false,
+          "dominio": "AMBIENTE_DEPOSITACIONAL",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Interpretación: lista según TIPO_ROCA."
+        },
+        {
+          "nombre": "PROCESO_SEDIMENTARIO",
+          "obligatorio": false,
+          "dominio": "PROCESO_SEDIMENTARIO",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo sedimentaria (incluye lahares y avalanchas volcánicas)."
+        },
+        {
+          "nombre": "FACIES_SEDIMENTARIA",
+          "obligatorio": false,
+          "dominio": "FACIES_SEDIMENTARIA",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo sedimentaria."
+        },
+        {
+          "nombre": "TIPO_DEPOSITO_VOLCANICO",
+          "obligatorio": false,
+          "dominio": "TIPO_DEPOSITO_VOLCANICO",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+        },
+        {
+          "nombre": "POSICION_CENTRO_ERUPTIVO",
+          "obligatorio": false,
+          "dominio": "POSICION_CENTRO_ERUPTIVO",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+        },
+        {
+          "nombre": "TIPO_ERUPCION",
+          "obligatorio": false,
+          "dominio": "TIPO_ERUPCION",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+        },
+        {
+          "nombre": "TIPO_CENTRO_EMISION",
+          "obligatorio": false,
+          "dominio": "TIPO_CENTRO_EMISION",
+          "nota": "Solo con LITIFICACION = Depósito (LITO_DEPOSITO). Solo volcánica."
+        },
+        {
+          "nombre": "TIPO_ANTROPICO",
+          "obligatorio": false,
+          "dominio": "TIPO_ANTROPICO",
+          "nota": "Solo TIPO_ROCA = Antrópico (LITO_ANTROPICO)."
+        },
+        {
+          "nombre": "TIPO_ANTROPICO_OTRO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo si TIPO_ANTROPICO = Otro: qué tipo de depósito antrópico es."
+        },
+        {
+          "nombre": "DESCRIPCION_ANTROPICO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Texto libre: material, origen, edad aproximada, estado."
         }
       ],
       "geometria": null,
@@ -1185,12 +1293,6 @@ const MODELO = {
           "nota": "De este campo depende los campos:\n AZIMUT/MANTEO\nTIPO_MEDIDA_ESTRUCTURAL"
         },
         {
-          "nombre": "TIPO_FALLA",
-          "obligatorio": false,
-          "dominio": "TIPO_FALLA",
-          "nota": "Solo si TIPO_ESTRUCTURA = Estructura falla"
-        },
-        {
           "nombre": "AZIMUT",
           "obligatorio": true,
           "dominio": null,
@@ -1221,6 +1323,284 @@ const MODELO = {
           "nota": "lista depende de campo TIPO_ESTRUCTURA"
         },
         {
+          "nombre": "GRADO_CONFIANZA_ESTRUCTURA",
+          "obligatorio": true,
+          "dominio": "GRADO_CONFIANZA",
+          "nota": null
+        },
+        {
+          "nombre": "DESCRIPCION_ESTRUCTURA",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "CATEGORIA_FALLA",
+          "obligatorio": false,
+          "dominio": "CATEGORIA_FALLA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). Subtipo CDC de la falla; de él depende TIPO_FALLA."
+        },
+        {
+          "nombre": "TIPO_FALLA",
+          "obligatorio": false,
+          "dominio": "TIPO_FALLA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). La lista depende de CATEGORIA_FALLA (GB_ATT_FA_*). v152: reemplaza la lista propia de 11 tipos."
+        },
+        {
+          "nombre": "NOMBRE_FALLA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). Nombre de la falla si lo tiene (p. ej. Falla Atacama)."
+        },
+        {
+          "nombre": "POTENCIA_FALLA",
+          "obligatorio": false,
+          "dominio": "POTENCIA_FALLA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "ANCHO_FALLA_MIN_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). Numérico, metros."
+        },
+        {
+          "nombre": "ANCHO_FALLA_MAX_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). Numérico, metros."
+        },
+        {
+          "nombre": "TIPO_DEFORMACION",
+          "obligatorio": false,
+          "dominio": "TIPO_DEFORMACION",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "RELLENO_FALLA",
+          "obligatorio": false,
+          "dominio": "RELLENO_FALLA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). ",
+          "multiple": true
+        },
+        {
+          "nombre": "CRITERIO_CINEMATICO",
+          "obligatorio": false,
+          "dominio": "CRITERIO_CINEMATICO",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). ",
+          "multiple": true
+        },
+        {
+          "nombre": "CALIDAD_CRITERIO",
+          "obligatorio": false,
+          "dominio": "CALIDAD_CRITERIO",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). Calificación del conjunto de criterios."
+        },
+        {
+          "nombre": "SEPARACION_FALLA_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). Numérico, metros: separación estructural o desplazamiento."
+        },
+        {
+          "nombre": "TIPO_SEPARACION",
+          "obligatorio": false,
+          "dominio": "TIPO_SEPARACION",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "DOMINIO_ESTRUCTURAL_FALLA",
+          "obligatorio": false,
+          "dominio": "DOMINIO_ESTRUCTURAL",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "SISTEMA_ESTRUCTURAL",
+          "obligatorio": false,
+          "dominio": "SISTEMA_ESTRUCTURAL",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "ESCALA_FALLA",
+          "obligatorio": false,
+          "dominio": "ESCALA_ESTRUCTURA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "FASE_DEFORMACION_FALLA",
+          "obligatorio": false,
+          "dominio": "FASE_DEFORMACION",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "EDAD_MAXIMA_FALLA",
+          "obligatorio": false,
+          "dominio": "EDAD_ESTRATIGRAFICA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "EDAD_MINIMA_FALLA",
+          "obligatorio": false,
+          "dominio": "EDAD_ESTRATIGRAFICA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura falla (EST_FALLA, TBL_AF_FALLA). "
+        },
+        {
+          "nombre": "CATEGORIA_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "CATEGORIA_PLIEGUE",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). Subtipo CDC; de él depende TIPO_PLIEGUE."
+        },
+        {
+          "nombre": "TIPO_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "TIPO_PLIEGUE",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). La lista depende de CATEGORIA_PLIEGUE (GB_PLIEGUE_*)."
+        },
+        {
+          "nombre": "NOMBRE_PLIEGUE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "AMPLITUD_MIN_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). Numérico, metros."
+        },
+        {
+          "nombre": "AMPLITUD_MAX_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). Numérico, metros."
+        },
+        {
+          "nombre": "LONGITUD_ONDA_MIN_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). Numérico, metros."
+        },
+        {
+          "nombre": "LONGITUD_ONDA_MAX_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). Numérico, metros."
+        },
+        {
+          "nombre": "FORMA_CHARNELA",
+          "obligatorio": false,
+          "dominio": "FORMA_CHARNELA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "ANGULO_INTERLIMBO",
+          "obligatorio": false,
+          "dominio": "ANGULO_INTERLIMBO",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "RAZON_ASPECTO",
+          "obligatorio": false,
+          "dominio": "RAZON_ASPECTO",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "FORMA_PERFIL",
+          "obligatorio": false,
+          "dominio": "FORMA_PERFIL",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "ARMONIA_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "ARMONIA_PLIEGUE",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "SUPERFICIE_AXIAL",
+          "obligatorio": false,
+          "dominio": "SUPERFICIE_AXIAL",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "CILINDRICIDAD",
+          "obligatorio": false,
+          "dominio": "CILINDRICIDAD",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "ORDEN_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "ORDEN_PLIEGUE",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "SIMETRIA_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "SIMETRIA_PLIEGUE",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "DIRECCION_VERGENCIA",
+          "obligatorio": false,
+          "dominio": "DIRECCION_VERGENCIA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). Solo pliegues asimétricos."
+        },
+        {
+          "nombre": "ASOCIACION_FALLA",
+          "obligatorio": false,
+          "dominio": "ASOCIACION_FALLA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "ESCALA_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "ESCALA_ESTRUCTURA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "FAJA_PLEGADA",
+          "obligatorio": false,
+          "dominio": "FAJA_PLEGADA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "FASE_DEFORMACION_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "FASE_DEFORMACION",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "EDAD_MAXIMA_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "EDAD_ESTRATIGRAFICA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "EDAD_MINIMA_PLIEGUE",
+          "obligatorio": false,
+          "dominio": "EDAD_ESTRATIGRAFICA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura pliegue mayor o menor (EST_PLIEGUE, TBL_AF_PLIEGUE). "
+        },
+        {
+          "nombre": "TIPO_FRACTURA",
+          "obligatorio": false,
+          "dominio": "TIPO_FRACTURA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). Clasificación geométrica del sistema."
+        },
+        {
+          "nombre": "NUMERO_JUEGOS",
+          "obligatorio": false,
+          "dominio": "NUMERO_JUEGOS",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
+        },
+        {
+          "nombre": "DOMINIO_ESTRUCTURAL_FRACTURA",
+          "obligatorio": false,
+          "dominio": "DOMINIO_ESTRUCTURAL",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). Orientación aproximada del juego descrito."
+        },
+        {
           "nombre": "ESPACIAMIENTO_FRACTURA",
           "obligatorio": false,
           "dominio": "ESPACIAMIENTO_FRACTURA",
@@ -1245,16 +1625,41 @@ const MODELO = {
           "nota": "Textura de la superficie de las fracturas del juego. Una superficie estriada indica cizalle: si el desplazamiento es apreciable, se describe como falla y no como fractura. Solo para TIPO_ESTRUCTURA='Estructura fractura'."
         },
         {
-          "nombre": "GRADO_CONFIANZA_ESTRUCTURA",
-          "obligatorio": true,
-          "dominio": "GRADO_CONFIANZA",
-          "nota": null
+          "nombre": "RELLENO_FRACTURA",
+          "obligatorio": false,
+          "dominio": "RELLENO_FRACTURA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). ",
+          "multiple": true
         },
         {
-          "nombre": "DESCRIPCION_ESTRUCTURA",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": null
+          "nombre": "RELACION_ESTRATIFICACION",
+          "obligatorio": false,
+          "dominio": "RELACION_ESTRATIFICACION",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
+        },
+        {
+          "nombre": "ESPESOR_ESTRATIFICACION",
+          "obligatorio": false,
+          "dominio": "ESPESOR_ESTRATIFICACION",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). Solo si las fracturas tienen relación con la estratificación."
+        },
+        {
+          "nombre": "ASOCIACION_ESTRUCTURAL",
+          "obligatorio": false,
+          "dominio": "ASOCIACION_ESTRUCTURAL",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
+        },
+        {
+          "nombre": "GENESIS_MECANICA",
+          "obligatorio": false,
+          "dominio": "GENESIS_MECANICA",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
+        },
+        {
+          "nombre": "GENESIS_PROCESO",
+          "obligatorio": false,
+          "dominio": "GENESIS_PROCESO",
+          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
         }
       ],
       "geometria": null,
@@ -1634,6 +2039,121 @@ const MODELO = {
       "geometria": null,
       "pk": "ID_AFLORAMIENTO",
       "cardinalidad": "0..1"
+    },
+    "TBL_COMPONENTE": {
+      "campos": [
+        {
+          "nombre": "ID_PUNTO_CONTROL",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_COMPONENTE",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_LITOLOGIA",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": "Litología (roca o depósito) a la que pertenece el componente."
+        },
+        {
+          "nombre": "CLASE_COMPONENTE",
+          "obligatorio": true,
+          "dominio": "CLASE_COMPONENTE",
+          "nota": "Clasto (sedimentaria o depósito siliciclástico) o fragmento piroclástico."
+        },
+        {
+          "nombre": "COMPONENTE_MIN_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% mínimo estimado de este componente (PORCEN_MIN de la tabla CDC)."
+        },
+        {
+          "nombre": "COMPONENTE_MAX_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% máximo estimado de este componente (PORCEN_MAX de la tabla CDC)."
+        },
+        {
+          "nombre": "TAMANO_MIN_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Tamaño mínimo, cm."
+        },
+        {
+          "nombre": "TAMANO_MAX_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Tamaño máximo, cm."
+        },
+        {
+          "nombre": "REDONDEAMIENTO_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "REDONDEAMIENTO_CDC",
+          "nota": "Escala CDC completa (Powers), con rangos."
+        },
+        {
+          "nombre": "FORMA_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "FORMA_CDC",
+          "nota": "Esfericidad o forma (Zingg)."
+        },
+        {
+          "nombre": "COLOR_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "COLOR_AFLORAMIENTO",
+          "nota": null
+        },
+        {
+          "nombre": "LITOLOGIA_CLASTO",
+          "obligatorio": false,
+          "dominio": "LITOLOGIA_CLASTOS_GRAVA",
+          "nota": "Solo CLASE_COMPONENTE = Clasto (COMP_CLASTO, TBL_AF_SED_CLASTO). Litología del clasto (Vol III, 46 términos)."
+        },
+        {
+          "nombre": "GRANULOMETRIA_CLASTO",
+          "obligatorio": false,
+          "dominio": "GRANULOMETRIA_CLASTOS",
+          "nota": "Solo CLASE_COMPONENTE = Clasto (COMP_CLASTO, TBL_AF_SED_CLASTO). Granulometría promedio de este tipo de clasto."
+        },
+        {
+          "nombre": "TIPO_CLASTO",
+          "obligatorio": false,
+          "dominio": "TIPO_CLASTO",
+          "nota": "Solo CLASE_COMPONENTE = Clasto (COMP_CLASTO, TBL_AF_SED_CLASTO). Génesis del clasto."
+        },
+        {
+          "nombre": "LITOLOGIA_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": "LITOLOGIA_FRAGMENTO",
+          "nota": "Solo CLASE_COMPONENTE = Fragmento piroclástico (COMP_FRAGMENTO, TBL_AF_VOLC_FRAGMENTO). Litología del fragmento (Vol IV)."
+        },
+        {
+          "nombre": "ACHATAMIENTO_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo CLASE_COMPONENTE = Fragmento piroclástico (COMP_FRAGMENTO, TBL_AF_VOLC_FRAGMENTO). Achatamiento F = eje mayor / eje menor (promedio de más de 20 pómez); texto libre según la norma."
+        },
+        {
+          "nombre": "GENESIS_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": "GENESIS_FRAGMENTO",
+          "nota": "Solo CLASE_COMPONENTE = Fragmento piroclástico (COMP_FRAGMENTO, TBL_AF_VOLC_FRAGMENTO). "
+        },
+        {
+          "nombre": "NOTA_COMPONENTE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Texto libre."
+        }
+      ],
+      "geometria": null,
+      "pk": "ID_COMPONENTE",
+      "cardinalidad": "0..N"
     }
   },
   "relaciones": [
@@ -1721,20 +2241,30 @@ const MODELO = {
       "padre": "TBL_LITOLOGIA",
       "hijo": "TBL_CONTACTO",
       "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "PUNTO_CONTROL",
+      "hijo": "TBL_COMPONENTE",
+      "campo": "ID_PUNTO_CONTROL"
+    },
+    {
+      "padre": "TBL_LITOLOGIA",
+      "hijo": "TBL_COMPONENTE",
+      "campo": "ID_LITOLOGIA"
     }
   ],
   "dominios": {
     "TIPO_ROCA": {
       "tipo": "simple",
       "valores": [
-        "Depósito",
         "Volcánica",
         "Sedimentaria",
         "Metamórfica",
         "Tectónica",
-        "Intrusiva"
+        "Intrusiva",
+        "Antrópico"
       ],
-      "fuente": "Lista de Dominios.xlsx"
+      "fuente": "Lista de Dominios.xlsx; v152: sale «Depósito» (pasa a LITIFICACION) y entra «Antrópico» (decisión del usuario, 2026-10-26)"
     },
     "COLOR_AFLORAMIENTO": {
       "tipo": "simple",
@@ -1873,7 +2403,30 @@ const MODELO = {
           "Toba de ceniza y lapilli",
           "Toba de lapilli",
           "Toba de lapilli y ceniza",
-          "Roca piroclástica indiferenciada"
+          "Roca piroclástica indiferenciada",
+          "Ceniza",
+          "Lapilli",
+          "Tefra de bloques",
+          "Tefra de bloques y ceniza",
+          "Tefra de bloques y lapilli",
+          "Tefra de bombas",
+          "Tefra de bombas y ceniza",
+          "Tefra de bombas y lapilli",
+          "Tefra de ceniza y bloques",
+          "Tefra de ceniza y bombas",
+          "Tefra de ceniza y lapilli",
+          "Tefra de lapilli y bloques",
+          "Tefra de lapilli y bombas",
+          "Tefra de lapilli y ceniza",
+          "Tefra indiferenciada",
+          "Depósito volcánico ultramáfico",
+          "Depósito volcánico ultramáfico a máfico",
+          "Depósito volcánico máfico",
+          "Depósito volcánico máfico a intermedio",
+          "Depósito volcánico intermedio",
+          "Depósito volcánico intermedio a félsico",
+          "Depósito volcánico félsico",
+          "Depósito volcánico indiferenciado"
         ],
         "Sedimentaria": [
           "Arenisca",
@@ -1996,7 +2549,168 @@ const MODELO = {
           "Sedimentita cristalina de composición indeterminada",
           "Sedimentita microcristalina de composición indeterminada",
           "Sedimentita de composición indeterminada",
-          "Sedimentita de composición indeterminada por alteración"
+          "Sedimentita de composición indeterminada por alteración",
+          "Arcilla",
+          "Arcilla arenosa",
+          "Arcilla arenosa y ligeramente gravosa",
+          "Arcilla arenosa y limosa",
+          "Arcilla arenosa, limosa y ligeramente gravosa",
+          "Arcilla gravosa",
+          "Arcilla ligeramente gravosa",
+          "Arcilla limosa",
+          "Arcilla limosa y gravosa",
+          "Arcilla limosa y ligeramente gravosa",
+          "Arena",
+          "Arena arcillosa",
+          "Arena arcillosa y gravosa",
+          "Arena arcillosa y ligeramente gravosa",
+          "Arena fangosa",
+          "Arena fangosa y gravosa",
+          "Arena fangosa y ligeramente gravosa",
+          "Arena gravosa",
+          "Arena ligeramente gravosa",
+          "Arena limosa",
+          "Arena limosa y gravosa",
+          "Arena limosa y ligeramente gravosa",
+          "Fango",
+          "Fango arenoso",
+          "Fango arenoso y ligeramente gravoso",
+          "Fango gravoso",
+          "Fango ligeramente gravoso",
+          "Grava",
+          "Grava arcillosa",
+          "Grava arenosa",
+          "Grava arenosa y arcillosa",
+          "Grava arenosa y fangosa",
+          "Grava arenosa y limosa",
+          "Grava fangosa",
+          "Grava limosa",
+          "Limo",
+          "Limo arcilloso",
+          "Limo arcilloso y gravoso",
+          "Limo arcilloso y ligeramente gravoso",
+          "Limo arenoso",
+          "Limo arenoso y arcilloso",
+          "Limo arenoso y ligeramente gravoso",
+          "Limo arenoso, arcilloso y ligeramente gravoso",
+          "Limo gravoso",
+          "Limo ligeramente gravoso",
+          "Sedimento megaclástico",
+          "Sedimento megaclástico arcilloso",
+          "Sedimento megaclástico arenoso",
+          "Sedimento megaclástico arenoso y arcilloso",
+          "Sedimento megaclástico arenoso y fangoso",
+          "Sedimento megaclástico arenoso y limoso",
+          "Sedimento megaclástico fangoso",
+          "Sedimento megaclástico limoso",
+          "Sedimento siliciclástico indiferenciado",
+          "Arcilla volcanosedimentaria",
+          "Arcilla arenosa volcanosedimentaria",
+          "Arcilla arenosa y ligeramente gravosa volcanosedimentaria",
+          "Arcilla arenosa y limosa volcanosedimentaria",
+          "Arcilla arenosa, limosa y ligeramente gravosa volcanosedimentaria",
+          "Arcilla gravosa volcanosedimentaria",
+          "Arcilla ligeramente gravosa volcanosedimentaria",
+          "Arcilla limosa volcanosedimentaria",
+          "Arcilla limosa y gravosa volcanosedimentaria",
+          "Arcilla limosa y ligeramente gravosa volcanosedimentaria",
+          "Arena volcanosedimentaria",
+          "Arena arcillosa volcanosedimentaria",
+          "Arena arcillosa y gravosa volcanosedimentaria",
+          "Arena arcillosa y ligeramente gravosa volcanosedimentaria",
+          "Arena fangosa volcanosedimentaria",
+          "Arena fangosa y gravosa volcanosedimentaria",
+          "Arena fangosa y ligeramente gravosa volcanosedimentaria",
+          "Arena gravosa volcanosedimentaria",
+          "Arena ligeramente gravosa volcanosedimentaria",
+          "Arena limosa volcanosedimentaria",
+          "Arena limosa y gravosa volcanosedimentaria",
+          "Arena limosa y ligeramente gravosa volcanosedimentaria",
+          "Fango volcanosedimentario",
+          "Fango arenoso volcanosedimentario",
+          "Fango arenoso y ligeramente gravoso volcanosedimentario",
+          "Fango gravoso volcanosedimentario",
+          "Fango ligeramente gravoso volcanosedimentario",
+          "Grava volcanosedimentaria",
+          "Grava arcillosa volcanosedimentaria",
+          "Grava arenosa volcanosedimentaria",
+          "Grava arenosa y arcillosa volcanosedimentaria",
+          "Grava arenosa y fangosa volcanosedimentaria",
+          "Grava arenosa y limosa volcanosedimentaria",
+          "Grava fangosa volcanosedimentaria",
+          "Grava limosa volcanosedimentaria",
+          "Limo volcanosedimentario",
+          "Limo arcilloso volcanosedimentario",
+          "Limo arcilloso y gravoso volcanosedimentario",
+          "Limo arcilloso y ligeramente gravoso volcanosedimentario",
+          "Limo arenoso volcanosedimentario",
+          "Limo arenoso y arcilloso volcanosedimentario",
+          "Limo arenoso y ligeramente gravoso volcanosedimentario",
+          "Limo arenoso, arcilloso y ligeramente gravoso volcanosedimentario",
+          "Limo gravoso volcanosedimentario",
+          "Limo ligeramente gravoso volcanosedimentario",
+          "Volcanosedimento megaclástico",
+          "Volcanosedimento megaclástico arcilloso",
+          "Volcanosedimento megaclástico arenoso",
+          "Volcanosedimento megaclástico arenoso y arcilloso",
+          "Volcanosedimento megaclástico arenoso y fangoso",
+          "Volcanosedimento megaclástico arenoso y limoso",
+          "Volcanosedimento megaclástico fangoso",
+          "Volcanosedimento megaclástico limoso",
+          "Depósito volcanosedimentario indiferenciado",
+          "Calcarena",
+          "Calcifango",
+          "Calcigrava",
+          "Calcilimo",
+          "Sedimento de floatstone",
+          "Sedimento de grainstone",
+          "Sedimento de micrita",
+          "Sedimento de packstone",
+          "Sedimento de rudstone",
+          "Sedimento de wackestone",
+          "Sedimento de carbonato indiferenciado",
+          "Arena de anhidrita",
+          "Arena de halita",
+          "Arena de sulfato",
+          "Arena de yeso",
+          "Chuca de sulfato",
+          "Grava anhidrita",
+          "Grava de halita",
+          "Grava de sulfato",
+          "Grava de yeso",
+          "Limo de sulfato",
+          "Sedimento salino indiferenciado",
+          "Arena de fosfato",
+          "Fango de fosfato",
+          "Grava de fosfato",
+          "Guano blanco",
+          "Guano indiferenciado",
+          "Guano rojo",
+          "Limo de fosfato",
+          "Sedimento de fosfofloatstone",
+          "Sedimento de fosfograinstone",
+          "Sedimento de fosfopackstone",
+          "Sedimento de fosforudstone",
+          "Sedimento de fosfowackestone",
+          "Sedimento de microsforita",
+          "Sedimento de fosfato indiferenciado",
+          "Coorongita",
+          "Sapropel",
+          "Turba",
+          "Turba impura",
+          "Turba negra",
+          "Turba negra impura",
+          "Turba rubia",
+          "Turba rubia impura",
+          "Sedimento orgánico indiferenciado",
+          "Fango de diatomeas",
+          "Fango de espículas",
+          "Fango de radiolarios",
+          "Sedimento silíceo indiferenciado",
+          "Sedimento margoso",
+          "Sedimento mixto indiferenciado",
+          "Sedimento clástico de composición indeterminada",
+          "Sedimento de composición indeterminada"
         ],
         "Metamórfica": [
           "Esquisto",
@@ -2007,14 +2721,6 @@ const MODELO = {
           "Cuarcita",
           "Gneis",
           "Pizarra"
-        ],
-        "Depósito": [
-          "Aluviales",
-          "Coluviales",
-          "Glaciares",
-          "Eólicos",
-          "Litorales",
-          "Tefra, depósito volcánico"
         ],
         "Tectónica": [
           "Brecha cohesiva de falla",
@@ -2039,9 +2745,10 @@ const MODELO = {
           "Brecha tectónica",
           "Formación quebrada",
           "Melange tectónico"
-        ]
+        ],
+        "Antrópico": []
       },
-      "fuente": "Lista de Dominios.xlsx (+ piroclásticos propuestos)",
+      "fuente": "Lista de Dominios.xlsx (+ piroclásticos propuestos) | v152: sin rama Depósito; sedimentos por subtipo (por_subtipo_deposito) y tefra + depósito volcánico indiferenciado (depositos_volcanicos), CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' hoja LV_lito",
       "por_subtipo": {
         "Siliciclástico": [
           "Arenisca",
@@ -2221,7 +2928,213 @@ const MODELO = {
           "Formación quebrada",
           "Melange tectónico"
         ]
-      }
+      },
+      "por_subtipo_deposito": {
+        "Siliciclástico": [
+          "Arcilla",
+          "Arcilla arenosa",
+          "Arcilla arenosa y ligeramente gravosa",
+          "Arcilla arenosa y limosa",
+          "Arcilla arenosa, limosa y ligeramente gravosa",
+          "Arcilla gravosa",
+          "Arcilla ligeramente gravosa",
+          "Arcilla limosa",
+          "Arcilla limosa y gravosa",
+          "Arcilla limosa y ligeramente gravosa",
+          "Arena",
+          "Arena arcillosa",
+          "Arena arcillosa y gravosa",
+          "Arena arcillosa y ligeramente gravosa",
+          "Arena fangosa",
+          "Arena fangosa y gravosa",
+          "Arena fangosa y ligeramente gravosa",
+          "Arena gravosa",
+          "Arena ligeramente gravosa",
+          "Arena limosa",
+          "Arena limosa y gravosa",
+          "Arena limosa y ligeramente gravosa",
+          "Fango",
+          "Fango arenoso",
+          "Fango arenoso y ligeramente gravoso",
+          "Fango gravoso",
+          "Fango ligeramente gravoso",
+          "Grava",
+          "Grava arcillosa",
+          "Grava arenosa",
+          "Grava arenosa y arcillosa",
+          "Grava arenosa y fangosa",
+          "Grava arenosa y limosa",
+          "Grava fangosa",
+          "Grava limosa",
+          "Limo",
+          "Limo arcilloso",
+          "Limo arcilloso y gravoso",
+          "Limo arcilloso y ligeramente gravoso",
+          "Limo arenoso",
+          "Limo arenoso y arcilloso",
+          "Limo arenoso y ligeramente gravoso",
+          "Limo arenoso, arcilloso y ligeramente gravoso",
+          "Limo gravoso",
+          "Limo ligeramente gravoso",
+          "Sedimento megaclástico",
+          "Sedimento megaclástico arcilloso",
+          "Sedimento megaclástico arenoso",
+          "Sedimento megaclástico arenoso y arcilloso",
+          "Sedimento megaclástico arenoso y fangoso",
+          "Sedimento megaclástico arenoso y limoso",
+          "Sedimento megaclástico fangoso",
+          "Sedimento megaclástico limoso",
+          "Sedimento siliciclástico indiferenciado"
+        ],
+        "Volcanosedimentario": [
+          "Arcilla volcanosedimentaria",
+          "Arcilla arenosa volcanosedimentaria",
+          "Arcilla arenosa y ligeramente gravosa volcanosedimentaria",
+          "Arcilla arenosa y limosa volcanosedimentaria",
+          "Arcilla arenosa, limosa y ligeramente gravosa volcanosedimentaria",
+          "Arcilla gravosa volcanosedimentaria",
+          "Arcilla ligeramente gravosa volcanosedimentaria",
+          "Arcilla limosa volcanosedimentaria",
+          "Arcilla limosa y gravosa volcanosedimentaria",
+          "Arcilla limosa y ligeramente gravosa volcanosedimentaria",
+          "Arena volcanosedimentaria",
+          "Arena arcillosa volcanosedimentaria",
+          "Arena arcillosa y gravosa volcanosedimentaria",
+          "Arena arcillosa y ligeramente gravosa volcanosedimentaria",
+          "Arena fangosa volcanosedimentaria",
+          "Arena fangosa y gravosa volcanosedimentaria",
+          "Arena fangosa y ligeramente gravosa volcanosedimentaria",
+          "Arena gravosa volcanosedimentaria",
+          "Arena ligeramente gravosa volcanosedimentaria",
+          "Arena limosa volcanosedimentaria",
+          "Arena limosa y gravosa volcanosedimentaria",
+          "Arena limosa y ligeramente gravosa volcanosedimentaria",
+          "Fango volcanosedimentario",
+          "Fango arenoso volcanosedimentario",
+          "Fango arenoso y ligeramente gravoso volcanosedimentario",
+          "Fango gravoso volcanosedimentario",
+          "Fango ligeramente gravoso volcanosedimentario",
+          "Grava volcanosedimentaria",
+          "Grava arcillosa volcanosedimentaria",
+          "Grava arenosa volcanosedimentaria",
+          "Grava arenosa y arcillosa volcanosedimentaria",
+          "Grava arenosa y fangosa volcanosedimentaria",
+          "Grava arenosa y limosa volcanosedimentaria",
+          "Grava fangosa volcanosedimentaria",
+          "Grava limosa volcanosedimentaria",
+          "Limo volcanosedimentario",
+          "Limo arcilloso volcanosedimentario",
+          "Limo arcilloso y gravoso volcanosedimentario",
+          "Limo arcilloso y ligeramente gravoso volcanosedimentario",
+          "Limo arenoso volcanosedimentario",
+          "Limo arenoso y arcilloso volcanosedimentario",
+          "Limo arenoso y ligeramente gravoso volcanosedimentario",
+          "Limo arenoso, arcilloso y ligeramente gravoso volcanosedimentario",
+          "Limo gravoso volcanosedimentario",
+          "Limo ligeramente gravoso volcanosedimentario",
+          "Volcanosedimento megaclástico",
+          "Volcanosedimento megaclástico arcilloso",
+          "Volcanosedimento megaclástico arenoso",
+          "Volcanosedimento megaclástico arenoso y arcilloso",
+          "Volcanosedimento megaclástico arenoso y fangoso",
+          "Volcanosedimento megaclástico arenoso y limoso",
+          "Volcanosedimento megaclástico fangoso",
+          "Volcanosedimento megaclástico limoso",
+          "Depósito volcanosedimentario indiferenciado"
+        ],
+        "Carbonato": [
+          "Calcarena",
+          "Calcifango",
+          "Calcigrava",
+          "Calcilimo",
+          "Sedimento de floatstone",
+          "Sedimento de grainstone",
+          "Sedimento de micrita",
+          "Sedimento de packstone",
+          "Sedimento de rudstone",
+          "Sedimento de wackestone",
+          "Sedimento de carbonato indiferenciado"
+        ],
+        "Salino no carbonatado": [
+          "Arena de anhidrita",
+          "Arena de halita",
+          "Arena de sulfato",
+          "Arena de yeso",
+          "Chuca de sulfato",
+          "Grava anhidrita",
+          "Grava de halita",
+          "Grava de sulfato",
+          "Grava de yeso",
+          "Limo de sulfato",
+          "Sedimento salino indiferenciado"
+        ],
+        "Fosfato": [
+          "Arena de fosfato",
+          "Fango de fosfato",
+          "Grava de fosfato",
+          "Guano blanco",
+          "Guano indiferenciado",
+          "Guano rojo",
+          "Limo de fosfato",
+          "Sedimento de fosfofloatstone",
+          "Sedimento de fosfograinstone",
+          "Sedimento de fosfopackstone",
+          "Sedimento de fosforudstone",
+          "Sedimento de fosfowackestone",
+          "Sedimento de microsforita",
+          "Sedimento de fosfato indiferenciado"
+        ],
+        "Rico en material orgánico": [
+          "Coorongita",
+          "Sapropel",
+          "Turba",
+          "Turba impura",
+          "Turba negra",
+          "Turba negra impura",
+          "Turba rubia",
+          "Turba rubia impura",
+          "Sedimento orgánico indiferenciado"
+        ],
+        "Silíceo no clástico": [
+          "Fango de diatomeas",
+          "Fango de espículas",
+          "Fango de radiolarios",
+          "Sedimento silíceo indiferenciado"
+        ],
+        "Mixto": [
+          "Sedimento margoso",
+          "Sedimento mixto indiferenciado"
+        ],
+        "Composición indeterminada": [
+          "Sedimento clástico de composición indeterminada",
+          "Sedimento de composición indeterminada"
+        ]
+      },
+      "depositos_volcanicos": [
+        "Ceniza",
+        "Lapilli",
+        "Tefra de bloques",
+        "Tefra de bloques y ceniza",
+        "Tefra de bloques y lapilli",
+        "Tefra de bombas",
+        "Tefra de bombas y ceniza",
+        "Tefra de bombas y lapilli",
+        "Tefra de ceniza y bloques",
+        "Tefra de ceniza y bombas",
+        "Tefra de ceniza y lapilli",
+        "Tefra de lapilli y bloques",
+        "Tefra de lapilli y bombas",
+        "Tefra de lapilli y ceniza",
+        "Tefra indiferenciada",
+        "Depósito volcánico ultramáfico",
+        "Depósito volcánico ultramáfico a máfico",
+        "Depósito volcánico máfico",
+        "Depósito volcánico máfico a intermedio",
+        "Depósito volcánico intermedio",
+        "Depósito volcánico intermedio a félsico",
+        "Depósito volcánico félsico",
+        "Depósito volcánico indiferenciado"
+      ]
     },
     "GRANULOMETRIA": {
       "tipo": "cascada",
@@ -2759,13 +3672,6 @@ const MODELO = {
           "Augen (ojos)",
           "Indeterminada"
         ],
-        "Depósito": [
-          "Estratificada",
-          "Masiva",
-          "Gradada",
-          "Matriz-soportada",
-          "Clasto-soportada"
-        ],
         "Tectónica": [
           "Cataclástica",
           "Cataclástica fina no foliada",
@@ -2819,7 +3725,17 @@ const MODELO = {
           "Raíces / rizolitos",
           "Ripples escalantes (climbing)",
           "Slump / pliegue sinsed.",
-          "Tepees (carbonático)"
+          "Tepees (carbonático)",
+          "Estratificación",
+          "Laminación",
+          "Estratificación cruzada",
+          "Imbricación de clastos",
+          "Lente",
+          "Canal",
+          "Paleosuelo",
+          "Bloques erráticos",
+          "Estructura masiva (sin estructura)",
+          "Superficie de erosión interna"
         ],
         "Volcánica": [
           "Macizo (sin estructura)",
@@ -2918,21 +3834,6 @@ const MODELO = {
           "Pliegues ptigmáticos",
           "Rodding",
           "Venas de segregación (cuarzo)"
-        ],
-        "Depósito": [
-          "Estratificación",
-          "Laminación",
-          "Estratificación cruzada",
-          "Gradación normal",
-          "Gradación inversa",
-          "Imbricación de clastos",
-          "Lente",
-          "Grietas de desecación",
-          "Canal",
-          "Paleosuelo",
-          "Bloques erráticos",
-          "Estructura masiva (sin estructura)",
-          "Superficie de erosión interna"
         ]
       },
       "fuente": "Rama Volcánica: norma CDC 2016 Vol IV, 'ESTRUCTURA INTERNA DEL DEPÓSITO EN AFLORAMIENTO' (ver corregir_estructura_volcanica.py). Rama Intrusiva: norma CDC 2016 Vol IV, 'ESTRUCTURA INTERNA DEL CUERPO INTRUSIVO' — los términos oficiales van primero, EN EL ORDEN DE LA NORMA (el conteo bruto del corpus no sirve para ordenar esta rama: 'gradación' 808, 'imbricación' 302 y 'cumulado' 563 son casi todo uso sedimentario), y detrás los ya curados que la norma no trae, por uso real inequívoco (xenolito 227, miarolítica 55, enclaves microgranulares 14, brecha intrusiva 13, orbicular 9, diques sinplutónicos 7, stoping 2, autolito 1). Antes NO tenía ningún término de diaclasas, omisión grave para un granito ('disyunción columnar' sale 86 veces en el corpus). Ramas Sedimentaria, Metamórfica y Depósito: curaduría propia CONSERVADA a propósito. El campo oficial sedimentario (Vol III, Tabla 2) tiene más de 130 términos en 7 clases y volcarlo entero sería inusable en terreno; para metamórficas la norma no tiene un campo único equivalente (lo reparte en TIPO FOLIACIÓN + ESPACIAMIENTO DE FOLIACIÓN + Vol V de rocas tectónicas). De las tres solo se sacó lo que no era estructura. Depuración 2026-09-07 (usuario: 'fenocristales no es una estructura'): se sacaron 'Bioclastos / conchillas' (componente → TEXTURA='Bioclástica' y CONTENIDO_FOSIL), 'Porfidoblastos' (textura → TEXTURA='Porfidoblástica'), 'Matriz-soportado'/'Clasto-soportado' (fábrica, estaba duplicado en FABRICA_CLASTOS Y en TEXTURA.Depósito) y 'Textura rapakivi' (textura, movida a TEXTURA.Intrusiva).",
@@ -3033,22 +3934,70 @@ const MODELO = {
       "confirmar": true
     },
     "TIPO_FALLA": {
-      "tipo": "simple",
-      "valores": [
-        "Normal",
-        "Inversa",
-        "Cabalgamiento",
-        "De rumbo dextral",
-        "De rumbo sinistral",
-        "Normal-dextral (oblicua)",
-        "Normal-sinistral (oblicua)",
-        "Inversa-dextral (oblicua)",
-        "Inversa-sinistral (oblicua)",
-        "Lístrica",
-        "Indiferenciada"
-      ],
-      "fuente": "construida (no venía en las tablas; PROPUESTO)",
-      "confirmar": true
+      "tipo": "cascada",
+      "padre": "CATEGORIA_FALLA",
+      "mapa": {
+        "Falla Normal": [
+          "Falla normal",
+          "Falla normal de bajo ángulo (<30°)",
+          "Falla normal asociada a colapso de caldera",
+          "Falla normal volcada",
+          "Falla de tijera normal"
+        ],
+        "Falla Inversa": [
+          "Falla inversa",
+          "Falla inversa de alto ángulo (>45°)",
+          "Falla inversa de ángulo moderado (15-45°)",
+          "Falla inversa de bajo ángulo (<15°)",
+          "Falla inversa volcada",
+          "Falla de tijera inversa"
+        ],
+        "Falla Oblicua": [
+          "Falla con desplazamiento oblicuo",
+          "Falla con desplazamiento oblicuo-inverso, sentido dextral",
+          "Falla con desplazamiento oblicuo-inverso, sentido sinistral",
+          "Falla con desplazamiento oblicuo-normal, sentido dextral",
+          "Falla con desplazamiento oblicuo-normal, sentido sinistral",
+          "Falla subvertical con desplazamiento oblicuo, sentido dextral",
+          "Falla subvertical con desplazamiento oblicuo, sentido sinistral"
+        ],
+        "Falla de Rumbo": [
+          "Falla de rumbo",
+          "Falla de rumbo dextral",
+          "Falla de rumbo sinistral"
+        ],
+        "Falla Polifásica": [
+          "Falla polifasica",
+          "Falla inversa con reactivacion inversa",
+          "Falla inversa con reactivacion normal (falla de inversion negativa)",
+          "Falla inversa con reactivacion normal de bajo angulo",
+          "Falla inversa con reactivación de rumbo dextral",
+          "Falla inversa con reactivación de rumbo sinistral",
+          "Falla inversa volcada y con reactivacion normal",
+          "Falla normal con reactivacion normal",
+          "Falla normal con reactivacion inversa (falla de inversion positiva)",
+          "Falla normal con reactivación de rumbo dextral",
+          "Falla normal con reactivación de rumbo sinistral",
+          "Falla normal de bajo angulo con reactivaión inversa",
+          "Falla normal volcada y con reactivacion inversa",
+          "Falla de rumbo dextral con reactivación inversa",
+          "Falla de rumbo sinistral con reactivación inversa",
+          "Falla de rumbo dextral con reactivación normal",
+          "Falla de rumbo sinistral con reactivación normal",
+          "Falla de rumbo dextral con reactivación dextral",
+          "Falla de rumbo sinistral con reactivación sinistral",
+          "Falla de rumbo dextral con reactivación sinistral",
+          "Falla de rumbo sinistral con reactivación dextral"
+        ],
+        "Falla indeterminada": [
+          "Falla con desplazamiento en manteo pero dirección de manteo indeterminada",
+          "Falla indeterminada",
+          "Falla indeterminada de alto ángulo (≥45°)",
+          "Falla indeterminada de bajo ángulo (<45°)",
+          "Lineamiento"
+        ]
+      },
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', listas GB_ATT_FA_*_2014 (la categoría «Falla de Manteo y Desplazamiento Vertical» no trae lista)"
     },
     "TIPO_ALTERACION": {
       "tipo": "simple",
@@ -3121,22 +4070,6 @@ const MODELO = {
         "Carta/Mapa",
         "Google Earth / imagen",
         "Estimado en terreno"
-      ],
-      "fuente": "diagrama_v3 / estandar CDC (PROPUESTO)",
-      "confirmar": true
-    },
-    "TIPO_DEPOSITO": {
-      "tipo": "simple",
-      "valores": [
-        "Aluvial",
-        "Lacustre",
-        "Glacial",
-        "Litoral",
-        "Coluvial",
-        "Eólico",
-        "Volcanoclástico",
-        "Antrópico",
-        "Fluvioglacial"
       ],
       "fuente": "diagrama_v3 / estandar CDC (PROPUESTO)",
       "confirmar": true
@@ -4535,6 +5468,1071 @@ const MODELO = {
         "Indeterminado"
       ],
       "fuente": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'AMBIENTE TECTONICO ESTRUCTURAL'."
+    },
+    "LITIFICACION": {
+      "tipo": "simple",
+      "valores": [
+        "Roca",
+        "Depósito"
+      ],
+      "fuente": "Norma CDC 2016 Vol III (subtipos en pares sedimento/roca, Tabla 1) y Norma CDC 2016 Vol IV (tefra frente a roca piroclástica). Con «Depósito» se despliega LITO_DEPOSITO."
+    },
+    "CONTEXTO_DEPOSITO": {
+      "tipo": "cascada",
+      "padre": "TIPO_ROCA",
+      "mapa": {
+        "Sedimentaria": [
+          "Depósito sedimentario interestratificado en sucesión principalmente sedimentaria",
+          "Depósito sedimentario interestratificado en sucesión volcanosedimentaria",
+          "Depósito sedimentario intercalado en sucesión principalmente volcánica",
+          "Depósito sedimentario aislado",
+          "Enclave de roca sedimentaria",
+          "Mega-enclave de roca sedimentaria",
+          "Roof pendant o septa de roca sedimentaria",
+          "Fragmento o clasto de roca sedimentaria dentro de un depósito",
+          "Indeterminado"
+        ],
+        "Volcánica": [
+          "Depósito volcánico interestratificado en sucesión principalmente volcánica",
+          "Depósito volcánico interestratificado en sucesión volcanosedimentaria",
+          "Depósito volcánico intercalado en sucesión principalmente sedimentaria",
+          "Depósito volcánico aislado",
+          "Enclave de roca volcánica",
+          "Mega-enclave de roca volcánica",
+          "Roof pendant o septa de roca volcánica",
+          "Fragmento de roca volcánica dentro de un depósito",
+          "Indeterminado"
+        ]
+      },
+      "fuente": "Norma CDC 2016 Vol III p. 56 y Norma CDC 2016 Vol IV p. 25, campo CONTEXTO DEL DEPÓSITO DENTRO DEL AFLORAMIENTO (columna de subtipos)"
+    },
+    "TIPO_LIMITE_SUPERIOR": {
+      "tipo": "simple",
+      "valores": [
+        "Techo gradacional",
+        "Techo nítido",
+        "Techo erosionado",
+        "Techo no expuesto"
+      ],
+      "fuente": "Norma CDC 2016 Vol III p. 62, campo TIPO DE LÍMITE SUPERIOR DEL DEPÓSITO"
+    },
+    "UBICACION_DEPOSITO": {
+      "tipo": "cascada",
+      "padre": "TIPO_ROCA",
+      "mapa": {
+        "Sedimentaria": [
+          "Sección inferior de un depósito multilitológico",
+          "Sección media del depósito multilitológico",
+          "Sección superior del depósito multilitológico"
+        ],
+        "Volcánica": [
+          "Proximal",
+          "Media",
+          "Distal",
+          "Lateral",
+          "Base",
+          "Techo",
+          "Frontal"
+        ]
+      },
+      "fuente": "Norma CDC 2016 Vol III p. 63, UBICACIÓN DENTRO DE UN DEPÓSITO MULTILITOLÓGICO; Norma CDC 2016 Vol IV p. 63, UBICACIÓN DENTRO DEL DEPÓSITO VOLCÁNICO"
+    },
+    "AMBIENTE_DEPOSITACIONAL": {
+      "tipo": "cascada",
+      "padre": "TIPO_ROCA",
+      "mapa": {
+        "Sedimentaria": [
+          "Ambiente sedimentario indiferenciado",
+          "Sedimentario continental indiferenciado",
+          "Aluvial",
+          "Cavernoso",
+          "Coluvial",
+          "De salar",
+          "Desértico",
+          "Eólico",
+          "Fluvial",
+          "Glaciar",
+          "Lacustre",
+          "Palustre",
+          "Remoción en masa",
+          "Sedimentario transicional indiferenciado",
+          "Costa (litoral)",
+          "Deltaico",
+          "Estuario",
+          "Lagunar costero",
+          "Planicie de marea",
+          "Sedimentario marino indiferenciado",
+          "Plataforma carbonatada",
+          "Rampa carbonatada",
+          "Plataforma continental",
+          "Talud continental",
+          "Zona abisal"
+        ],
+        "Volcánica": [
+          "Ambiente volcánico continental",
+          "Ambiente volcánico continental subaéreo",
+          "Ambiente volcánico continental subacuático",
+          "Ambiente volcánico continental subglacial",
+          "Ambiente volcánico litoral",
+          "Ambiente volcánico marino",
+          "Ambiente volcánico marino somero",
+          "Ambiente volcánico marino profundo",
+          "Ambiente volcánico indeterminado"
+        ]
+      },
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' LV_AMB_SEDIMENTARIO_1 (tildes según Norma CDC 2016 Vol III p. 81, que agrega «Remoción en masa»; «Antrópico» es TIPO_ROCA propio); Norma CDC 2016 Vol IV p. 68, AMBIENTE DE DEPOSICIÓN"
+    },
+    "PROCESO_SEDIMENTARIO": {
+      "tipo": "simple",
+      "valores": [
+        "Depósito de caída desde suspensión",
+        "Depósito tractivo por flujo de agua",
+        "Depósito tractivo por flujo de aire",
+        "Depósito tractivo por flujo de hielo",
+        "Depósito de flujo hiperconcentrado",
+        "Depósito gravitacional de caída de roca",
+        "Depósito gravitacional de deslizamiento rotacional",
+        "Depósito gravitacional de deslizamiento translacional",
+        "Depósito gravitacional de reptación",
+        "Depósito gravitacional de colapso",
+        "Depósito gravitacional de flujo cohesivo",
+        "Depósito gravitacional de flujo granular",
+        "Depósito gravitacional de flujo licuado",
+        "Depósito de corriente de turbidez de alta densidad",
+        "Depósito de corriente de turbidez de baja densidad",
+        "Depósito lahárico de detrito",
+        "Depósito lahárico hiperconcentrado",
+        "Depósito lahárico fluvial",
+        "Deposito lahárico indiferenciado",
+        "Depósito de avalancha volcánica, tipo Bezymianny",
+        "Depósito de avalancha volcánica, tipo Bandai",
+        "Depósito de avalancha volcánica, tipo Unzen",
+        "Depósito de avalancha volcánica indiferenciada",
+        "Depósito de precipitación química",
+        "Depósito de acumulación biogénica",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol III p. 78, campo PROCESO SEDIMENTARIO (columna de términos)"
+    },
+    "FACIES_SEDIMENTARIA": {
+      "tipo": "simple",
+      "valores": [
+        "Lacustre, facies litoral",
+        "Lacustre, facies sublitoral",
+        "Lacustre, facies agua profundo",
+        "Aluvial, facies de cabecera de abanico",
+        "Aluvial, facies de cuerpo de abanico",
+        "Aluvial, facies de pie de abanico",
+        "Fluvial, facies de rio recto-sinuoso",
+        "Fluvial, facies de rio meándrico",
+        "Fluvial, facies de rio anastomosado",
+        "Fluvial, facies de rio trenzado",
+        "Eólico, facies de duna",
+        "Eólico, facies de interduna",
+        "Eólico, facies de loess",
+        "Marino transicional, facies de delta, facies de prodelta",
+        "Marino transicional, facies de delta, facies de frente deltaico (dominado por ríos)",
+        "Marino transicional, facies de delta, facies de frente deltaico (dominado por olas)",
+        "Marino transicional, facies de delta, facies de frente deltaico (dominado por marea)",
+        "Marino transicional, facies de delta, facies de canales distributarios",
+        "Marino transicional, facies de delta, facies de planicie interdistributaria (dominado por rios)",
+        "Marino transicional, facies de delta, facies de planicie interdistributaria (dominado por olas)",
+        "Marino transicional, facies de delta, facies de planicie interdistributaria (dominado por marea)",
+        "Marino transicional, facies de estuario, dominado por marea",
+        "Marino transicional, facies de estuario, dominado por olas",
+        "Marino transicional, facies de isla barrera",
+        "Marino transicional, facies de lagoon",
+        "Marino transicional, facies de sabkhas",
+        "Marino transicional, facies de planicies intermareales",
+        "Marino clástico, facies de costa, trascosta (backshore)",
+        "Marino clástico, facies de costa, playa frontal (foreshore)",
+        "Marino clástico, facies de costa, frente de la costa (shoreface)",
+        "Marino clástico, facies de costa, transición (olas de tormentas)",
+        "Marino clástico, facies de plataforma interna (offshore)",
+        "Marino clástico, facies de plataforma externa",
+        "Marino clástico, facies de talud",
+        "Marino clástico, facies de cabecera abanico submarino (proximal)",
+        "Marino clástico, facies de cuerpo abanico submarino (medio)",
+        "Marino clástico, facies de pie abanico submarino (inferior)",
+        "Marino clástico, facies de contouritas",
+        "Plataforma de carbonato con borde, facies de plataforma interior evaporítica o salobre",
+        "Plataforma de carbonato con borde, facies de plataforma interior restringida",
+        "Plataforma de carbonato con borde, facies de plataforma interior mar abierto",
+        "Plataforma de carbonato con borde, facies de bancos de arena de margen",
+        "Plataforma de carbonato con borde, facies de arrecife de margen",
+        "Plataforma de carbonato con borde, facies de talud",
+        "Plataforma de carbonato con borde, facies del pie de talud",
+        "Plataforma de carbonato con borde, facies de plataforma profunda",
+        "Plataforma de carbonato con borde, facies de mar profundo",
+        "Rampa de carbonato, facies peritidal",
+        "Rampa de carbonato, facies lagonal",
+        "Rampa de carbonato, facies de rampa interna",
+        "Rampa de carbonato, facies de rampa media",
+        "Rampa de carbonato, facies de rampa exterior",
+        "Rampa de carbonato, facies de de mar profundo",
+        "Marino abisal, facies de fondo oceánico",
+        "Marino abisal, facies pelágicas carbonáticas",
+        "Marino abisal, facies pelágicas silíceas"
+      ],
+      "fuente": "Norma CDC 2016 Vol III pp. 79-80, campo FACIES SEDIMENTARIA (columna de facies)"
+    },
+    "TIPO_DEPOSITO_VOLCANICO": {
+      "tipo": "simple",
+      "valores": [
+        "Lava pahoehoe",
+        "Lava Aa",
+        "Lava almohadillada",
+        "Lava de bloques",
+        "Lava clastogénica",
+        "Lava-domo",
+        "Peperita asociada a lava (interacción con sedimento húmedo)",
+        "Hialoclastita asociado a lava (interacción con agua)",
+        "Lava indiferenciada",
+        "Lava brechosa indiferenciada",
+        "Depósito de corriente de densidad piroclástico vesiculado (ignimbrita)",
+        "Depósito de oleada piroclástica (diluido)",
+        "Depósito de flujo piroclástico (denso)",
+        "Depósito de flujo piroclástico de bloques y ceniza (no vesiculado)",
+        "Depósito de caída por nube de ceniza co-ignimbrítica",
+        "Depósito de caída por dispersión de la pluma",
+        "Depósito de caída balística",
+        "Depósito de 'spatter' (salpicadura)",
+        "Depósito de bloque y/o bomba densa balística",
+        "Depósito de bombas pumíceas y/o escoriáceas balísticas",
+        "Depósito de caída indiferenciada"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV pp. 62-63, campo TIPO DE DEPÓSITO VOLCÁNICO"
+    },
+    "POSICION_CENTRO_ERUPTIVO": {
+      "tipo": "simple",
+      "valores": [
+        "Facies de conos y anillos de piroclastos",
+        "Facies extracaldera",
+        "Facies intracaldera",
+        "Facies de estratovolcán",
+        "Facies volcán de escudo",
+        "Facies de domo",
+        "Facies de volcán fisural",
+        "Punto de emisión de lava"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV p. 64, campo POSICIÓN RELATIVA AL CENTRO ERUPTIVO"
+    },
+    "TIPO_ERUPCION": {
+      "tipo": "simple",
+      "valores": [
+        "Erupción hawaiiana",
+        "Erupción stromboliana",
+        "Erupción sub-pliniana",
+        "Erupción pliniana",
+        "Erupción ultrapliniana",
+        "Erupción vulcaniana",
+        "Erupción surtseyana",
+        "Erupción freatopliniana",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV p. 65, campo TIPO DE ERUPCIÓN"
+    },
+    "TIPO_CENTRO_EMISION": {
+      "tipo": "simple",
+      "valores": [
+        "Cono de escoria",
+        "Cono de toba",
+        "Cono de 'spatter' (salpicadura)",
+        "Anillo de toba",
+        "Maar",
+        "Domo bajo (torta)",
+        "Domo coulée",
+        "Domo peleano",
+        "Domo tipo tapón elevado ('upheaved plug')",
+        "Estratovolcán",
+        "Volcán de escudo",
+        "Caldera de pistón",
+        "Caldera de colapso en bloques ('piecemeal')",
+        "Caldera de bisagra",
+        "Caldera de subsidencia flexural ('downsag')",
+        "Caldera embudo",
+        "Volcán fisural",
+        "Fisura eruptiva",
+        "Punto de emisión de lava"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV p. 67, campo TIPO DE CENTRO DE EMISIÓN VOLCÁNICO (columna de subtipos)"
+    },
+    "TIPO_ANTROPICO": {
+      "tipo": "simple",
+      "valores": [
+        "Desmonte minero (botadero)",
+        "Relave minero",
+        "Pila de lixiviación",
+        "Relleno artificial",
+        "Otro"
+      ],
+      "fuente": "GDB institucional SNGM, GB_GEOMORFOLOGIA_L_ANTROPICA (límite de desmonte minero, de relave minero y de pila de lixiviación); + Relleno artificial y Otro (usuario, 2026-10-26). La norma CDC 2016 no trae lista de depósitos antrópicos."
+    },
+    "CATEGORIA_FALLA": {
+      "tipo": "simple",
+      "valores": [
+        "Falla Normal",
+        "Falla Inversa",
+        "Falla Oblicua",
+        "Falla de Rumbo",
+        "Falla Polifásica",
+        "Falla de Manteo y Desplazamiento Vertical",
+        "Falla indeterminada"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Subtipo, AF_EST_SEC_FALLA"
+    },
+    "POTENCIA_FALLA": {
+      "tipo": "simple",
+      "valores": [
+        "> 1000 m",
+        "1000-100 m",
+        "100-10 m",
+        "10-1 m",
+        "1,0-0,1 m",
+        "0,1-0,01 m",
+        "0,01-0,001 m",
+        "< 0,001 m"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 4, campo POTENCIA (TBL_AF_FALLA)"
+    },
+    "TIPO_DEFORMACION": {
+      "tipo": "simple",
+      "valores": [
+        "Deformación frágil",
+        "Deformación dúctil",
+        "Deformación dúctil y frágil",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 5, campo TIPO DE DEFORMACIÓN"
+    },
+    "RELLENO_FALLA": {
+      "tipo": "simple",
+      "valores": [
+        "Arcillas",
+        "Carbonatos",
+        "Cuarzo",
+        "Sulfatos",
+        "Ceolitas",
+        "Micas",
+        "Sulfuros",
+        "Óxidos",
+        "Minerales hidrotermales indiferenciados",
+        "Roca tectónica de falla",
+        "Indeterminado",
+        "Sin Relleno"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 4, campo RELLENO DE LA FALLA (multiselección)"
+    },
+    "CRITERIO_CINEMATICO": {
+      "tipo": "simple",
+      "valores": [
+        "Separación de capas o contactos",
+        "Separación de dos contactos no paralelos",
+        "Orientación de lineaciones de falla y separación de capas o contacto",
+        "Desplazamiento de objetos o rasgos lineales",
+        "Escarpe",
+        "Elemento geomorfológico desplazado",
+        "Foliación cataclástica tipo S-C",
+        "Foliación tipo S de pared de falla",
+        "Fracturas tipo RO",
+        "Fracturas tipo RM",
+        "Fracturas lunares",
+        "Fracturas tipo PT",
+        "Fracturas tipo PO",
+        "Fracturas tipo T",
+        "Fracturas crescénticas",
+        "Estilolitos de falla (slickolites)",
+        "Veta fibrosa de falla (slickenfibers)",
+        "Veta-molde de falla",
+        "Marca de abrasión (tool mark)",
+        "Clastos de brecha micro-fallados",
+        "Orientación de fallas secundarias sintéticas",
+        "Orientación de fallas secundarias antitéticas",
+        "Pliegues de arrastre",
+        "Pliegues en echelon",
+        "Pliegues asimétricos",
+        "Pliegue en vaina",
+        "Diques en echelon",
+        "Foliación milonítica tipo S-C",
+        "Foliación milonítica tipo S-C'",
+        "Porfiroclastos tipo sigma",
+        "Porfiroclastos tipo delta",
+        "Porfiroclastos con alas complejas",
+        "Porfiroclastos con estructuras de cuartos",
+        "Porfiroclastos micro-fallados",
+        "Porfiroclastos imbricados",
+        "Porfiroblastos tipo bola de nieve",
+        "Foliación milonítica oblicua",
+        "Peces de mineral",
+        "Agregados policristalinos sigmoides",
+        "Boudins asimétricos",
+        "Estructura de zona de relevo (stepover)",
+        "Grietas de tensión en echelon",
+        "Sombras de presión con crecimiento de cristales fibrosos asimétricos"
+      ],
+      "fuente": "Norma CDC 2016 Vol V pp. 5-6, campo CRITERIO CINEMATICO (multiselección; definiciones en el Anexo 1)"
+    },
+    "CALIDAD_CRITERIO": {
+      "tipo": "simple",
+      "valores": [
+        "Bueno",
+        "Medio",
+        "Malo"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 6, campo CALIDAD DEL CRITERIO"
+    },
+    "TIPO_SEPARACION": {
+      "tipo": "simple",
+      "valores": [
+        "Desplazamiento",
+        "Separación estratigráfica",
+        "Separación de manteo",
+        "Separación vertical",
+        "Separación de rumbo",
+        "Separación horizontal"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 7, campo TIPO DE SEPARACION DE LA FALLA"
+    },
+    "DOMINIO_ESTRUCTURAL": {
+      "tipo": "simple",
+      "valores": [
+        "Sistema NS",
+        "Sistema EO",
+        "Sistema NE-SO",
+        "Sistema NNE-SSO",
+        "Sistema NNO-SSE",
+        "Sistema NO-SE",
+        "Sistema ENE-OSO",
+        "Sistema ONO-ESE",
+        "Sistema horizontal o subhorizontal",
+        "Sistema con orientaciones variables"
+      ],
+      "fuente": "Norma CDC 2016 Vol V pp. 8 y 54, campo DOMINIO ESTRUCTURAL (falla y fractura)"
+    },
+    "SISTEMA_ESTRUCTURAL": {
+      "tipo": "abierta",
+      "valores": [
+        "Sistema de Fallas de Atacama",
+        "Sistema de Fallas Oeste",
+        "Sistema de Fallas de Domeyko",
+        "Sistema de Fallas de Liquiñe-Ofqui",
+        "Faja plegada y corrida de Potrerillos",
+        "Faja plegada y corrida de Sierra Moreno",
+        "Faja plegada y corrida de la Cordillera de Domeyko",
+        "Faja plegada y corrida de la Cordillera de la Sal",
+        "Faja plegada y corrida de Exploradora",
+        "Faja plegada y corrida de Patagonia",
+        "Faja plegada y corrida de Magallanes",
+        "No determinado"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 9, campo SISTEMA ESTRUCTURAL (lista parcial que la norma pide extender: dominio abierto)"
+    },
+    "ESCALA_ESTRUCTURA": {
+      "tipo": "simple",
+      "valores": [
+        "Transregional, >100 km",
+        "Regional, 10-100 km",
+        "Distrital, 1-10 km",
+        "Local, 100-1.000 m",
+        "Afloramiento, <100 m"
+      ],
+      "fuente": "Norma CDC 2016 Vol V pp. 9 y 39, ESCALA DE LA FALLA / ESCALA DEL PLIEGUE"
+    },
+    "FASE_DEFORMACION": {
+      "tipo": "simple",
+      "valores": [
+        "primera fase",
+        "segunda fase",
+        "tercera fase",
+        "cuarta fase",
+        "quinta fase",
+        "no determinada"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 40, campo FASE DE DEFORMACION (la de falla, p. 10, es la misma sin «no determinada»)"
+    },
+    "EDAD_ESTRATIGRAFICA": {
+      "tipo": "simple",
+      "valores": [
+        "Holoceno superior",
+        "Holoceno medio",
+        "Holoceno inferior",
+        "Pleistoceno Superior",
+        "Pleistoceno Medio",
+        "Calabriano (Pleistoceno Inferior alto)",
+        "Gelasiano (Pleistoceno Inferior bajo)",
+        "Piacenziano (Plioceno Superior)",
+        "Zancleano (Plioceno Inferior)",
+        "Messiniano (Mioceno Superior alto)",
+        "Tortoniano (Mioceno Superior bajo)",
+        "Serravalliano (Mioceno Medio alto)",
+        "Langhiano (Mioceno Medio bajo)",
+        "Burdigaliano (Mioceno Inferior alto)",
+        "Aquitaniano (Mioceno Inferior bajo)",
+        "Chattiano (Oligoceno Superior)",
+        "Rupeliano (Oligoceno Inferior)",
+        "Priaboniano (Eoceno Superior)",
+        "Bartoniano (Eoceno Medio alto)",
+        "Lutetiano (Eoceno Medio bajo)",
+        "Ypresiano (Eoceno Inferior)",
+        "Thanetiano (Paleoceno Superior)",
+        "Selandiano (Paleoceno Medio)",
+        "Daniano (Paleoceno Inferior)",
+        "Maastrichtiano del Cretácico Superior alto",
+        "Campaniano del Cretácico Superior alto",
+        "Santoniano del Cretácico Superior medio",
+        "Coniaciano del Cretácico Superior medio",
+        "Turoniano del Cretácico Superior bajo",
+        "Cenomaniano del Cretácico Superior bajo",
+        "Albiano del Cretácico Inferior alto",
+        "Aptiano del Cretácico Inferior alto",
+        "Barremiano del Cretácico Inferior bajo",
+        "Hauteriviano del Cretácico Inferior bajo",
+        "Valanginiano del Cretácico Inferior bajo",
+        "Berriasiano del Cretácico Inferior bajo",
+        "Titoniano (Jurásico Superior alto)",
+        "Kimmeridgiano (Jurásico Superior medio)",
+        "Oxfordiano (Jurásico Superior bajo)",
+        "Calloviano del Jurásico Medio alto",
+        "Bathoniano del Jurásico Medio alto",
+        "Bajociano del Jurásico Medio bajo",
+        "Aaleniano del Jurásico Medio bajo",
+        "Toarciano del Jurásico Inferior alto",
+        "Pleinsbachiano del Jurásico Inferior alto",
+        "Sinemuriano del Jurásico Inferior bajo",
+        "Hettangiano del Jurásico Inferior bajo",
+        "Raetiano (Triásico Superior alto)",
+        "Noriano (Triásico Superior medio)",
+        "Carniano (Triásico Superior bajo)",
+        "Ladiniano (Triásico Medio alto)",
+        "Anisiano (Triásico Medio bajo)",
+        "Olenekiano (Triásico Inferior alto)",
+        "Induano (Triásico Inferior bajo)",
+        "Changhsingiano (Pérmico Superior alto)",
+        "Wuchiapingiano (Pérmico Superior bajo)",
+        "Capitaniano (Pérmico Medio alto)",
+        "Wordiano (Pérmico Medio medio)",
+        "Roadiano (Pérmico Medio bajo)",
+        "Kunguriano del Pérmico Inferior alto",
+        "Artinskiano del Pérmico Inferior alto",
+        "Sakmariano del Pérmico Inferior bajo",
+        "Asseliano del Pérmico Inferior bajo",
+        "Gzheliano (Pennsylvaniano Superior alto)",
+        "Kasimoviano (Pennsylvaniano Superior bajo)",
+        "Moscoviano (Pennsylvaniano Medio)",
+        "Bashkiriano (Pennsylvaniano Inferior)",
+        "Serpukhoviano (Mississippiano Superior)",
+        "Visean (Mississippiano Medio)",
+        "Tournaisiano (Mississippiano Inferior)",
+        "Famenniano (Devónico Superior alto)",
+        "Frasniano (Devónico Superior bajo)",
+        "Givetiano (Devónico Medio alto)",
+        "Eifeliano (Devónico Medio bajo)",
+        "Emsiano (Devónico Inferior alto)",
+        "Pragiano (Devónico Inferior medio)",
+        "Lochkoviano (Devónico Inferior bajo)",
+        "Ludfordiano del Silúrico Superior bajo",
+        "Gorstiano del Silúrico Superior bajo",
+        "Homeriano del Silúrico Inferior alto",
+        "Sheinwoodiano del Silúrico Inferior alto",
+        "Telychiano del Silúrico Inferior bajo",
+        "Aeroniano del Silúrico Inferior bajo",
+        "Rhuddaniano del Silúrico Inferior bajo",
+        "Himantiano (Ordovícico Superior alto)",
+        "Katiano (Ordovícico Superior medio)",
+        "Sandbiano (Ordovícico Superior bajo)",
+        "Darriwiliano (Ordovícico Medio alto)",
+        "Dapingiano (Ordovícico Medio bajo)",
+        "Floiano (Ordovícico Inferior alto)",
+        "Tremadociano (Ordovícico Inferior bajo)",
+        "Edad 10 (Cámbrico Superior alto)",
+        "Jiangshaniano (Cámbrico Superior medio)",
+        "Paibiano (Cámbrico Superior bajo)",
+        "Guzhangiano (Cámbrico Medio alto)",
+        "Drumiano (Cámbrico Medio medio)",
+        "Edad 5 (Cámbrico Medio bajo)",
+        "Edad 4 del Cámbrico Inferior alto",
+        "Edad 3 del Cámbrico Inferior alto",
+        "Edad 2 del Cámbrico Inferior bajo",
+        "Fortuniano del Cámbrico Inferior bajo"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' LV_ATT_EDAD_1 (98 edades) + los tres términos del Holoceno de Norma CDC 2016 Vol V Anexo 2, Tabla 1"
+    },
+    "CATEGORIA_PLIEGUE": {
+      "tipo": "simple",
+      "valores": [
+        "Pliegue anticlinal",
+        "Pliegue sinclinal",
+        "Flexura",
+        "Antiforme-Sinforme",
+        "Pliegue menor",
+        "Pliegues indiferenciados"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Subtipo, AF_EST_SEC_PLIEGUE"
+    },
+    "TIPO_PLIEGUE": {
+      "tipo": "cascada",
+      "padre": "CATEGORIA_PLIEGUE",
+      "mapa": {
+        "Pliegue anticlinal": [
+          "Anticlinal",
+          "Anticlinal recto",
+          "Anticlinal inclinado",
+          "Anticlinal volcado",
+          "Anticlinal recumbente",
+          "Anticlinal buzante",
+          "Anticlinal recto y buzante",
+          "Anticlinal inclinado y buzante",
+          "Anticlinal volcado y buzante",
+          "Anticlinal reclinado",
+          "Anticlinal vertical",
+          "Anticlinal invertido (anticlinal sinforme)",
+          "Anticlinal doblemente buzante, braquianticlinal",
+          "Anticlinal doblemente buzante, depresión en linea de charnela",
+          "Pliegue dómico anticlinal",
+          "Anticlinal cónico",
+          "Anticlinorio"
+        ],
+        "Pliegue sinclinal": [
+          "Sinclinal",
+          "Sinclinal recto",
+          "Sinclinal inclinado",
+          "Sinclinal volcado",
+          "Sinclinal recumbente",
+          "Sinclinal buzante",
+          "Sinclinal recto y buzante",
+          "Sinclinal inclinado y buzante",
+          "Sinclinal volcado y buzante",
+          "Sinclinal reclinado",
+          "Sinclinal vertical",
+          "Sinclinal invertido (sinclinal antiforme)",
+          "Sinclinal doblemente buzante, braquisinclinal",
+          "Sinclinal doblemente buzante, culminación en linea de charnela",
+          "Pliegue cuenca sinclinal",
+          "Sinclinal cónico",
+          "Sinclinorio"
+        ],
+        "Flexura": [
+          "Flexura monoclinal",
+          "Anticlinal de flexura monoclinal",
+          "Sinclinal de flexura monoclinal",
+          "Anticlinal de flexura monoclinal basculado",
+          "Sinclinal de flexura monoclinal basculado",
+          "Flexura monoclinal buzante",
+          "Anticlinal de flexura monoclinal buzante",
+          "Sinclinal de flexura monoclinal buzante",
+          "Anticlinal de flexura monoclinal basculado y buzante",
+          "Sinclinal de flexura monoclinal basculado y buzante"
+        ],
+        "Antiforme-Sinforme": [
+          "Antiforme",
+          "Antiforme recto",
+          "Antiforme inclinado",
+          "Antiforme volcado",
+          "Antiforme buzante",
+          "Antiforme recto y buzante",
+          "Antiforme inclinado y buzante",
+          "Antiforme volcado y buzante",
+          "Antiforme doblemente buzante, braquiantiforme",
+          "Antiforme doblemente buzante, depresión en línea de charnela",
+          "Pliegue dómico antiforme",
+          "Antiforme cónico",
+          "Sinforme",
+          "Sinforme recto",
+          "Sinforme inclinado",
+          "Sinforme volcado",
+          "Sinforme buzante",
+          "Sinforme recto y buzante",
+          "Sinforme inclinado y buzante",
+          "Sinforme volcado y buzante",
+          "Sinforme doblemente buzante, braquisinforme",
+          "Sinforme doblemente buzante, culminación en línea de charnela",
+          "Pliegue cuenca sinforme",
+          "Sinforme cónico",
+          "Pliegue neutro recumbente",
+          "Pliegue neutro reclinado",
+          "Pliegue neutro vertical"
+        ],
+        "Pliegues indiferenciados": [
+          "Par anticlinal-sinclinal",
+          "Sistema de pliegues de longitud de onda bajo",
+          "Sistema de pliegues en echelon dextral",
+          "Sistema de pliegues en echelon sinistral"
+        ]
+      },
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', listas GB_PLIEGUE_*_2014 (la categoría «Pliegue menor» no trae lista)"
+    },
+    "FORMA_CHARNELA": {
+      "tipo": "simple",
+      "valores": [
+        "En cofre b=2",
+        "Achatado 1<b≤2",
+        "Circular a subredondeado 0,4≤b≤1",
+        "Subangular a angular 0,1≤b<0,4",
+        "Agudo a chevron 0≤b<0,1"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 27, campo FORMA DE CHARNELA (el Excel solo trae «Achatado»)"
+    },
+    "ANGULO_INTERLIMBO": {
+      "tipo": "simple",
+      "valores": [
+        "Suave 120-180°",
+        "Abierto 70-120°",
+        "Cerrado 30-70°",
+        "Apretado 0-30°",
+        "Isoclinal 0°",
+        "Elástico  <0°"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_PLIEGUE_ANG_INTERLIMBO_2014 = Norma CDC 2016 Vol V p. 28"
+    },
+    "RAZON_ASPECTO": {
+      "tipo": "simple",
+      "valores": [
+        "Muy ancho 0≤P<0,25",
+        "Ancho 0,25≤P<0,63",
+        "Ecuante 0,63≤P<1,58",
+        "Alto 1,58≤P<4",
+        "Muy alto 4≤P"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 29, campo RAZÓN DE ASPECTO"
+    },
+    "FORMA_PERFIL": {
+      "tipo": "simple",
+      "valores": [
+        "Tipo 1A",
+        "Tipo 1B (paralelo)",
+        "Tipo 1C",
+        "Tipo 2 (similar)",
+        "Tipo 3"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_PLIEGUE_FORMA_PERFIL_2014 (Ramsay 1967)"
+    },
+    "ARMONIA_PLIEGUE": {
+      "tipo": "simple",
+      "valores": [
+        "Armónico sencillo",
+        "Armónico complejo",
+        "Disarmónico",
+        "Ptigmático"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 30, campo ARMONÍA DEL PLIEGUE"
+    },
+    "SUPERFICIE_AXIAL": {
+      "tipo": "simple",
+      "valores": [
+        "Plana",
+        "Curviplana",
+        "Convoluta",
+        "Policlinal"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_PLIEGUE_ SUPERF_AXIAL = Norma CDC 2016 Vol V p. 31"
+    },
+    "CILINDRICIDAD": {
+      "tipo": "simple",
+      "valores": [
+        "cilíndrico",
+        "subcilíndrico",
+        "no cilíndrico",
+        "cónico",
+        "pliegue en vaina",
+        "periclinal (doblemente buzante)"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_PLIEGUE_CILINDRICIDAD_2014 (agrega «periclinal» a los 5 del Norma CDC 2016 Vol V)"
+    },
+    "ORDEN_PLIEGUE": {
+      "tipo": "simple",
+      "valores": [
+        "Primero orden",
+        "Parasitario de segundo orden",
+        "Parasitario de tercer orden"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_PLIEGUE_ORDEN"
+    },
+    "SIMETRIA_PLIEGUE": {
+      "tipo": "simple",
+      "valores": [
+        "Simétrico",
+        "Asimétrico"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 35, campo SIMETRÍA DEL PLIEGUE"
+    },
+    "DIRECCION_VERGENCIA": {
+      "tipo": "simple",
+      "valores": [
+        "Hacia el Este",
+        "Hacia el EsteNorEste",
+        "Hacia el EsteSurEste",
+        "Hacia el NorEste",
+        "Hacia el NorNorEste",
+        "Hacia el NorNorOeste",
+        "Hacia el NorOeste",
+        "Hacia el Norte",
+        "Hacia el Oeste",
+        "Hacia el OesteNorOeste",
+        "Hacia el OesteSurOeste",
+        "Hacia el Sur",
+        "Hacia el SurEste",
+        "Hacia el SurOeste",
+        "Hacia el SurSurEste",
+        "Hacia el SurSurOeste"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_DIRECCION_2014 (16 rumbos)"
+    },
+    "ASOCIACION_FALLA": {
+      "tipo": "simple",
+      "valores": [
+        "Pliegue de arrastre",
+        "Pliegue de flexión de falla",
+        "Pliegue de flexión sobre falla lístrica (rollover)",
+        "Pliegue de propagación de falla",
+        "Pliegue forzado",
+        "Pliegue por despegue",
+        "Pliegues en echelon",
+        "Asociacion desconocida o no determinada",
+        "No presenta asociacion"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_PLIEGUE_ASS_FALLA_2014"
+    },
+    "FAJA_PLEGADA": {
+      "tipo": "abierta",
+      "valores": [
+        "Faja plegada y corrida de Potrerillos",
+        "Faja plegada y corrida de Sierra Moreno",
+        "Faja plegada y corrida de la Cordillera de Domeyko",
+        "Faja plegada y corrida de la Cordillera de la Sal",
+        "Faja plegada y corrida de Exploradora",
+        "Faja plegada y corrida de Patagonia",
+        "Faja plegada y corrida de Magallanes"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 39, campo FAJA PLEGADA ASOCIADA (lista parcial: dominio abierto)"
+    },
+    "TIPO_FRACTURA": {
+      "tipo": "simple",
+      "valores": [
+        "Fracturas abanicadas",
+        "Fracturas concéntricas",
+        "Fracturas concentricas-cilíndricas",
+        "Fracturas concéntricas-cónicas",
+        "Fracturas concentricas-esféricas o semiesféricas",
+        "Fracturas en echelon",
+        "Fracturas en echelon en juegos conjugados",
+        "Fracturas en echelon sigmoidales",
+        "Fracturas pinadas",
+        "Fracturas plano-paralelas polidireccionales",
+        "Fracturas plano-paralelas polidireccionales conjugadas",
+        "Fracturas plano-paralelas polidireccionales ortogonales",
+        "Fracturas plano-paralelas unidireccionales",
+        "Fracturas poligonal-columnar",
+        "Fracturas radiales",
+        "Fracturas no sistematicas (irregulares)",
+        "Fracturas indiferenciadas"
+      ],
+      "fuente": "CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx' GB_ATT_FRACTURA_2014"
+    },
+    "NUMERO_JUEGOS": {
+      "tipo": "simple",
+      "valores": [
+        "macizo con algunas fracturas no sistemáticas",
+        "un juego de fracturas sistemáticas",
+        "un juego sistemático y fracturas no sistemáticas",
+        "dos juegos de fracturas sistemáticas",
+        "dos juegos sistemáticos y fracturas no sistemáticas",
+        "tres juegos de fracturas sistemáticas",
+        "tres juegos sistemáticos y fracturas no sistemáticas",
+        "cuatro o más juegos de fracturas sistemáticas",
+        "fracturamiento pervasivo"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 53, campo NÚMERO JUEGOS (ISRM)"
+    },
+    "RELLENO_FRACTURA": {
+      "tipo": "simple",
+      "valores": [
+        "Arcillas",
+        "Carbonatos",
+        "Cuarzo",
+        "Sulfatos",
+        "Ceolitas",
+        "Micas",
+        "Sulfuros",
+        "Óxidos",
+        "Minerales hidrotermales",
+        "Varios",
+        "Indeterminado",
+        "Sin Relleno"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 57, campo RELLENO (fracturas; multiselección)"
+    },
+    "RELACION_ESTRATIFICACION": {
+      "tipo": "simple",
+      "valores": [
+        "Fractura estratoconfinada",
+        "Fractura estrato-transversal",
+        "Fractura estratoparalela",
+        "No aplicable",
+        "No determinada"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 58, campo RELACIÓN ESTRATIFICACIÓN"
+    },
+    "ESPESOR_ESTRATIFICACION": {
+      "tipo": "simple",
+      "valores": [
+        "Extremadamente separado >6 m",
+        "Muy separado 2-6 m",
+        "Separado 0,6-2 m",
+        "Moderado 0,2-0,6 m",
+        "Cercano 0,06-0,2 m",
+        "Muy cercano 0,02-0,06 m",
+        "Extremadamente cercano <0,02 m"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 59, campo ESPESOR ESTRATIFICACIÓN (misma escala que el espaciamiento; mayúscula inicial como ESPACIAMIENTO_FRACTURA)"
+    },
+    "ASOCIACION_ESTRUCTURAL": {
+      "tipo": "simple",
+      "valores": [
+        "Unidad estratificada subhorizontal",
+        "Charnela de pliegue",
+        "Limbo de pliegue",
+        "Falla",
+        "Cuerpo intrusivo",
+        "No determinada"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 59, campo ASOCIACIÓN ESTRUCTURAL"
+    },
+    "GENESIS_MECANICA": {
+      "tipo": "simple",
+      "valores": [
+        "Fractura de tensión",
+        "Fractura de cizalle",
+        "Fractura híbrida tensión-cizalle",
+        "No determinada"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 61, campo GÉNESIS MECÁNICA"
+    },
+    "GENESIS_PROCESO": {
+      "tipo": "simple",
+      "valores": [
+        "Descompresión (exfoliación)",
+        "Enfriamiento",
+        "Deshidratación",
+        "Deformación tectónica",
+        "Emplazamiento de cuerpo intrusivo",
+        "Sobrepresión hidráulica",
+        "No determinada"
+      ],
+      "fuente": "Norma CDC 2016 Vol V p. 62, campo GÉNESIS PROCESO"
+    },
+    "CLASE_COMPONENTE": {
+      "tipo": "simple",
+      "valores": [
+        "Clasto",
+        "Fragmento piroclástico"
+      ],
+      "fuente": "Clasto: TBL_AF_SED_CLASTO (Norma CDC 2016 Vol III); fragmento: TBL_AF_VOLC_FRAGMENTO (Norma CDC 2016 Vol IV)"
+    },
+    "REDONDEAMIENTO_CDC": {
+      "tipo": "simple",
+      "valores": [
+        "Muy angulosos",
+        "Angulosos",
+        "Subangulosos",
+        "Subredondeados",
+        "Redondeados",
+        "Bien redondeados",
+        "Muy angulosos a angulosos",
+        "Muy angulosos a subangulosos",
+        "Muy angulosos a subredondeados",
+        "Muy angulosos a redondeados",
+        "Muy angulosos a bien redondeados",
+        "Angulosos a subangulosos",
+        "Angulosos a subredondeados",
+        "Angulosos a redondeados",
+        "Angulosos a bien redondeados",
+        "Subangulosos a subredondeados",
+        "Subangulosos a redondeados",
+        "Subangulosos a bien redondeados",
+        "Subredondeados a redondeados",
+        "Subredondeados a bien redondeados",
+        "Redondeados a bien redondeados",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol III p. 75 (REDONDEAMIENTO CLASTOS) = Norma CDC 2016 Vol IV p. 58 (fragmentos); Powers 1953"
+    },
+    "FORMA_CDC": {
+      "tipo": "simple",
+      "valores": [
+        "Esférico o equidimensional",
+        "Discoidal o tabular",
+        "Cilíndrico o elongado",
+        "Elipsoidal",
+        "Esférico o equidimensional a discoidal o tabular",
+        "Esférico o equidimensional a cilíndrico o elongado",
+        "Esférico o equidimensional a elipsoidal",
+        "Discoidal o tabular a cilíndrico o elongado",
+        "Discoidal o tabular a elipsoidal",
+        "Cilíndrico o elongado a elipsoidal",
+        "Irregular",
+        "Heterogéneo"
+      ],
+      "fuente": "Norma CDC 2016 Vol III p. 75 (FORMA CLASTOS) = Norma CDC 2016 Vol IV p. 58 (fragmentos); Zingg 1935"
+    },
+    "TIPO_CLASTO": {
+      "tipo": "simple",
+      "valores": [
+        "Extraclasto",
+        "Intraclasto",
+        "Bioclasto",
+        "Clasto aloquímico (excluyendo bioclasto)",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol III p. 76, campo TIPO CLASTO (génesis; mayúscula inicial)"
+    },
+    "LITOLOGIA_FRAGMENTO": {
+      "tipo": "simple",
+      "valores": [
+        "Pómez",
+        "Fiamme",
+        "Lapilli acrecionario",
+        "Lapilli armado",
+        "Escoria",
+        "Bloque con diaclasamiento prismático (PJB)",
+        "Bomba",
+        "Roca plutónica",
+        "Roca plutónica máfica",
+        "Roca plutónica intermedia",
+        "Roca plutónica félsica",
+        "Roca plutónica ultramáfica",
+        "Roca microfanerítica",
+        "Roca microfanerítica máfica",
+        "Roca microfanerítica intermedia",
+        "Roca microfanerítica félsica",
+        "Roca volcánica o hipabisal",
+        "Roca volcánica o hipabisal máfica",
+        "Roca volcánica o hipabisal intermedia",
+        "Roca volcánica o hipabisal félsica",
+        "Roca ígnea indiferenciada",
+        "Roca metamórfica",
+        "Roca metasedimentaria",
+        "Roca metavolcánica",
+        "Roca metaplutónica",
+        "Roca surmicácea",
+        "Roca sedimentaria",
+        "Roca de litología indeterminada"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV pp. 56-57, campo LITOLOGÍA DE FRAGMENTO O ENCLAVE (columna de términos)"
+    },
+    "GENESIS_FRAGMENTO": {
+      "tipo": "simple",
+      "valores": [
+        "Material juvenil",
+        "Enclave coetáneo",
+        "Autolito",
+        "Enclave cumulado",
+        "Material semi-cognado o accesorio",
+        "Xenolito",
+        "Restita",
+        "Xenolito de manto",
+        "Indeterminada"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV p. 60, campo GÉNESIS DEL FRAGMENTO O ENCLAVE (columna de términos)"
     }
   },
   "avisos": [
@@ -4551,7 +6549,8 @@ const MODELO = {
     "TIPO_DEPOSITO: poblada desde diagrama v3 / estandar (CONFIRMAR).",
     "SUBTIPO_SEDIMENTARIO y campos de clasificación sedimentaria agregados desde la norma CDC 2016 Vol III (agregar_subtipo_sedimentario.py).",
     "NOMBRE_ROCA Sedimentaria ampliado por SUBTIPO_SEDIMENTARIO desde la norma CDC 2016 Vol III (agregar_nombres_sedimentarios.py).",
-    "NOMBRE_ROCA Volcánica sincronizado con ROCAS_VOLCANICAS de la PWA (Lava + Rocas piroclásticas, sincronizar_nombres_volcanicos.py); salen Ignimbrita, Toba, Lapillita y Aglomerado volcánico."
+    "NOMBRE_ROCA Volcánica sincronizado con ROCAS_VOLCANICAS de la PWA (Lava + Rocas piroclásticas, sincronizar_nombres_volcanicos.py); salen Ignimbrita, Toba, Lapillita y Aglomerado volcánico.",
+    "v152 (2026-10-26): estructuras en árbol (EST_FALLA/EST_PLIEGUE/EST_FRACTURA), Depósito pasa de TIPO_ROCA a LITIFICACION con hija LITO_DEPOSITO, TIPO_ROCA Antrópico con LITO_ANTROPICO, y TBL_COMPONENTE (COMP_CLASTO/COMP_FRAGMENTO). Ver modelo/reestructurar_v152.py."
   ],
   "familias_litologia": [
     {
@@ -4564,6 +6563,7 @@ const MODELO = {
         "ID_LITOLOGIA",
         "ID_AFLORAMIENTO",
         "TIPO_ROCA",
+        "LITIFICACION",
         "NOMBRE_ROCA",
         "UNIDAD_GEOLOGICA",
         "ESPESOR_ESTRATO_MIN_CM",
@@ -4585,10 +6585,9 @@ const MODELO = {
     {
       "tabla": "LITO_CLASTICA",
       "padre": false,
-      "descripcion": "Hija 1:1. Rocas y depositos formados por clastos: tamano, forma, composicion, matriz y cemento.",
-      "aplica_a": "Deposito; Sedimentaria clastica; Rocas piroclasticas y Tefra",
+      "descripcion": "Hija 1:1. Rocas y depositos piroclasticos formados por clastos: tamano, forma, composicion, matriz y cemento (v152: los depositos sedimentarios van en SED_SILICICLASTICA).",
+      "aplica_a": "Volcanica, rocas piroclasticas (roca o deposito)",
       "campos": [
-        "TIPO_DEPOSITO",
         "GRANULOMETRIA",
         "SELECCION",
         "REDONDEAMIENTO",
@@ -4601,8 +6600,7 @@ const MODELO = {
         "FABRICA_CLASTOS",
         "COMPOSICION_CLASTICA_MATRIZ",
         "GRANULOMETRIA_MATRIZ",
-        "CEMENTO",
-        "GRADO_CONSOLIDACION"
+        "CEMENTO"
       ]
     },
     {
@@ -4733,13 +6731,199 @@ const MODELO = {
         "MATRIZ_TECTONICA_PCT",
         "AMBIENTE_TECTONICO"
       ]
+    },
+    {
+      "tabla": "LITO_DEPOSITO",
+      "padre": false,
+      "descripcion": "Hija 1:1 (v152). Descripcion e interpretacion del deposito: contexto, geometria, limites, gradacion, ubicacion, ambiente, proceso y facies (CDC TBL_AF_DEP_SEDIMENTARIO) o tipo de deposito, centro y erupcion (CDC TBL_AF_DEP_VOLCANICO).",
+      "aplica_a": "Sedimentaria o Volcanica con LITIFICACION = Deposito",
+      "campos": [
+        "CONTEXTO_DEPOSITO",
+        "GEOMETRIA_DEPOSITO",
+        "ARREGLO_ESTRATOS",
+        "GRADACION_INTERNA",
+        "LIMITE_INFERIOR_DEPOSITO",
+        "LIMITE_SUPERIOR_DEPOSITO",
+        "UBICACION_DEPOSITO",
+        "FABRICA_GRAVOSA",
+        "GRADO_CONSOLIDACION",
+        "AMBIENTE_DEPOSITACIONAL",
+        "PROCESO_SEDIMENTARIO",
+        "FACIES_SEDIMENTARIA",
+        "TIPO_DEPOSITO_VOLCANICO",
+        "POSICION_CENTRO_ERUPTIVO",
+        "TIPO_ERUPCION",
+        "TIPO_CENTRO_EMISION"
+      ]
+    },
+    {
+      "tabla": "LITO_ANTROPICO",
+      "padre": false,
+      "descripcion": "Hija 1:1 (v152). Depositos antropicos: desmonte, relave, pila de lixiviacion, relleno u otro.",
+      "aplica_a": "Antropico",
+      "campos": [
+        "TIPO_ANTROPICO",
+        "TIPO_ANTROPICO_OTRO",
+        "DESCRIPCION_ANTROPICO"
+      ]
+    }
+  ],
+  "familias_estructura": [
+    {
+      "tabla": "TBL_DATOS_ESTRUCTURALES",
+      "padre": true,
+      "titulo": "Medida",
+      "descripcion": "Padre. Datos comunes de toda medida estructural: tipo, orientación, confianza y descripción.",
+      "aplica_a": "Toda medida",
+      "campos": [
+        "ID_PUNTO_CONTROL",
+        "ID_ESTRUCTURA",
+        "ID_LITOLOGIA",
+        "ID_CONTACTO",
+        "TIPO_ESTRUCTURA",
+        "AZIMUT",
+        "MANTEO_BUZAMIENTO",
+        "TREND",
+        "PLUNGE",
+        "TIPO_MEDIDA_ESTRUCTURAL",
+        "GRADO_CONFIANZA_ESTRUCTURA",
+        "DESCRIPCION_ESTRUCTURA"
+      ]
+    },
+    {
+      "tabla": "EST_FALLA",
+      "padre": false,
+      "titulo": "Falla (CDC TBL_AF_FALLA)",
+      "descripcion": "Hija 1:1 (ID_ESTRUCTURA). Descripción de la falla según la norma CDC 2016 Vol V (TBL_AF_FALLA).",
+      "aplica_a": "TIPO_ESTRUCTURA = Estructura falla",
+      "campos": [
+        "CATEGORIA_FALLA",
+        "TIPO_FALLA",
+        "NOMBRE_FALLA",
+        "POTENCIA_FALLA",
+        "ANCHO_FALLA_MIN_M",
+        "ANCHO_FALLA_MAX_M",
+        "TIPO_DEFORMACION",
+        "RELLENO_FALLA",
+        "CRITERIO_CINEMATICO",
+        "CALIDAD_CRITERIO",
+        "SEPARACION_FALLA_M",
+        "TIPO_SEPARACION",
+        "DOMINIO_ESTRUCTURAL_FALLA",
+        "SISTEMA_ESTRUCTURAL",
+        "ESCALA_FALLA",
+        "FASE_DEFORMACION_FALLA",
+        "EDAD_MAXIMA_FALLA",
+        "EDAD_MINIMA_FALLA"
+      ]
+    },
+    {
+      "tabla": "EST_PLIEGUE",
+      "padre": false,
+      "titulo": "Pliegue (CDC TBL_AF_PLIEGUE)",
+      "descripcion": "Hija 1:1 (ID_ESTRUCTURA). Descripción del pliegue según la norma CDC 2016 Vol V (TBL_AF_PLIEGUE).",
+      "aplica_a": "TIPO_ESTRUCTURA = Estructura pliegue mayor o Estructura pliegue menor",
+      "campos": [
+        "CATEGORIA_PLIEGUE",
+        "TIPO_PLIEGUE",
+        "NOMBRE_PLIEGUE",
+        "AMPLITUD_MIN_M",
+        "AMPLITUD_MAX_M",
+        "LONGITUD_ONDA_MIN_M",
+        "LONGITUD_ONDA_MAX_M",
+        "FORMA_CHARNELA",
+        "ANGULO_INTERLIMBO",
+        "RAZON_ASPECTO",
+        "FORMA_PERFIL",
+        "ARMONIA_PLIEGUE",
+        "SUPERFICIE_AXIAL",
+        "CILINDRICIDAD",
+        "ORDEN_PLIEGUE",
+        "SIMETRIA_PLIEGUE",
+        "DIRECCION_VERGENCIA",
+        "ASOCIACION_FALLA",
+        "ESCALA_PLIEGUE",
+        "FAJA_PLEGADA",
+        "FASE_DEFORMACION_PLIEGUE",
+        "EDAD_MAXIMA_PLIEGUE",
+        "EDAD_MINIMA_PLIEGUE"
+      ]
+    },
+    {
+      "tabla": "EST_FRACTURA",
+      "padre": false,
+      "titulo": "Fractura (CDC TBL_AF_FRACTURA)",
+      "descripcion": "Hija 1:1 (ID_ESTRUCTURA). Sistema y juego de fracturas según la norma CDC 2016 Vol V (TBL_AF_FRACTURA y TBL_AF_FRAC_JUEGO).",
+      "aplica_a": "TIPO_ESTRUCTURA = Estructura fractura",
+      "campos": [
+        "TIPO_FRACTURA",
+        "NUMERO_JUEGOS",
+        "DOMINIO_ESTRUCTURAL_FRACTURA",
+        "ESPACIAMIENTO_FRACTURA",
+        "PERSISTENCIA_FRACTURA",
+        "ABERTURA_FRACTURA",
+        "TEXTURA_SUPERFICIE_FRACTURA",
+        "RELLENO_FRACTURA",
+        "RELACION_ESTRATIFICACION",
+        "ESPESOR_ESTRATIFICACION",
+        "ASOCIACION_ESTRUCTURAL",
+        "GENESIS_MECANICA",
+        "GENESIS_PROCESO"
+      ]
+    }
+  ],
+  "familias_componente": [
+    {
+      "tabla": "TBL_COMPONENTE",
+      "padre": true,
+      "titulo": "Componente",
+      "descripcion": "Padre. Componente de una roca o depósito clástico o piroclástico (0..N por litología), con sus atributos comunes.",
+      "aplica_a": "Todo componente",
+      "campos": [
+        "ID_PUNTO_CONTROL",
+        "ID_COMPONENTE",
+        "ID_LITOLOGIA",
+        "CLASE_COMPONENTE",
+        "COMPONENTE_MIN_PCT",
+        "COMPONENTE_MAX_PCT",
+        "TAMANO_MIN_CM",
+        "TAMANO_MAX_CM",
+        "REDONDEAMIENTO_COMPONENTE",
+        "FORMA_COMPONENTE",
+        "COLOR_COMPONENTE",
+        "NOTA_COMPONENTE"
+      ]
+    },
+    {
+      "tabla": "COMP_CLASTO",
+      "padre": false,
+      "titulo": "Clasto (CDC TBL_AF_SED_CLASTO)",
+      "descripcion": "Hija 1:1 (ID_COMPONENTE). Clasto de una roca o depósito siliciclástico (norma CDC 2016 Vol III).",
+      "aplica_a": "CLASE_COMPONENTE = Clasto",
+      "campos": [
+        "LITOLOGIA_CLASTO",
+        "GRANULOMETRIA_CLASTO",
+        "TIPO_CLASTO"
+      ]
+    },
+    {
+      "tabla": "COMP_FRAGMENTO",
+      "padre": false,
+      "titulo": "Fragmento piroclástico (CDC TBL_AF_VOLC_FRAGMENTO)",
+      "descripcion": "Hija 1:1 (ID_COMPONENTE). Fragmento de una roca o depósito piroclástico (norma CDC 2016 Vol IV).",
+      "aplica_a": "CLASE_COMPONENTE = Fragmento piroclástico",
+      "campos": [
+        "LITOLOGIA_FRAGMENTO",
+        "ACHATAMIENTO_FRAGMENTO",
+        "GENESIS_FRAGMENTO"
+      ]
     }
   ]
 };
 </script>
 <script>
 "use strict";
-const APP_VER = 'v151';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v152';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -4769,7 +6953,7 @@ function restaurarAbiertos(){const a=abiertosGet();
 const STORE2TBL = {proyecto:'TBL_PROYECTO',punto:'PUNTO_CONTROL',litologia:'TBL_LITOLOGIA',
   estructural:'TBL_DATOS_ESTRUCTURALES',contacto:'TBL_CONTACTO',muestreo:'TBL_MUESTREO',
   foto:'TBL_FOTOGRAFIAS',esquema:'TBL_ESQUEMA_DIBUJO',geomorf:'TBL_GEOMORFOLOGIA',
-  aflora:'TBL_AFLORAMIENTO',
+  aflora:'TBL_AFLORAMIENTO',componente:'TBL_COMPONENTE',
   punto_gabinete:'PUNTO_CONTROL_GABINETE',linea_gabinete:'LINEA_CONTROL_GABINETE'};
 const STORES = Object.keys(STORE2TBL);
 // 'linea' no cuelga de un punto (es una capa aparte, hermana de PUNTO_CONTROL) -> no entra
@@ -4783,6 +6967,9 @@ const HIJAS = [
   // por punto, sin numerar y sin boton "+ Agregar" una vez creada.
   {store:'aflora', titulo:'Afloramiento', clase:'', unico:true},
   {store:'litologia', titulo:'Litología', clase:'lito', oblig:true},
+  // v152: clastos y fragmentos piroclásticos descritos uno a uno (CDC TBL_AF_SED_CLASTO y
+  // TBL_AF_VOLC_FRAGMENTO), 0..N por litología; cada uno elige su litología con ID_LITOLOGIA.
+  {store:'componente', titulo:'Componentes (clastos y fragmentos)', clase:''},
   {store:'estructural', titulo:'Datos estructurales', clase:''},
   {store:'contacto', titulo:'Contactos', clase:''},
   {store:'geomorf', titulo:'Geomorfología', clase:''},
@@ -4869,7 +7056,52 @@ function migrarRegistroV151(store,r){
   }
   return cambio;
 }
-const DB='captura-terreno', VER=17;   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+// v152 (pedido del usuario, 2026-10-26, sobre el informe del modelo CDC 2016):
+//   litologia: «Depósito» deja de ser TIPO_ROCA. Pasa a LITIFICACION = 'Depósito' dentro de Sedimentaria
+//              (aluviales, coluviales…: el nombre genético queda como NOMBRE_ROCA y su TIPO_DEPOSITO se
+//              copia a AMBIENTE_DEPOSITACIONAL) o de Volcánica (la tefra: su término GB_TEFRA, que la
+//              migración v10 había dejado en GRANULOMETRIA, vuelve a NOMBRE_ROCA). TIPO_DEPOSITO
+//              'Antrópico' pasa a TIPO_ROCA 'Antrópico'. TIPO_DEPOSITO no se borra (la light lo lee).
+//   estructural: TIPO_FALLA (lista propia de 11) pasa a CATEGORIA_FALLA + TIPO_FALLA de la CDC
+//              (GB_ATT_FA_*). El valor viejo queda en TIPO_FALLA_V151 (fuera del modelo).
+const AMBIENTE_DE_DEPOSITO_V152={'Aluvial':'Aluvial','Lacustre':'Lacustre','Glacial':'Glaciar','Fluvioglacial':'Glaciar',
+  'Litoral':'Costa (litoral)','Coluvial':'Coluvial','Eólico':'Eólico'};
+const AMBIENTE_DE_NOMBRE_V152={'Aluviales':'Aluvial','Coluviales':'Coluvial','Glaciares':'Glaciar','Eólicos':'Eólico','Litorales':'Costa (litoral)'};
+const FALLA_V152={'Normal':['Falla Normal','Falla normal'],'Inversa':['Falla Inversa','Falla inversa'],
+  'Cabalgamiento':['Falla Inversa','Falla inversa de bajo ángulo (<15°)'],'Lístrica':['Falla Normal','Falla normal'],
+  'De rumbo dextral':['Falla de Rumbo','Falla de rumbo dextral'],'De rumbo sinistral':['Falla de Rumbo','Falla de rumbo sinistral'],
+  'Normal-dextral (oblicua)':['Falla Oblicua','Falla con desplazamiento oblicuo-normal, sentido dextral'],
+  'Normal-sinistral (oblicua)':['Falla Oblicua','Falla con desplazamiento oblicuo-normal, sentido sinistral'],
+  'Inversa-dextral (oblicua)':['Falla Oblicua','Falla con desplazamiento oblicuo-inverso, sentido dextral'],
+  'Inversa-sinistral (oblicua)':['Falla Oblicua','Falla con desplazamiento oblicuo-inverso, sentido sinistral'],
+  'Indiferenciada':['Falla indeterminada','Falla indeterminada']};
+function migrarRegistroV152(store,r){
+  if(!r) return false;
+  if(store==='litologia' && r.TIPO_ROCA==='Depósito'){
+    if(r.NOMBRE_ROCA==='Tefra, depósito volcánico' || r.TIPO_DEPOSITO==='Volcanoclástico'){
+      r.TIPO_ROCA='Volcánica'; r.TIPO_VOLCANICA='Rocas piroclásticas';
+      const tefras=(dominio('NOMBRE_ROCA')||{}).depositos_volcanicos||[];
+      if(tefras.includes(r.GRANULOMETRIA)) r.NOMBRE_ROCA=r.GRANULOMETRIA;   // la granulometría guarda el nombre CDC
+    } else if(r.TIPO_DEPOSITO==='Antrópico'){
+      r.TIPO_ROCA='Antrópico'; if(!r.TIPO_ANTROPICO) r.TIPO_ANTROPICO='Otro';
+      if(!r.TIPO_ANTROPICO_OTRO && r.NOMBRE_ROCA) r.TIPO_ANTROPICO_OTRO=r.NOMBRE_ROCA;
+      return true;
+    } else {
+      r.TIPO_ROCA='Sedimentaria';
+      if(!r.SUBTIPO_SEDIMENTARIO) r.SUBTIPO_SEDIMENTARIO='Siliciclástico';
+      const amb=AMBIENTE_DE_DEPOSITO_V152[r.TIPO_DEPOSITO]||AMBIENTE_DE_NOMBRE_V152[r.NOMBRE_ROCA];
+      if(amb && !r.AMBIENTE_DEPOSITACIONAL) r.AMBIENTE_DEPOSITACIONAL=amb;
+    }
+    r.LITIFICACION='Depósito';
+    return true;
+  }
+  if(store==='estructural' && r.TIPO_FALLA && !r.CATEGORIA_FALLA && FALLA_V152[r.TIPO_FALLA]){
+    r.TIPO_FALLA_V151=r.TIPO_FALLA; [r.CATEGORIA_FALLA, r.TIPO_FALLA]=FALLA_V152[r.TIPO_FALLA];
+    return true;
+  }
+  return false;
+}
+const DB='captura-terreno', VER=18;   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -4996,6 +7228,9 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
             li.NOMBRE_ROCA = 'Tefra, depósito volcánico';
             if(!li.TIPO_DEPOSITO) li.TIPO_DEPOSITO = 'Volcanoclástico';
             delete li.TIPO_VOLCANICA;   // ya no aplica: TIPO_ROCA=Depósito, no Volcánica
+            // v152: el getAll de la migración v18 se pidió antes de este put y no ve el cambio; se
+            // completa aquí para que la tefra no quede como un Depósito sin migrar.
+            migrarRegistroV152('litologia', li);
             try{ noAbortar(txM.objectStore('litologia').put(li)); }
             catch(e){ console.warn('Migración v10: no se pudo migrar la litología (Tefra)',li.id,e); }
           } else if(li.TIPO_VOLCANICA==='Piroclástica'){
@@ -5059,6 +7294,25 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
             if(!migrarRegistroV151(storeName,reg)) return;
             try{ noAbortar(txM.objectStore(storeName).put(reg)); }
             catch(e){ console.warn('Migración v17: no se pudo migrar',storeName,reg.id,e); }
+          });
+        };
+      });
+    }
+    // Migración v18 (app v152): Depósito -> LITIFICACION y TIPO_FALLA CDC -- ver migrarRegistroV152.
+    // Su getAll se pide junto con los de las migraciones anteriores, ANTES de sus put: lee los
+    // registros como estaban. Por eso la v10 (Tefra -> Depósito) llama ella misma a migrarRegistroV152.
+    // Las demás migraciones de litología tocan otros tipos de roca, sin cruce con Depósito.
+    {
+      const txM=r.transaction;
+      const noAbortar=req=>{req.onerror=ev=>{ev.preventDefault();console.warn('Migración v18: registro omitido',req.error);};return req;};
+      ['litologia','estructural'].forEach(storeName=>{
+        if(!d.objectStoreNames.contains(storeName)) return;
+        const q=noAbortar(txM.objectStore(storeName).getAll());
+        q.onsuccess=ev=>{
+          (ev.target.result||[]).forEach(reg=>{
+            if(!migrarRegistroV152(storeName,reg)) return;
+            try{ noAbortar(txM.objectStore(storeName).put(reg)); }
+            catch(e){ console.warn('Migración v18: no se pudo migrar',storeName,reg.id,e); }
           });
         };
       });
@@ -5266,6 +7520,7 @@ async function importBackup(file, destinoColeccion = null) {
           foto: 'foto',
           esquema: 'esquema',
           geomorf: 'geomorf',
+          componente: 'componente',   // v152
           // el arbol se reconstituye solo: los ids viajan intactos, asi que _parent y
           // _punto siguen apuntando a donde deben. Funciona incluso al importar un
           // backup de Terreno dentro de Gabinete: el punto cambia de store pero
@@ -5300,6 +7555,7 @@ async function importBackup(file, destinoColeccion = null) {
             }
             try {
               migrarRegistroV151(storeDestino, record);   // respaldo de antes de v151
+              migrarRegistroV152(storeDestino, record);   // respaldo de antes de v152
               await put(storeDestino, record);
               totalInsertadas++;
             } catch (err) {
@@ -5943,7 +8199,8 @@ function tipoWidget(campo){
   const n=campo.nombre;
   if(campo.dominio) return 'select';
   if(/^(LAT|LONG)/.test(n)||/Lat$|Long$/.test(n)) return 'number';
-  if(/COTA|AZIMUT|MANTEO|BUZAMIENTO|PESO|VOLUMEN|RUMBO|ORIENTACION|TREND|PLUNGE|ESPESOR|_PCT$|_CM$|_MM$/.test(n)) return 'number';
+  // _M$ (v152): metros de las fichas CDC de falla y pliegue (ANCHO_FALLA_MIN_M, AMPLITUD_MAX_M…)
+  if(/COTA|AZIMUT|MANTEO|BUZAMIENTO|PESO|VOLUMEN|RUMBO|ORIENTACION|TREND|PLUNGE|ESPESOR|_PCT$|_CM$|_MM$|_M$/.test(n)) return 'number';
   if(n==='FECHA') return 'date';
   if(n==='HORA') return 'time';
   if(/DESCRIPCION|OBSERVACION|COMENTARIO|RELACION_LITOLOGIA|DISTRIBUCION|TEXTO|PROSA/.test(n)) return 'textarea';
@@ -6241,12 +8498,20 @@ const SEDIMENTARIA_GRAVOSA = ['Conglomerado', 'Brecha sedimentaria', 'Conglomera
 // deformación y no de transporte, y tiene sus propios campos.
 // Declaración, no `const`: así queda en window y smoke.html puede probarla desde el iframe
 // (un `const` del scope del módulo no es visible desde el padre — ver la prueba de humo).
+// v152: «Depósito» ya no es TIPO_ROCA sino LITIFICACION dentro de Sedimentaria y Volcánica, así que
+// "clástico" = sedimentaria clástica (roca o depósito) o volcánica piroclástica (roca o tefra).
 function esClastico(v){
   const tipo = v['TIPO_ROCA'];
-  if (tipo === 'Depósito') return true;
   if (tipo === 'Volcánica') return v['TIPO_VOLCANICA'] === 'Rocas piroclásticas';
-  if (tipo === 'Sedimentaria') return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
+  if (tipo === 'Sedimentaria') return sedimentariaClasticaExport(v);
   return false;
+}
+function esDeposito(v){ return v['LITIFICACION']==='Depósito' && (v['TIPO_ROCA']==='Sedimentaria' || v['TIPO_ROCA']==='Volcánica'); }
+function esPiroclastica(v){ return v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas'; }
+// Clastos tamaño grava: las 3 rocas gravosas y todo depósito sedimentario clástico (sus nombres CDC, como
+// "Arena" o "Grava arenosa", no dicen si traen clastos >2 mm: se deja anotarlos).
+function esGravosa(v){
+  return v['TIPO_ROCA']==='Sedimentaria' && (SEDIMENTARIA_GRAVOSA.includes(v['NOMBRE_ROCA']) || (v['LITIFICACION']==='Depósito' && sedimentariaClasticaExport(v)));
 }
 
 // Qué tablas hijas de litología se llenan al EXPORTAR (v150). Las clásticas se copian: depósitos y
@@ -6254,18 +8519,38 @@ function esClastico(v){
 // volcanosedimentarias) o SED_NO_CLASTICA (carbonato, salino, fosfato, orgánico, silíceo). Mixto e
 // indeterminado solo llenan LITO_SEDIMENTARIA. Sin SUBTIPO se deduce de NOMBRE_ROCA (datos previos).
 // Declaraciones (no const) para que smoke.html las alcance desde el iframe.
+// Sin subtipo, un depósito (LITIFICACION = Depósito) cuenta como clástico salvo que su nombre sea de un
+// sedimento no clástico: así los aluviales, coluviales… migrados de v151 y los sedimentos CDC siliciclásticos
+// y volcanosedimentarios llenan SED_SILICICLASTICA.
 function sedimentariaClasticaExport(v){
   const st=v['SUBTIPO_SEDIMENTARIO'];
   if(st) return st==='Siliciclástico'||st==='Volcanosedimentario';
-  return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
+  if(SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA'])) return true;
+  if(v['LITIFICACION']!=='Depósito') return false;
+  const pd=(dominio('NOMBRE_ROCA')||{}).por_subtipo_deposito||{};
+  return !Object.entries(pd).some(([k,vs])=>k!=='Siliciclástico'&&k!=='Volcanosedimentario'&&vs.includes(v['NOMBRE_ROCA']));
 }
+// Estructuras (v152): la ficha de falla, pliegue o fractura que se llena según TIPO_ESTRUCTURA.
+const esFalla = v => v['TIPO_ESTRUCTURA']==='Estructura falla';
+const esPliegue = v => v['TIPO_ESTRUCTURA']==='Estructura pliegue mayor' || v['TIPO_ESTRUCTURA']==='Estructura pliegue menor';
 function familiaAplica(tabla, v){
   const sed=v['TIPO_ROCA']==='Sedimentaria', st=v['SUBTIPO_SEDIMENTARIO'];
-  if(tabla==='LITO_CLASTICA') return !sed;
+  if(tabla==='LITO_CLASTICA') return esPiroclastica(v);
   if(tabla==='SED_SILICICLASTICA') return sed && sedimentariaClasticaExport(v);
   if(tabla==='SED_NO_CLASTICA') return sed && !sedimentariaClasticaExport(v) && st!=='Mixto' && st!=='Composición indeterminada';
+  if(tabla==='LITO_DEPOSITO') return esDeposito(v);
+  if(tabla==='LITO_ANTROPICO') return v['TIPO_ROCA']==='Antrópico';
+  if(tabla==='EST_FALLA') return esFalla(v);
+  if(tabla==='EST_PLIEGUE') return esPliegue(v);
+  if(tabla==='EST_FRACTURA') return v['TIPO_ESTRUCTURA']==='Estructura fractura';
+  if(tabla==='COMP_CLASTO') return v['CLASE_COMPONENTE']==='Clasto';
+  if(tabla==='COMP_FRAGMENTO') return v['CLASE_COMPONENTE']==='Fragmento piroclástico';
   return true;
 }
+// Ficha -> reparto al exportar (padre + hijas 1:1) y clave que une las hijas con el padre.
+const FAMILIAS_DE = {litologia:['familias_litologia','ID_LITOLOGIA'], estructural:['familias_estructura','ID_ESTRUCTURA'],
+  componente:['familias_componente','ID_COMPONENTE']};
+function familiasDe(store){ const f=FAMILIAS_DE[store]; return f && MODELO[f[0]] ? {lista:MODELO[f[0]], clave:f[1]} : null; }
 
 // ============ Revelado progresivo de campos (2026-09-01) ============
 // A pedido del usuario: en vez de mostrar TODOS los campos que aplican a la vez (una roca
@@ -6298,19 +8583,17 @@ const CONDICIONALES = {
   PERSISTENCIA_FRACTURA:       {modo:'ocultar', regla: esFractura},
   ABERTURA_FRACTURA:           {modo:'ocultar', regla: esFractura},
   TEXTURA_SUPERFICIE_FRACTURA: {modo:'ocultar', regla: esFractura},
-  // Una litología es roca O depósito: TIPO_DEPOSITO solo con TIPO_ROCA = "Depósito".
-  TIPO_DEPOSITO: {modo:'bloquear', regla: v => v['TIPO_ROCA']==='Depósito'},
+  // v152: roca o depósito, solo en sedimentarias y volcánicas (los pares sedimento/roca de la CDC).
+  LITIFICACION: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' || v['TIPO_ROCA']==='Volcánica'},
   // Lava/Rocas piroclásticas solo aplica a rocas volcánicas (acota NOMBRE_ROCA, ver filtrarNombreRocaVolcanica).
   TIPO_VOLCANICA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica'},
   // Granulometría solo para: (1) todos los depósitos (incluida "Tefra, depósito volcánico",
   // 2026-08-25), (2) rocas sedimentarias siliciclásticas. No aplica a rocas piroclásticas: los
   // nombres oficiales ya llevan el tamaño de grano incorporado.
-  GRANULOMETRIA: {modo:'ocultar', regla: v => {
-    const tipo = v['TIPO_ROCA'];
-    if (tipo === 'Depósito') return true;
-    if (tipo === 'Sedimentaria') return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
-    return false;
-  }},
+  // v152: GRANULOMETRIA cuelga de NOMBRE_ROCA, así que basta con que el nombre tenga rama: las 9 rocas
+  // siliciclásticas y los depósitos de v151 (Aluviales…, Tefra). Los sedimentos y tefras CDC nuevos
+  // ("Grava arenosa", "Lapilli") ya llevan el tamaño en el nombre y no tienen rama.
+  GRANULOMETRIA: {modo:'ocultar', regla: v => opciones('GRANULOMETRIA', v['NOMBRE_ROCA']||'').length>0},
   // --- Descripción litológica en detalle (v62). Mismo criterio que GRANULOMETRIA:
   // reusa la lista de 9 nombres siliciclásticos para lo que solo aplica a roca clástica.
   SELECCION: {modo:'ocultar', regla: esClastico},
@@ -6321,36 +8604,19 @@ const CONDICIONALES = {
   // litología de grava. Bajo 1 cm la prosa lo dice en mm, así que el campo sirve igual para
   // el grano más grueso de una arenisca.
   CLASTOS_TAM_MAX_CM: {modo:'ocultar', regla: esClastico},
-  REDONDEAMIENTO: {modo:'ocultar', regla: v => {
-    const tipo = v['TIPO_ROCA'];
-    if (tipo === 'Depósito') return true;
-    if (tipo === 'Sedimentaria') return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
-    return false;
-  }},
+  REDONDEAMIENTO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && sedimentariaClasticaExport(v)},
   // Esfericidad (norma CDC Vol III "FORMA CLASTOS"): mismo criterio que REDONDEAMIENTO --
   // depósitos y sedimentarias clásticas, el mismo trío grano/clasto (2026-08-25).
-  ESFERICIDAD: {modo:'ocultar', regla: v => {
-    const tipo = v['TIPO_ROCA'];
-    if (tipo === 'Depósito') return true;
-    if (tipo === 'Sedimentaria') return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
-    return false;
-  }},
+  ESFERICIDAD: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && sedimentariaClasticaExport(v)},
   // Composición de granos (norma CDC Vol III "COMPOSICIÓN CLÁSTICA-ALOQUÍMICA", sistema de
   // Folk): mismo alcance que REDONDEAMIENTO/ESFERICIDAD -- NO aplica a rocas piroclásticas
   // (esas usan LITICOS_PCT/POMEZ_PCT/CRISTALES_PCT, un eje distinto).
-  COMPOSICION_CLASTICA: {modo:'ocultar', regla: v => {
-    const tipo = v['TIPO_ROCA'];
-    if (tipo === 'Depósito') return true;
-    if (tipo === 'Sedimentaria') return SEDIMENTARIA_CLASTICA.includes(v['NOMBRE_ROCA']);
-    return false;
-  }},
+  COMPOSICION_CLASTICA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && sedimentariaClasticaExport(v)},
   // Litología de clastos tamaño grava (norma CDC Vol III): solo depósitos y sedimentarias
   // GRAVOSAS (Conglomerado/Brecha sedimentaria/Conglomerado megaclástico) -- una Arenisca no
   // tiene clastos >2 mm por definición.
-  LITOLOGIA_CLASTOS: {modo:'ocultar', regla: v =>
-    v['TIPO_ROCA']==='Depósito' || (v['TIPO_ROCA']==='Sedimentaria' && SEDIMENTARIA_GRAVOSA.includes(v['NOMBRE_ROCA']))},
-  LITOLOGIA_CLASTOS_DETALLE: {modo:'ocultar', regla: v =>
-    v['TIPO_ROCA']==='Depósito' || (v['TIPO_ROCA']==='Sedimentaria' && SEDIMENTARIA_GRAVOSA.includes(v['NOMBRE_ROCA']))},
+  LITOLOGIA_CLASTOS: {modo:'ocultar', regla: esGravosa},
+  LITOLOGIA_CLASTOS_DETALLE: {modo:'ocultar', regla: esGravosa},
   // Fábrica matriz/clasto-soportada (2026-08-25, corrige bug de jerarquía reportado por el
   // usuario): antes vivía como 2 opciones sueltas DENTRO de TEXTURA, al mismo nivel que
   // "Clástica (detrítica)" -- es una subclasificación de esa textura, no una alternativa.
@@ -6362,11 +8628,10 @@ const CONDICIONALES = {
   // Granulometría de clastos y de matriz (v151, norma CDC Vol III, DDA Descripción de Depósitos
   // Sedimentarios): clastos con el mismo alcance que LITOLOGIA_CLASTOS; matriz en todo depósito
   // (la fábrica no se pide en depósitos) y en sedimentarias matriz-soportadas.
-  GRANULOMETRIA_CLASTOS: {modo:'ocultar', regla: v =>
-    v['TIPO_ROCA']==='Depósito' || (v['TIPO_ROCA']==='Sedimentaria' && SEDIMENTARIA_GRAVOSA.includes(v['NOMBRE_ROCA']))},
-  GRANULOMETRIA_MATRIZ: {modo:'ocultar', regla: v =>
-    v['TIPO_ROCA']==='Depósito' || (v['TIPO_ROCA']==='Sedimentaria' && v['FABRICA_CLASTOS']==='Matriz-soportada')},
-  CEMENTO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' || v['TIPO_ROCA']==='Depósito'},
+  GRANULOMETRIA_CLASTOS: {modo:'ocultar', regla: esGravosa},
+  GRANULOMETRIA_MATRIZ: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' &&
+    ((v['LITIFICACION']==='Depósito' && sedimentariaClasticaExport(v)) || v['FABRICA_CLASTOS']==='Matriz-soportada')},
+  CEMENTO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
   // Clasificación de depósitos sedimentarios (norma CDC 2016 Vol III, DDA Clasificación y
   // Nomenclatura): el SUBTIPO decide qué se describe. Solo rocas sedimentarias.
   SUBTIPO_SEDIMENTARIO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
@@ -6409,7 +8674,7 @@ const CONDICIONALES = {
   TIPO_MATRIZ_TECTONICA:     {modo:'ocultar', regla: v => esTectonica(v) && v['SUBTIPO_TECTONICA']!=='Roca de cizalle dúctil'},
   MATRIZ_TECTONICA_PCT:      {modo:'ocultar', regla: v => esTectonica(v) && v['SUBTIPO_TECTONICA']!=='Roca de cizalle dúctil'},
   AMBIENTE_TECTONICO:        {modo:'ocultar', regla: esTectonica},
-  ESTRUCTURA_TIPO_ROCA:      {modo:'ocultar', regla: v => !esTectonica(v)},
+  ESTRUCTURA_TIPO_ROCA:      {modo:'ocultar', regla: v => !esTectonica(v) && v['TIPO_ROCA']!=='Antrópico'},
   COMPOSICION_MINERAL_INTRUSIVA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
   COMPOSICION_MINERAL_INTRUSIVA_DETALLE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
   FENOCRISTALES_ESPECIE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava'},
@@ -6422,11 +8687,9 @@ const CONDICIONALES = {
   // invisibles para Tefra pese a que la nota del campo dice "rocas piroclásticas: fragmentos
   // cristalinos" y Tefra es justo el equivalente no litificado. Mismo alcance dual que el resto.
   CRISTALES_ESPECIE: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   CRISTALES_DETALLE: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // Componentes cuantificados (%): reemplaza COMPONENTE_PIROCLASTICO (2026-08-25, a pedido del
   // usuario -- "no me gusta cristalina/litica/vitrea, deberia ser liticos/pomez/cristales con
   // %, la clasificacion de una toba se basa en esos porcentajes"). Verificado en el RAG (ver
@@ -6435,49 +8698,39 @@ const CONDICIONALES = {
   // "tobas riolíticas, pumíceas y de cristales"). Mismo alcance dual que tenía
   // COMPONENTE_PIROCLASTICO: Rocas piroclásticas Y Tefra.
   LITICOS_PCT: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // TIPO_LITICOS/DETALLE (2026-08-26, lista construida del RAG): el tipo de fragmento lítico
   // complementa a LITICOS_PCT (cuántos hay vs. de qué roca/origen son). Mismo alcance dual que
   // LITICOS_PCT: Rocas piroclásticas Y Tefra.
   TIPO_LITICOS: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   TIPO_LITICOS_DETALLE: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // TIPO_FRAGMENTO_VITREO/DETALLE (2026-08-26, lista construida del RAG): tipo de clasto
   // vítreo (eje CDC vitroclástico). Complementa a MATRIZ_COMPOSICION (el intersticial vs. el
   // clasto). Mismo alcance dual: Rocas piroclásticas Y Tefra.
   TIPO_FRAGMENTO_VITREO: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   TIPO_FRAGMENTO_VITREO_DETALLE: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   POMEZ_PCT: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   CRISTALES_PCT: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // Matriz: solo rocas piroclásticas (Lava usa el campo propio CRISTALINIDAD, verbatim CDC —
   // ver más abajo. MATRIZ_COMPOSICION nunca fue un campo verbatim de la norma, es aproximación
   // del corpus SGB, así que no se extendió a Lava tras la corrección del 2026-08-21).
   // Matriz: Rocas piroclásticas Y Tefra (2026-08-25) -- mismo patrón dual que los campos
   // de arriba, la norma cita el mismo campo para ambas.
   MATRIZ_COMPOSICION: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   MATRIZ_DETALLE: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // % de matriz respecto al TOTAL de la roca (a diferencia de LITICOS_PCT/POMEZ_PCT/
   // CRISTALES_PCT, que son % de los CLASTOS) -- version numerica de clasto/matriz-soportada,
   // a pedido del usuario ("el porcentaje de matriz con respecto a los clastos").
   MATRIZ_PCT: {modo:'ocultar', regla: v =>
-    (v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas') ||
-    (v['TIPO_ROCA']==='Depósito' && v['NOMBRE_ROCA']==='Tefra, depósito volcánico')},
+    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // Cristalinidad: Lava o Rocas piroclásticas por igual. Campo verbatim CDC 2016 Vol IV, tabla
   // TBL_AF_DEP_IGNEO_VOLCANICO ("DDA Descripción de Depósitos Volcánicos") — el texto del campo
   // no restringe su uso a lava. La primera corrección (2026-08-21) lo dejó "solo Lava" por
@@ -6486,10 +8739,89 @@ const CONDICIONALES = {
   CRISTALINIDAD: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica'},
   MASA_FUNDAMENTAL: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava'},
   TEXTURA_DUNHAM:   {modo:'ocultar', regla: v => v['NOMBRE_ROCA']==='Caliza' || (v['TIPO_ROCA']==='Sedimentaria' && v['SUBTIPO_SEDIMENTARIO']==='Carbonato')},
-  SOLDADURA:        {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Rocas piroclásticas'},
-  GRADO_CONSOLIDACION: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Depósito'},
-  // Tipo de falla solo cuando la estructura medida es una falla (formulario de punto).
-  TIPO_FALLA: {modo:'ocultar', regla: v => v['TIPO_ESTRUCTURA']==='Estructura falla'},
+  SOLDADURA:        {modo:'ocultar', regla: v => esPiroclastica(v) && v['LITIFICACION']!=='Depósito'},
+  // --- v152: depósito (LITIFICACION = Depósito, hija LITO_DEPOSITO; norma CDC Vol III y IV) ---
+  GRADO_CONSOLIDACION:      {modo:'ocultar', regla: esDeposito},
+  CONTEXTO_DEPOSITO:        {modo:'ocultar', regla: esDeposito},
+  GEOMETRIA_DEPOSITO:       {modo:'ocultar', regla: esDeposito},
+  ARREGLO_ESTRATOS:         {modo:'ocultar', regla: esDeposito},
+  GRADACION_INTERNA:        {modo:'ocultar', regla: esDeposito},
+  LIMITE_INFERIOR_DEPOSITO: {modo:'ocultar', regla: esDeposito},
+  LIMITE_SUPERIOR_DEPOSITO: {modo:'ocultar', regla: esDeposito},
+  UBICACION_DEPOSITO:       {modo:'ocultar', regla: esDeposito},
+  AMBIENTE_DEPOSITACIONAL:  {modo:'ocultar', regla: esDeposito},
+  FABRICA_GRAVOSA:          {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Sedimentaria'},
+  PROCESO_SEDIMENTARIO:     {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Sedimentaria'},
+  FACIES_SEDIMENTARIA:      {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Sedimentaria'},
+  TIPO_DEPOSITO_VOLCANICO:  {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
+  POSICION_CENTRO_ERUPTIVO: {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
+  TIPO_ERUPCION:            {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
+  TIPO_CENTRO_EMISION:      {modo:'ocultar', regla: v => esDeposito(v) && v['TIPO_ROCA']==='Volcánica'},
+  // --- v152: antrópico (hija LITO_ANTROPICO). No lleva nombre de roca, textura ni estructura.
+  TIPO_ANTROPICO:        {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Antrópico'},
+  TIPO_ANTROPICO_OTRO:   {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Antrópico' && v['TIPO_ANTROPICO']==='Otro'},
+  DESCRIPCION_ANTROPICO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Antrópico'},
+  NOMBRE_ROCA:           {modo:'ocultar', regla: v => v['TIPO_ROCA']!=='Antrópico'},
+  TEXTURA:               {modo:'ocultar', regla: v => v['TIPO_ROCA']!=='Antrópico'},
+  // --- v152: fichas CDC de falla, pliegue y fractura (hijas EST_* de la medida, Vol V) ---
+  CATEGORIA_FALLA:           {modo:'ocultar', regla: esFalla},
+  // las categorías sin lista CDC (falla de manteo y desplazamiento vertical, pliegue menor) no muestran el tipo
+  TIPO_FALLA:                {modo:'ocultar', regla: v => esFalla(v) && opciones('TIPO_FALLA', v['CATEGORIA_FALLA']||'').length>0},
+  NOMBRE_FALLA:              {modo:'ocultar', regla: esFalla},
+  POTENCIA_FALLA:            {modo:'ocultar', regla: esFalla},
+  ANCHO_FALLA_MIN_M:         {modo:'ocultar', regla: esFalla},
+  ANCHO_FALLA_MAX_M:         {modo:'ocultar', regla: esFalla},
+  TIPO_DEFORMACION:          {modo:'ocultar', regla: esFalla},
+  RELLENO_FALLA:             {modo:'ocultar', regla: esFalla},
+  CRITERIO_CINEMATICO:       {modo:'ocultar', regla: esFalla},
+  CALIDAD_CRITERIO:          {modo:'ocultar', regla: v => esFalla(v) && !!v['CRITERIO_CINEMATICO']},
+  SEPARACION_FALLA_M:        {modo:'ocultar', regla: esFalla},
+  TIPO_SEPARACION:           {modo:'ocultar', regla: esFalla},
+  DOMINIO_ESTRUCTURAL_FALLA: {modo:'ocultar', regla: esFalla},
+  SISTEMA_ESTRUCTURAL:       {modo:'ocultar', regla: esFalla},
+  ESCALA_FALLA:              {modo:'ocultar', regla: esFalla},
+  FASE_DEFORMACION_FALLA:    {modo:'ocultar', regla: esFalla},
+  EDAD_MAXIMA_FALLA:         {modo:'ocultar', regla: esFalla},
+  EDAD_MINIMA_FALLA:         {modo:'ocultar', regla: esFalla},
+  CATEGORIA_PLIEGUE:         {modo:'ocultar', regla: esPliegue},
+  TIPO_PLIEGUE:              {modo:'ocultar', regla: v => esPliegue(v) && opciones('TIPO_PLIEGUE', v['CATEGORIA_PLIEGUE']||'').length>0},
+  NOMBRE_PLIEGUE:            {modo:'ocultar', regla: esPliegue},
+  AMPLITUD_MIN_M:            {modo:'ocultar', regla: esPliegue},
+  AMPLITUD_MAX_M:            {modo:'ocultar', regla: esPliegue},
+  LONGITUD_ONDA_MIN_M:       {modo:'ocultar', regla: esPliegue},
+  LONGITUD_ONDA_MAX_M:       {modo:'ocultar', regla: esPliegue},
+  FORMA_CHARNELA:            {modo:'ocultar', regla: esPliegue},
+  ANGULO_INTERLIMBO:         {modo:'ocultar', regla: esPliegue},
+  RAZON_ASPECTO:             {modo:'ocultar', regla: esPliegue},
+  FORMA_PERFIL:              {modo:'ocultar', regla: esPliegue},
+  ARMONIA_PLIEGUE:           {modo:'ocultar', regla: esPliegue},
+  SUPERFICIE_AXIAL:          {modo:'ocultar', regla: esPliegue},
+  CILINDRICIDAD:             {modo:'ocultar', regla: esPliegue},
+  ORDEN_PLIEGUE:             {modo:'ocultar', regla: esPliegue},
+  SIMETRIA_PLIEGUE:          {modo:'ocultar', regla: esPliegue},
+  DIRECCION_VERGENCIA:       {modo:'ocultar', regla: v => esPliegue(v) && v['SIMETRIA_PLIEGUE']==='Asimétrico'},
+  ASOCIACION_FALLA:          {modo:'ocultar', regla: esPliegue},
+  ESCALA_PLIEGUE:            {modo:'ocultar', regla: esPliegue},
+  FAJA_PLEGADA:              {modo:'ocultar', regla: esPliegue},
+  FASE_DEFORMACION_PLIEGUE:  {modo:'ocultar', regla: esPliegue},
+  EDAD_MAXIMA_PLIEGUE:       {modo:'ocultar', regla: esPliegue},
+  EDAD_MINIMA_PLIEGUE:       {modo:'ocultar', regla: esPliegue},
+  TIPO_FRACTURA:             {modo:'ocultar', regla: esFractura},
+  NUMERO_JUEGOS:             {modo:'ocultar', regla: esFractura},
+  DOMINIO_ESTRUCTURAL_FRACTURA: {modo:'ocultar', regla: esFractura},
+  RELLENO_FRACTURA:          {modo:'ocultar', regla: esFractura},
+  RELACION_ESTRATIFICACION:  {modo:'ocultar', regla: esFractura},
+  ESPESOR_ESTRATIFICACION:   {modo:'ocultar', regla: v => esFractura(v) && ['Fractura estratoconfinada','Fractura estrato-transversal','Fractura estratoparalela'].includes(v['RELACION_ESTRATIFICACION'])},
+  ASOCIACION_ESTRUCTURAL:    {modo:'ocultar', regla: esFractura},
+  GENESIS_MECANICA:          {modo:'ocultar', regla: esFractura},
+  GENESIS_PROCESO:           {modo:'ocultar', regla: esFractura},
+  // --- v152: componentes (TBL_COMPONENTE): clasto (Vol III) o fragmento piroclástico (Vol IV) ---
+  LITOLOGIA_CLASTO:       {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Clasto'},
+  GRANULOMETRIA_CLASTO:   {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Clasto'},
+  TIPO_CLASTO:            {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Clasto'},
+  LITOLOGIA_FRAGMENTO:    {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Fragmento piroclástico'},
+  ACHATAMIENTO_FRAGMENTO: {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Fragmento piroclástico'},
+  GENESIS_FRAGMENTO:      {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Fragmento piroclástico'},
   // Contacto medido (v146): la medida apunta al contacto del punto; dejar de ser 'Estructura
   // contacto' limpia el vínculo y el guardado suelta los números copiados en el contacto.
   ID_CONTACTO: {modo:'ocultar', regla: v => v['TIPO_ESTRUCTURA']==='Estructura contacto'},
@@ -6535,14 +8867,20 @@ function formulario(store, reg, ctx){
   // solo si alguno de sus campos aplica al tipo de roca. En el teléfono sigue siendo UNA ficha.
   // TIPO_VOLCANICA se muestra junto a TIPO_ROCA (acota NOMBRE_ROCA) aunque se exporte en
   // LITO_VOLCANICA, y NOMBRE_ROCA sigue al final, como conclusión.
+  // v152: la ficha de estructura (EST_FALLA/PLIEGUE/FRACTURA) y la de componente (COMP_CLASTO/FRAGMENTO)
+  // se agrupan igual, con el título de cada familia del modelo; el grupo del padre va sin título.
   const grupos=[], grupoDe={};
-  if(store==='litologia' && MODELO.familias_litologia){
-    const TITULO={TBL_LITOLOGIA:'Datos generales', LITO_CLASTICA:'Clastos, matriz y cemento',
+  const fam=familiasDe(store);
+  if(fam){
+    const lito=store==='litologia', padre=fam.lista[0].tabla;
+    const TITULO=lito?{TBL_LITOLOGIA:'Datos generales', LITO_CLASTICA:'Clastos, matriz y cemento',
       LITO_SEDIMENTARIA:'Sedimentaria: clasificación y componentes', SED_NO_CLASTICA:'Sedimentaria no clástica (carbonato, fosfato…)', LITO_VOLCANICA:'Volcánica', LITO_PIROCLASTICA:'Componentes piroclásticos',
-      LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica'};
-    const famDe={}; MODELO.familias_litologia.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
-    famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre';
-    const orden=MODELO.familias_litologia.map(f=>f.tabla).concat('__nombre');
+      LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica',
+      LITO_DEPOSITO:'Depósito: descripción e interpretación', LITO_ANTROPICO:'Depósito antrópico'}
+      :Object.fromEntries(fam.lista.filter(f=>!f.padre).map(f=>[f.tabla,f.titulo||f.tabla]));
+    const famDe={}; fam.lista.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
+    if(lito){ famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre'; }
+    const orden=fam.lista.map(f=>f.tabla).concat(lito?['__nombre']:[]);
     const pos=n=>{const k=orden.indexOf(famDe[n]); return k<0?0:k;};
     // orden estable: dentro de cada grupo se respeta el orden previo; TIPO_VOLCANICA tras TIPO_ROCA
     cs=cs.map((c,i)=>({c,i})).sort((a,b)=>pos(a.c.nombre)-pos(b.c.nombre)||a.i-b.i).map(x=>x.c);
@@ -6552,7 +8890,7 @@ function formulario(store, reg, ctx){
       const g={tabla:t, nodo:el('div',{class:'grupo-lito','data-familia':t}), row:el('div',{class:'row'})};
       if(TITULO[t]) g.nodo.append(el('h4',{},TITULO[t]));
       g.nodo.append(g.row); grupos.push(g);
-      cs.forEach(c=>{ if((famDe[c.nombre]||'TBL_LITOLOGIA')===t) grupoDe[c.nombre]=g; });
+      cs.forEach(c=>{ if((famDe[c.nombre]||padre)===t) grupoDe[c.nombre]=g; });
     }
   }
   // Piloto de revelado progresivo (ver PILOTO_REVELADO_LITOLOGIA_VOLCANICA): la infraestructura
@@ -6812,7 +9150,12 @@ function formulario(store, reg, ctx){
   function filtrarNombreRocaVolcanica(esBuild){
     const iTV=inputs['TIPO_VOLCANICA'], iNR=inputs['NOMBRE_ROCA'];
     if(!iTV||!iNR)return;
-    const subset = iTV.value ? ROCAS_VOLCANICAS[iTV.value] : null;
+    const iTR=inputs['TIPO_ROCA'], iLI=inputs['LITIFICACION'], volc=!!iTR&&iTR.value==='Volcánica';
+    let subset = iTV.value ? ROCAS_VOLCANICAS[iTV.value] : null;
+    // v152: una volcánica no lava con LITIFICACION = Depósito es tefra o depósito volcánico indiferenciado
+    // (LV_lito CDC, NOMBRE_ROCA.depositos_volcanicos); como roca, sin TIPO_VOLCANICA, lava + piroclásticas.
+    if(volc && iLI && iLI.value==='Depósito' && iTV.value!=='Lava') subset=dominio('NOMBRE_ROCA').depositos_volcanicos;
+    else if(volc && !subset) subset=ROCAS_VOLCANICAS['Lava'].concat(ROCAS_VOLCANICAS['Rocas piroclásticas']);
     if(!subset)return;
     const actual=iNR.value;
     iNR.innerHTML='';iNR.append(el('option',{value:''},'— seleccionar —'));
@@ -6835,12 +9178,19 @@ function formulario(store, reg, ctx){
   // sigue siendo el padre de la cascada y el subtipo solo ESTRECHA la lista ya poblada. Sin subtipo
   // queda la lista completa de sedimentarias (compatible con registros guardados antes de v150).
   // v151: el mismo mecanismo acota las rocas tectónicas por SUBTIPO_TECTONICA (por_subtipo_tectonico).
-  const filtrarNombreRocaSedimentaria=b=>filtrarNombreRocaPorSubtipo(b,'Sedimentaria','SUBTIPO_SEDIMENTARIO','por_subtipo');
+  // v152: con LITIFICACION = Depósito la lista es la de sedimentos del subtipo (por_subtipo_deposito, LV_lito
+  // CDC *_NOLITIF); sin subtipo, todos los sedimentos o todas las rocas, nunca las dos mezcladas.
+  const filtrarNombreRocaSedimentaria=b=>{
+    const iLI=inputs['LITIFICACION'], dep=!!iLI&&iLI.value==='Depósito', nr=dominio('NOMBRE_ROCA');
+    const sedimentos=new Set(Object.values(nr.por_subtipo_deposito||{}).flat());
+    filtrarNombreRocaPorSubtipo(b,'Sedimentaria','SUBTIPO_SEDIMENTARIO', dep?'por_subtipo_deposito':'por_subtipo',
+      dep?[...sedimentos]:nr.mapa['Sedimentaria'].filter(v=>!sedimentos.has(v)));
+  };
   const filtrarNombreRocaTectonica=b=>filtrarNombreRocaPorSubtipo(b,'Tectónica','SUBTIPO_TECTONICA','por_subtipo_tectonico');
-  function filtrarNombreRocaPorSubtipo(esBuild, tipoRoca, campoSub, clave){
+  function filtrarNombreRocaPorSubtipo(esBuild, tipoRoca, campoSub, clave, sinSubtipo){
     const iST=inputs[campoSub], iNR=inputs['NOMBRE_ROCA'], iTR=inputs['TIPO_ROCA'];
     if(!iST||!iNR||!iTR||iTR.value!==tipoRoca)return;
-    const subset = iST.value ? (dominio('NOMBRE_ROCA')[clave]||{})[iST.value] : null;
+    const subset = iST.value ? (dominio('NOMBRE_ROCA')[clave]||{})[iST.value] : (sinSubtipo||null);
     if(!subset)return;
     const actual=iNR.value;
     iNR.innerHTML='';iNR.append(el('option',{value:''},'— seleccionar —'));
@@ -6916,7 +9266,7 @@ function formulario(store, reg, ctx){
     // cuando el cambio viene de TIPO_ROCA o del propio TIPO_VOLCANICA (no en cada tecleo de
     // otro campo). MATRIZ_COMPOSICION ya no se recorta aquí (v84): pasó a multiselect y
     // Rocas piroclásticas/Tefra comparten el mismo dominio completo, sin nada que angostar.
-    if(changed==='TIPO_ROCA'||changed==='TIPO_VOLCANICA'||changed==='SUBTIPO_SEDIMENTARIO'||changed==='SUBTIPO_TECTONICA'){
+    if(changed==='TIPO_ROCA'||changed==='TIPO_VOLCANICA'||changed==='LITIFICACION'||changed==='SUBTIPO_SEDIMENTARIO'||changed==='SUBTIPO_TECTONICA'){
       filtrarNombreRocaVolcanica(false); filtrarNombreRocaSedimentaria(false); filtrarNombreRocaTectonica(false); filtrarTexturaVolcanica(false);
       filtrarEstructuraVolcanica(false);
       aplicarCondicionales();
@@ -12896,7 +15246,7 @@ async function duplicarPunto(srcId){
   // dos pasadas: primero los ids nuevos de todas las fichas, después los vínculos entre ellas
   // (estructural.ID_CONTACTO -> contacto y contacto._medidaDe -> estructural, v146)
   const copias=[], mapId={};
-  for(const store of ['aflora','estructural','contacto','muestreo','geomorf'])
+  for(const store of ['aflora','componente','estructural','contacto','muestreo','geomorf'])   // componente: v152
     for(const it of await childrenOf(store,srcId)){const n=Object.assign({},it,{id:uid(),_parent:np.id});mapId[it.id]=n.id;copias.push([store,n]);}
   for(const [store,n] of copias){
     if(n.ID_LITOLOGIA&&mapLito[n.ID_LITOLOGIA])n.ID_LITOLOGIA=mapLito[n.ID_LITOLOGIA];
@@ -13329,17 +15679,19 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
     // por familia (MODELO.familias_litologia: clástica, sedimentaria, volcánica, piroclástica,
     // intrusiva, metamórfica). IndexedDB no cambia. Cada hija lleva ID_LITOLOGIA (clave 1:1 con el
     // padre) y solo existe si la ficha llenó algún campo de esa familia.
-    const fams=(s==='litologia'&&MODELO.familias_litologia)||null;
-    const defs=fams?fams.map(f=>({tbl:f.tabla,padre:f.padre,cs:f.campos.concat(f.campos_extra||[])}))
+    // v152: lo mismo para la medida estructural (EST_FALLA/PLIEGUE/FRACTURA por ID_ESTRUCTURA) y el
+    // componente (COMP_CLASTO/FRAGMENTO por ID_COMPONENTE): ver familiasDe().
+    const fam=familiasDe(s), clave=fam&&fam.clave;
+    const defs=fam?fam.lista.map(f=>({tbl:f.tabla,padre:f.padre,cs:f.campos.concat(f.campos_extra||[])}))
                     :[{tbl,padre:true,cs}];
     const lleno=v=>v!=null&&v!==''&&!(Array.isArray(v)&&!v.length);
     for(const d of defs){
       nT++;
-      const csD=d.padre?d.cs:['ID_LITOLOGIA'].concat(d.cs);
+      const csD=d.padre?d.cs:[clave].concat(d.cs);
       const st=crear(d.tbl,csD,d.padre?extras:[],false);
       for(const r of regsS){
         if(!d.padre&&(!familiaAplica(d.tbl,r)||!d.cs.some(c=>lleno(r[c]))))continue;
-        const fila=d.padre?r:Object.assign({},r,{ID_LITOLOGIA:r.ID_LITOLOGIA||r.id});
+        const fila=d.padre?r:Object.assign({},r,{[clave]:r[clave]||r.id});
         st.run([txt(r.id),txt(d.padre?r._parent:r.id)].concat(csD.map(c=>txt(fila[c])),(d.padre?extras:[]).map(e=>e[1](r))));
       }
       st.free();
@@ -13643,6 +15995,8 @@ function nombreLitologia(nombreRoca, tipoRoca){
   if(!tipoRoca) return '';
   // Depósito no lleva "roca": son depósitos, y su plural ya lo maneja generoRoca/mpl.
   if(tipoRoca==='Depósito') return 'Depósitos';
+  // v152: TIPO_ROCA 'Antrópico' no lleva nombre de roca ("roca antrópico" no es castellano)
+  if(tipoRoca==='Antrópico') return 'Depósito antrópico';
   return 'roca '+tipoRoca.toLowerCase();
 }
 function generoRoca(nombreRoca){
@@ -13703,7 +16057,9 @@ function sujetoLitologia(nombreRoca,tipoRoca,granulometria){
   // "Depósitos" duplicaría la palabra ("Depósitos tefra, depósito volcánico").
   if(nombre==='Tefra, depósito volcánico') return g ? g.charAt(0).toUpperCase()+g.slice(1) : 'Tefra';
   // Sin NOMBRE_ROCA, nombre ya vale "Depósitos": volver a prefijarlo daba "Depósitos depósito".
-  if(tipoRoca==='Depósito') return nombreRoca
+  // v152: los depósitos migrados de v151 son TIPO_ROCA Sedimentaria + LITIFICACION Depósito y conservan su
+  // nombre genético en plural ("Aluviales"): se reconocen por el nombre, ya no por el tipo de roca.
+  if(tipoRoca==='Depósito' || GENERO_ROCA_DEPOSITO.has(nombreRoca)) return nombreRoca
     ? 'Depósitos '+nombreRoca.toLowerCase()+(g?' de '+g:'')
     : 'Depósitos'+(g?' de '+g:'');
   if(!g) return nombre;
@@ -14114,7 +16470,7 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // "Tefra, depósito volcánico" ya contiene la palabra "depósito" -- mismo caso especial
     // que sujetoLitologia() (2026-08-25), evita "depósitos tefra, depósito volcánico".
     if(n==='Tefra, depósito volcánico') return 'tefra';
-    return l.TIPO_ROCA==='Depósito' ? 'depósitos '+minuscula(n) : minuscula(n);
+    return (l.TIPO_ROCA==='Depósito' || GENERO_ROCA_DEPOSITO.has(l.NOMBRE_ROCA)) ? 'depósitos '+minuscula(n) : minuscula(n);
   };
   // Referencia corta a la litología asociada por ID_LITOLOGIA (estructurales y muestras la
   // guardan desde siempre y ningún export en prosa la usaba). Devuelve '' con una sola
