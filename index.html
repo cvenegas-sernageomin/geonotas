@@ -2082,7 +2082,7 @@ const MODELO = {
       "pk": "ID_AFLORAMIENTO",
       "cardinalidad": "0..1"
     },
-    "TBL_COMPONENTE": {
+    "COMP_CLASTO": {
       "campos": [
         {
           "nombre": "ID_PUNTO_CONTROL",
@@ -2091,7 +2091,7 @@ const MODELO = {
           "nota": null
         },
         {
-          "nombre": "ID_COMPONENTE",
+          "nombre": "ID_CLASTO",
           "obligatorio": true,
           "dominio": null,
           "nota": null
@@ -2100,13 +2100,7 @@ const MODELO = {
           "nombre": "ID_LITOLOGIA",
           "obligatorio": true,
           "dominio": null,
-          "nota": "Litología (roca o depósito) a la que pertenece el componente."
-        },
-        {
-          "nombre": "CLASE_COMPONENTE",
-          "obligatorio": true,
-          "dominio": "CLASE_COMPONENTE",
-          "nota": "Clasto (sedimentaria o depósito siliciclástico) o fragmento piroclástico."
+          "nota": "Litología sedimentaria clástica (SED_CLASTICA) a la que pertenece el clasto."
         },
         {
           "nombre": "COMPONENTE_MIN_PCT",
@@ -2154,37 +2148,19 @@ const MODELO = {
           "nombre": "LITOLOGIA_CLASTO",
           "obligatorio": false,
           "dominio": "LITOLOGIA_CLASTOS_GRAVA",
-          "nota": "Solo CLASE_COMPONENTE = Clasto (COMP_CLASTO, TBL_AF_SED_CLASTO). Litología del clasto (Vol III, 46 términos)."
+          "nota": "Litología del clasto (Vol III, 46 términos)."
         },
         {
           "nombre": "GRANULOMETRIA_CLASTO",
           "obligatorio": false,
           "dominio": "GRANULOMETRIA_CLASTOS",
-          "nota": "Solo CLASE_COMPONENTE = Clasto (COMP_CLASTO, TBL_AF_SED_CLASTO). Granulometría promedio de este tipo de clasto."
+          "nota": "Granulometría promedio de este tipo de clasto."
         },
         {
           "nombre": "TIPO_CLASTO",
           "obligatorio": false,
           "dominio": "TIPO_CLASTO",
-          "nota": "Solo CLASE_COMPONENTE = Clasto (COMP_CLASTO, TBL_AF_SED_CLASTO). Génesis del clasto."
-        },
-        {
-          "nombre": "LITOLOGIA_FRAGMENTO",
-          "obligatorio": false,
-          "dominio": "LITOLOGIA_FRAGMENTO",
-          "nota": "Solo CLASE_COMPONENTE = Fragmento piroclástico (COMP_FRAGMENTO, TBL_AF_VOLC_FRAGMENTO). Litología del fragmento (Vol IV)."
-        },
-        {
-          "nombre": "ACHATAMIENTO_FRAGMENTO",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Solo CLASE_COMPONENTE = Fragmento piroclástico (COMP_FRAGMENTO, TBL_AF_VOLC_FRAGMENTO). Achatamiento F = eje mayor / eje menor (promedio de más de 20 pómez); texto libre según la norma."
-        },
-        {
-          "nombre": "GENESIS_FRAGMENTO",
-          "obligatorio": false,
-          "dominio": "GENESIS_FRAGMENTO",
-          "nota": "Solo CLASE_COMPONENTE = Fragmento piroclástico (COMP_FRAGMENTO, TBL_AF_VOLC_FRAGMENTO). "
+          "nota": "Génesis del clasto."
         },
         {
           "nombre": "NOTA_COMPONENTE",
@@ -2194,8 +2170,101 @@ const MODELO = {
         }
       ],
       "geometria": null,
-      "pk": "ID_COMPONENTE",
-      "cardinalidad": "0..N"
+      "pk": "ID_CLASTO",
+      "cardinalidad": "0..N",
+      "descripcion": "Clasto de una roca o depósito sedimentario clástico, descrito uno a uno (CDC TBL_AF_SED_CLASTO, Vol III). 0..N por litología SED_CLASTICA."
+    },
+    "COMP_FRAGMENTO": {
+      "campos": [
+        {
+          "nombre": "ID_PUNTO_CONTROL",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_FRAGMENTO",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_LITOLOGIA",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": "Litología piroclástica (VOL_PIROCLASTICA) a la que pertenece el fragmento."
+        },
+        {
+          "nombre": "COMPONENTE_MIN_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% mínimo estimado de este componente (PORCEN_MIN de la tabla CDC)."
+        },
+        {
+          "nombre": "COMPONENTE_MAX_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% máximo estimado de este componente (PORCEN_MAX de la tabla CDC)."
+        },
+        {
+          "nombre": "TAMANO_MIN_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Tamaño mínimo, cm."
+        },
+        {
+          "nombre": "TAMANO_MAX_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Tamaño máximo, cm."
+        },
+        {
+          "nombre": "REDONDEAMIENTO_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "REDONDEAMIENTO_CDC",
+          "nota": "Escala CDC completa (Powers), con rangos."
+        },
+        {
+          "nombre": "FORMA_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "FORMA_CDC",
+          "nota": "Esfericidad o forma (Zingg)."
+        },
+        {
+          "nombre": "COLOR_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "COLOR_AFLORAMIENTO",
+          "nota": null
+        },
+        {
+          "nombre": "LITOLOGIA_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": "LITOLOGIA_FRAGMENTO",
+          "nota": "Litología del fragmento (Vol IV)."
+        },
+        {
+          "nombre": "ACHATAMIENTO_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Achatamiento F = eje mayor / eje menor (promedio de más de 20 pómez); texto libre según la norma."
+        },
+        {
+          "nombre": "GENESIS_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": "GENESIS_FRAGMENTO",
+          "nota": null
+        },
+        {
+          "nombre": "NOTA_COMPONENTE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Texto libre."
+        }
+      ],
+      "geometria": null,
+      "pk": "ID_FRAGMENTO",
+      "cardinalidad": "0..N",
+      "descripcion": "Fragmento de una roca o depósito piroclástico, descrito uno a uno (CDC TBL_AF_VOLC_FRAGMENTO, Vol IV). 0..N por litología VOL_PIROCLASTICA."
     }
   },
   "relaciones": [
@@ -2286,12 +2355,22 @@ const MODELO = {
     },
     {
       "padre": "PUNTO_CONTROL",
-      "hijo": "TBL_COMPONENTE",
+      "hijo": "COMP_CLASTO",
       "campo": "ID_PUNTO_CONTROL"
     },
     {
-      "padre": "TBL_LITOLOGIA",
-      "hijo": "TBL_COMPONENTE",
+      "padre": "SED_CLASTICA",
+      "hijo": "COMP_CLASTO",
+      "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "PUNTO_CONTROL",
+      "hijo": "COMP_FRAGMENTO",
+      "campo": "ID_PUNTO_CONTROL"
+    },
+    {
+      "padre": "VOL_PIROCLASTICA",
+      "hijo": "COMP_FRAGMENTO",
       "campo": "ID_LITOLOGIA"
     }
   ],
@@ -6422,14 +6501,6 @@ const MODELO = {
       ],
       "fuente": "Norma CDC 2016 Vol V p. 62, campo GÉNESIS PROCESO"
     },
-    "CLASE_COMPONENTE": {
-      "tipo": "simple",
-      "valores": [
-        "Clasto",
-        "Fragmento piroclástico"
-      ],
-      "fuente": "Clasto: TBL_AF_SED_CLASTO (Norma CDC 2016 Vol III); fragmento: TBL_AF_VOLC_FRAGMENTO (Norma CDC 2016 Vol IV)"
-    },
     "REDONDEAMIENTO_CDC": {
       "tipo": "simple",
       "valores": [
@@ -6595,7 +6666,7 @@ const MODELO = {
     "SUBTIPO_SEDIMENTARIO y campos de clasificación sedimentaria agregados desde la norma CDC 2016 Vol III (agregar_subtipo_sedimentario.py).",
     "NOMBRE_ROCA Sedimentaria ampliado por SUBTIPO_SEDIMENTARIO desde la norma CDC 2016 Vol III (agregar_nombres_sedimentarios.py).",
     "NOMBRE_ROCA Volcánica sincronizado con ROCAS_VOLCANICAS de la PWA (Lava + Rocas piroclásticas, sincronizar_nombres_volcanicos.py); salen Ignimbrita, Toba, Lapillita y Aglomerado volcánico.",
-    "v152 (2026-10-26): estructuras en árbol (EST_FALLA/EST_PLIEGUE/EST_FRACTURA), Depósito pasa de TIPO_ROCA a LITIFICACION con los campos de depósito en LITO_SEDIMENTARIA y VOL_PIROCLASTICA, TIPO_ROCA Antrópico con LITO_ANTROPICO, y TBL_COMPONENTE (COMP_CLASTO/COMP_FRAGMENTO). Ver modelo/reestructurar_v152.py."
+    "v152 (2026-10-26): estructuras en árbol (EST_FALLA/EST_PLIEGUE/EST_FRACTURA), Depósito pasa de TIPO_ROCA a LITIFICACION con los campos de depósito en LITO_SEDIMENTARIA y VOL_PIROCLASTICA, TIPO_ROCA Antrópico con LITO_ANTROPICO, COMP_CLASTO (0..N bajo SED_CLASTICA) y COMP_FRAGMENTO (0..N bajo VOL_PIROCLASTICA). Ver modelo/reestructurar_v152.py."
   ],
   "familias_litologia": [
     {
@@ -6906,53 +6977,6 @@ const MODELO = {
         "GENESIS_PROCESO"
       ]
     }
-  ],
-  "familias_componente": [
-    {
-      "tabla": "TBL_COMPONENTE",
-      "padre": true,
-      "titulo": "Componente",
-      "descripcion": "Padre. Componente de una roca o depósito clástico o piroclástico (0..N por litología), con sus atributos comunes.",
-      "aplica_a": "Todo componente",
-      "campos": [
-        "ID_PUNTO_CONTROL",
-        "ID_COMPONENTE",
-        "ID_LITOLOGIA",
-        "CLASE_COMPONENTE",
-        "COMPONENTE_MIN_PCT",
-        "COMPONENTE_MAX_PCT",
-        "TAMANO_MIN_CM",
-        "TAMANO_MAX_CM",
-        "REDONDEAMIENTO_COMPONENTE",
-        "FORMA_COMPONENTE",
-        "COLOR_COMPONENTE",
-        "NOTA_COMPONENTE"
-      ]
-    },
-    {
-      "tabla": "COMP_CLASTO",
-      "padre": false,
-      "titulo": "Clasto (CDC TBL_AF_SED_CLASTO)",
-      "descripcion": "Hija 1:1 (ID_COMPONENTE). Clasto de una roca o depósito siliciclástico (norma CDC 2016 Vol III).",
-      "aplica_a": "CLASE_COMPONENTE = Clasto",
-      "campos": [
-        "LITOLOGIA_CLASTO",
-        "GRANULOMETRIA_CLASTO",
-        "TIPO_CLASTO"
-      ]
-    },
-    {
-      "tabla": "COMP_FRAGMENTO",
-      "padre": false,
-      "titulo": "Fragmento piroclástico (CDC TBL_AF_VOLC_FRAGMENTO)",
-      "descripcion": "Hija 1:1 (ID_COMPONENTE). Fragmento de una roca o depósito piroclástico (norma CDC 2016 Vol IV).",
-      "aplica_a": "CLASE_COMPONENTE = Fragmento piroclástico",
-      "campos": [
-        "LITOLOGIA_FRAGMENTO",
-        "ACHATAMIENTO_FRAGMENTO",
-        "GENESIS_FRAGMENTO"
-      ]
-    }
   ]
 };
 </script>
@@ -6988,7 +7012,7 @@ function restaurarAbiertos(){const a=abiertosGet();
 const STORE2TBL = {proyecto:'TBL_PROYECTO',punto:'PUNTO_CONTROL',litologia:'TBL_LITOLOGIA',
   estructural:'TBL_DATOS_ESTRUCTURALES',contacto:'TBL_CONTACTO',muestreo:'TBL_MUESTREO',
   foto:'TBL_FOTOGRAFIAS',esquema:'TBL_ESQUEMA_DIBUJO',geomorf:'TBL_GEOMORFOLOGIA',
-  aflora:'TBL_AFLORAMIENTO',componente:'TBL_COMPONENTE',
+  aflora:'TBL_AFLORAMIENTO',clasto:'COMP_CLASTO',fragmento:'COMP_FRAGMENTO',
   punto_gabinete:'PUNTO_CONTROL_GABINETE',linea_gabinete:'LINEA_CONTROL_GABINETE'};
 const STORES = Object.keys(STORE2TBL);
 // 'linea' no cuelga de un punto (es una capa aparte, hermana de PUNTO_CONTROL) -> no entra
@@ -7003,8 +7027,11 @@ const HIJAS = [
   {store:'aflora', titulo:'Afloramiento', clase:'', unico:true},
   {store:'litologia', titulo:'Litología', clase:'lito', oblig:true},
   // v152: clastos y fragmentos piroclásticos descritos uno a uno (CDC TBL_AF_SED_CLASTO y
-  // TBL_AF_VOLC_FRAGMENTO), 0..N por litología; cada uno elige su litología con ID_LITOLOGIA.
-  {store:'componente', titulo:'Componentes (clastos y fragmentos)', clase:''},
+  // TBL_AF_VOLC_FRAGMENTO), 0..N por litología. Cuelgan de la rama donde tienen sentido (rama):
+  // el panel solo aparece si el punto tiene una litología de esa rama, y su ID_LITOLOGIA solo
+  // ofrece esas litologías (ver renderPunto/bloqueHijo).
+  {store:'clasto', titulo:'Clastos', clase:'', rama:'SED_CLASTICA'},
+  {store:'fragmento', titulo:'Fragmentos piroclásticos', clase:'', rama:'VOL_PIROCLASTICA'},
   {store:'estructural', titulo:'Datos estructurales', clase:''},
   {store:'contacto', titulo:'Contactos', clase:''},
   {store:'geomorf', titulo:'Geomorfología', clase:''},
@@ -7136,7 +7163,7 @@ function migrarRegistroV152(store,r){
   }
   return false;
 }
-const DB='captura-terreno', VER=18;   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+const DB='captura-terreno', VER=19;   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -7151,6 +7178,7 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   r.onupgradeneeded=()=>{const d=r.result;
     if(tTimeout){clearTimeout(tTimeout);tTimeout=null;}
     const yaTeniaAflora=d.objectStoreNames.contains('aflora');
+    const yaTeniaClasto=d.objectStoreNames.contains('clasto');   // v19: migrar 'componente' una sola vez
     // 'planoproy' (v15): planos proyectados (rumbo/manteo + traza contra el DEM) que el geólogo
     // arma para proyectar un estrato sobre las laderas. Cuelga del proyecto (_parent=proyectoId,
     // como 'linea'/'nota'), así que SÍ lleva índice 'parent' -- pero no es una ficha CDC 2016:
@@ -7160,6 +7188,16 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
     // trato que 'planoproy': cuelga del proyecto con índice 'parent' y queda fuera del modelo CDC.
     STORES.concat(['fotomapa','linea','nota','planoproy','poligono']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
       if(s!=='proyecto')os.createIndex('parent','_parent',{unique:false});}});
+    // v19: el store 'componente' (v18, solo en pruebas de v152) se reparte en 'clasto' y 'fragmento'
+    // según CLASE_COMPONENTE. El store viejo queda como estaba (no se borra nada); la app ya no lo lee.
+    if(!yaTeniaClasto && d.objectStoreNames.contains('componente')){
+      const txC=r.transaction, q=txC.objectStore('componente').getAll();
+      q.onerror=ev=>{ev.preventDefault();console.warn('Migración v19: componentes omitidos',q.error);};
+      q.onsuccess=ev=>(ev.target.result||[]).forEach(c=>{
+        try{ const pc=txC.objectStore(componenteASuStore(c)).put(c); pc.onerror=e=>{e.preventDefault();console.warn('Migración v19: componente omitido',c.id);}; }
+        catch(e){console.warn('Migración v19: componente omitido',c&&c.id,e);}
+      });
+    }
     // 'cartageo': caché de Cartas Geológicas SERNAGEOMIN descargadas para uso offline en
     // terreno. NO es del modelo canónico (no pasa por STORE2TBL/campos(), no entra en
     // buildBackupBlob()/importBackup() — un Blob ni siquiera sobrevive JSON.stringify) ni
@@ -7555,7 +7593,9 @@ async function importBackup(file, destinoColeccion = null) {
           foto: 'foto',
           esquema: 'esquema',
           geomorf: 'geomorf',
-          componente: 'componente',   // v152
+          clasto: 'clasto',
+          fragmento: 'fragmento',
+          componente: 'componente',   // respaldo de pruebas de v152: cada registro va a 'clasto' o 'fragmento' (componenteASuStore)
           // el arbol se reconstituye solo: los ids viajan intactos, asi que _parent y
           // _punto siguen apuntando a donde deben. Funciona incluso al importar un
           // backup de Terreno dentro de Gabinete: el punto cambia de store pero
@@ -7589,9 +7629,10 @@ async function importBackup(file, destinoColeccion = null) {
               if (record && typeof record[campoImg] === 'string' && record[campoImg].length > 100) fotosConImagen++;
             }
             try {
-              migrarRegistroV151(storeDestino, record);   // respaldo de antes de v151
-              migrarRegistroV152(storeDestino, record);   // respaldo de antes de v152
-              await put(storeDestino, record);
+              const destino = storeOrigen === 'componente' ? componenteASuStore(record) : storeDestino;
+              migrarRegistroV151(destino, record);   // respaldo de antes de v151
+              migrarRegistroV152(destino, record);   // respaldo de antes de v152
+              await put(destino, record);
               totalInsertadas++;
             } catch (err) {
               errores.push(storeDestino + '/' + (record && record.id) + ': ' + (err && err.message || err));
@@ -8584,13 +8625,18 @@ function familiaAplica(tabla, v){
   if(tabla==='EST_FALLA') return esFalla(v);
   if(tabla==='EST_PLIEGUE') return esPliegue(v);
   if(tabla==='EST_FRACTURA') return v['TIPO_ESTRUCTURA']==='Estructura fractura';
-  if(tabla==='COMP_CLASTO') return v['CLASE_COMPONENTE']==='Clasto';
-  if(tabla==='COMP_FRAGMENTO') return v['CLASE_COMPONENTE']==='Fragmento piroclástico';
   return true;
 }
 // Ficha -> reparto al exportar (padre + hijas 1:1) y clave que une las hijas con el padre.
-const FAMILIAS_DE = {litologia:['familias_litologia','ID_LITOLOGIA'], estructural:['familias_estructura','ID_ESTRUCTURA'],
-  componente:['familias_componente','ID_COMPONENTE']};
+const FAMILIAS_DE = {litologia:['familias_litologia','ID_LITOLOGIA'], estructural:['familias_estructura','ID_ESTRUCTURA']};
+// v152 (2026-10-27): TBL_COMPONENTE se separó en COMP_CLASTO (bajo SED_CLASTICA) y COMP_FRAGMENTO (bajo
+// VOL_PIROCLASTICA). Un registro del store de pruebas 'componente' va al store de su clase; devuelve ese store.
+function componenteASuStore(r){
+  const s=r.CLASE_COMPONENTE==='Fragmento piroclástico'?'fragmento':'clasto', pk=s==='fragmento'?'ID_FRAGMENTO':'ID_CLASTO';
+  if(r.ID_COMPONENTE&&!r[pk]) r[pk]=r.ID_COMPONENTE;
+  delete r.ID_COMPONENTE; delete r.CLASE_COMPONENTE;
+  return s;
+}
 function familiasDe(store){ const f=FAMILIAS_DE[store]; return f && MODELO[f[0]] ? {lista:MODELO[f[0]], clave:f[1]} : null; }
 
 // ============ Revelado progresivo de campos (2026-09-01) ============
@@ -8864,13 +8910,6 @@ const CONDICIONALES = {
   ASOCIACION_ESTRUCTURAL:    {modo:'ocultar', regla: esFractura},
   GENESIS_MECANICA:          {modo:'ocultar', regla: esFractura},
   GENESIS_PROCESO:           {modo:'ocultar', regla: esFractura},
-  // --- v152: componentes (TBL_COMPONENTE): clasto (Vol III) o fragmento piroclástico (Vol IV) ---
-  LITOLOGIA_CLASTO:       {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Clasto'},
-  GRANULOMETRIA_CLASTO:   {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Clasto'},
-  TIPO_CLASTO:            {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Clasto'},
-  LITOLOGIA_FRAGMENTO:    {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Fragmento piroclástico'},
-  ACHATAMIENTO_FRAGMENTO: {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Fragmento piroclástico'},
-  GENESIS_FRAGMENTO:      {modo:'ocultar', regla: v => v['CLASE_COMPONENTE']==='Fragmento piroclástico'},
   // Contacto medido (v146): la medida apunta al contacto del punto; dejar de ser 'Estructura
   // contacto' limpia el vínculo y el guardado suelta los números copiados en el contacto.
   ID_CONTACTO: {modo:'ocultar', regla: v => v['TIPO_ESTRUCTURA']==='Estructura contacto'},
@@ -8916,8 +8955,8 @@ function formulario(store, reg, ctx){
   // solo si alguno de sus campos aplica al tipo de roca. En el teléfono sigue siendo UNA ficha.
   // TIPO_VOLCANICA se muestra junto a TIPO_ROCA (acota NOMBRE_ROCA) aunque se exporte en
   // LITO_VOLCANICA, y NOMBRE_ROCA sigue al final, como conclusión.
-  // v152: la ficha de estructura (EST_FALLA/PLIEGUE/FRACTURA) y la de componente (COMP_CLASTO/FRAGMENTO)
-  // se agrupan igual, con el título de cada familia del modelo; el grupo del padre va sin título.
+  // v152: la ficha de estructura (EST_FALLA/PLIEGUE/FRACTURA)
+  // se agrupa igual, con el título de cada familia del modelo; el grupo del padre va sin título.
   const grupos=[], grupoDe={};
   const fam=familiasDe(store);
   if(fam){
@@ -9006,7 +9045,7 @@ function formulario(store, reg, ctx){
     if(n==='ID_LITOLOGIA' && ctx && ctx.litologias){
       inp=el('select');inp.name=n;inp.append(el('option',{value:''},'— (opcional) litología —'));
       ctx.litologias.forEach((L,i)=>inp.append(el('option',{value:L.id},
-        'Lito '+(i+1)+': '+(L.NOMBRE_ROCA||L.TIPO_ROCA||L.id.slice(0,5))+(L.UNIDAD_GEOLOGICA?' — '+L.UNIDAD_GEOLOGICA:''))));
+        'Lito '+(L._nLito||i+1)+': '+(L.NOMBRE_ROCA||L.TIPO_ROCA||L.id.slice(0,5))+(L.UNIDAD_GEOLOGICA?' — '+L.UNIDAD_GEOLOGICA:''))));
       if(reg[n])inp.value=reg[n];
     }
     // FK ID_CONTACTO -> select de contactos del punto (en estructural, solo 'Estructura contacto').
@@ -13656,6 +13695,9 @@ async function renderPunto(app){
   for(const h of HIJAS){
     const items=await childrenOf(h.store,curPunto.id);
     if(h.store==='litologia')curPunto._nlito=items.length;
+    // clastos / fragmentos (v152): solo con una litología de su rama en el punto (o fichas ya hechas)
+    const litosRama=h.rama?litos.filter(L=>familiaAplica(h.rama,L)):litos;
+    if(h.rama && !litosRama.length && !items.length) continue;
     const hc=tarjetaColapsable(h.titulo+(h.oblig?' *':''),{clave:h.store,lleno:items.length>0,badge:items.length});
     const box=el('div');hc.body.append(box);
     items.forEach((it,i)=>box.append(bloqueHijo(h,it,i,litos,conts)));
@@ -13664,6 +13706,7 @@ async function renderPunto(app){
         if(bloqueoGabineteActivo())return;
         await guardarPunto();
         const reg={id:uid(),_parent:curPunto.id};
+        if(h.rama && litosRama.length===1) reg.ID_LITOLOGIA=litosRama[0].id;   // única litología posible
         if(h.store==='muestreo'){const sc=namingCfg(curProyecto).smp;
           if(sc.on){reg.ID_MUESTRA=fmtName(sc);const full=namingCfg(curProyecto);full.smp.next=sc.next+1;curProyecto._naming=full;await put('proyecto',curProyecto);}}
         await put(h.store,reg);
@@ -13770,7 +13813,9 @@ function bloqueHijo(h,reg,i,litos,conts){
   if(h.store==='foto'){ b.append(bloqueFoto(reg,litos)); }
   else if(h.store==='esquema'){ b.append(bloqueEsquema(reg)); }
   else {
-    const f=formulario(h.store,reg,{litologias:litos,contactos:conts||[]});
+    // clastos / fragmentos: el selector ofrece solo las litologías de su rama (y la ya elegida), con su número en el punto
+    const litosH=h.rama?litos.map((L,i)=>Object.assign({},L,{_nLito:i+1})).filter(L=>familiaAplica(h.rama,L)||L.id===reg.ID_LITOLOGIA):litos;
+    const f=formulario(h.store,reg,{litologias:litosH,contactos:conts||[]});
     b.append(f.node);
     const barra=barraMedicion(h.store,f);
     if(h.store==='contacto'){
@@ -15299,7 +15344,7 @@ async function duplicarPunto(srcId){
   // dos pasadas: primero los ids nuevos de todas las fichas, después los vínculos entre ellas
   // (estructural.ID_CONTACTO -> contacto y contacto._medidaDe -> estructural, v146)
   const copias=[], mapId={};
-  for(const store of ['aflora','componente','estructural','contacto','muestreo','geomorf'])   // componente: v152
+  for(const store of ['aflora','clasto','fragmento','estructural','contacto','muestreo','geomorf'])   // clasto/fragmento: v152
     for(const it of await childrenOf(store,srcId)){const n=Object.assign({},it,{id:uid(),_parent:np.id});mapId[it.id]=n.id;copias.push([store,n]);}
   for(const [store,n] of copias){
     if(n.ID_LITOLOGIA&&mapLito[n.ID_LITOLOGIA])n.ID_LITOLOGIA=mapLito[n.ID_LITOLOGIA];
@@ -15732,8 +15777,8 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
     // por familia (MODELO.familias_litologia: clástica, sedimentaria, volcánica, piroclástica,
     // intrusiva, metamórfica). IndexedDB no cambia. Cada hija lleva ID_LITOLOGIA (clave 1:1 con el
     // padre) y solo existe si la ficha llenó algún campo de esa familia.
-    // v152: lo mismo para la medida estructural (EST_FALLA/PLIEGUE/FRACTURA por ID_ESTRUCTURA) y el
-    // componente (COMP_CLASTO/FRAGMENTO por ID_COMPONENTE): ver familiasDe().
+    // v152: lo mismo para la medida estructural (EST_FALLA/PLIEGUE/FRACTURA por ID_ESTRUCTURA): ver
+    // familiasDe(). COMP_CLASTO y COMP_FRAGMENTO salen enteras, como cualquier otra ficha.
     const fam=familiasDe(s), clave=fam&&fam.clave;
     const defs=fam?fam.lista.map(f=>({tbl:f.tabla,padre:f.padre,cs:f.campos.concat(f.campos_extra||[])}))
                     :[{tbl,padre:true,cs}];
