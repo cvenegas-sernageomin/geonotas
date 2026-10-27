@@ -15783,12 +15783,28 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
     const defs=fam?fam.lista.map(f=>({tbl:f.tabla,padre:f.padre,cs:f.campos.concat(f.campos_extra||[])}))
                     :[{tbl,padre:true,cs}];
     const lleno=v=>v!=null&&v!==''&&!(Array.isArray(v)&&!v.length);
+    // Filas de las hijas 1:1 ("tabla|id"): las que aplican y llenaron algún campo, más las que otra tabla
+    // necesita para que su relación no quede colgando: la rama de la que cuelga cada clasto o fragmento
+    // (SED_CLASTICA, VOL_PIROCLASTICA), aunque sus campos estén vacíos, y la hija de cada nieta (hija_de).
+    const conFila=new Set();
+    if(fam){
+      const hijaDe=Object.fromEntries(fam.lista.map(f=>[f.tabla,f.hija_de]));
+      const marcar=(t,id)=>{ while(t){ conFila.add(t+'|'+id); t=hijaDe[t]; } };
+      for(const r of regsS) for(const d of defs)
+        if(!d.padre&&familiaAplica(d.tbl,r)&&d.cs.some(c=>lleno(r[c]))) marcar(d.tbl,r.id);
+      if(s==='litologia'){
+        const porId=Object.fromEntries(regsS.map(r=>[r.id,r]));
+        for(const h of HIJAS.filter(h=>h.rama)) for(const c of await all(h.store)){
+          const L=porId[c.ID_LITOLOGIA]; if(L&&familiaAplica(h.rama,L)) marcar(h.rama,L.id);
+        }
+      }
+    }
     for(const d of defs){
       nT++;
       const csD=d.padre?d.cs:[clave].concat(d.cs);
       const st=crear(d.tbl,csD,d.padre?extras:[],false);
       for(const r of regsS){
-        if(!d.padre&&(!familiaAplica(d.tbl,r)||!d.cs.some(c=>lleno(r[c]))))continue;
+        if(!d.padre&&!conFila.has(d.tbl+'|'+r.id))continue;
         const fila=d.padre?r:Object.assign({},r,{[clave]:r[clave]||r.id});
         st.run([txt(r.id),txt(d.padre?r._parent:r.id)].concat(csD.map(c=>txt(fila[c])),(d.padre?extras:[]).map(e=>e[1](r))));
       }

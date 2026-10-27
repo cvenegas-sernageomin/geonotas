@@ -2428,7 +2428,7 @@ async function correr(){
       const tefra = opts('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', LITIFICACION:'Depósito'}, 'NOMBRE_ROCA');
       ok(tefra.includes('Lapilli') && !tefra.includes('Toba de lapilli'), 'tefra: ' + tefra.slice(0, 3));
       // export: hijas EST_FALLA, LITO_DEPOSITO y LITO_ANTROPICO con su clave 1:1; COMP_CLASTO con su litología
-      const P = 'smoke-v152-', ids = [P + 'li1', P + 'li2', P + 'es1', P + 'co1'];
+      const P = 'smoke-v152-', ids = [P + 'li1', P + 'li2', P + 'es1', P + 'co1', P + 'li3', P + 'li4', P + 'fr1', P + 'li5'];
       await w.put('litologia', {id:ids[0], _parent:P+'pt', TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito', NOMBRE_ROCA:'Grava arenosa',
                                 SUBTIPO_SEDIMENTARIO:'Siliciclástico', AMBIENTE_DEPOSITACIONAL:'Aluvial', SELECCION:'Mala'});
       await w.put('litologia', {id:ids[1], _parent:P+'pt', TIPO_ROCA:'Antrópico', TIPO_ANTROPICO:'Relave minero'});
@@ -2436,6 +2436,12 @@ async function correr(){
                                   CATEGORIA_FALLA:'Falla Normal', TIPO_FALLA:'Falla normal', CRITERIO_CINEMATICO:'Escarpe; Fracturas tipo T'});
       await w.put('clasto', {id:ids[3], _parent:P+'pt', ID_LITOLOGIA:ids[0], COMPONENTE_MIN_PCT:'40',
                                  LITOLOGIA_CLASTO:'Clastos de andesita', REDONDEAMIENTO_COMPONENTE:'Subredondeados'});
+      // clasto y fragmento en litologías sin ningún campo de su rama: la fila de la rama debe salir igual
+      await w.put('litologia', {id:ids[4], _parent:P+'pt', TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'});
+      await w.put('clasto', {id:ids[3] + 'b', _parent:P+'pt', ID_LITOLOGIA:ids[4], LITOLOGIA_CLASTO:'Clastos de cuarzo'});
+      await w.put('litologia', {id:ids[5], _parent:P+'pt', TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', NOMBRE_ROCA:'Toba de lapilli'});
+      await w.put('fragmento', {id:ids[6], _parent:P+'pt', ID_LITOLOGIA:ids[5], LITOLOGIA_FRAGMENTO:'Pómez'});
+      await w.put('litologia', {id:ids[7], _parent:P+'pt', TIPO_ROCA:'Intrusiva', NOMBRE_ROCA:'Granito'});
       try {
         const r = await w.construirGPKG();
         const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
@@ -2454,8 +2460,15 @@ async function correr(){
           eq(q("SELECT ID_CLASTO, ID_LITOLOGIA, COMPONENTE_MIN_PCT, LITOLOGIA_CLASTO FROM COMP_CLASTO WHERE ID_REG='"+ids[3]+"'"),
              [{ID_CLASTO:ids[3], ID_LITOLOGIA:ids[0], COMPONENTE_MIN_PCT:'40', LITOLOGIA_CLASTO:'Clastos de andesita'}], 'fila COMP_CLASTO');
           eq(q("SELECT COUNT(*) n FROM sqlite_master WHERE name IN ('TBL_COMPONENTE','COMP_FRAGMENTO')"), [{n:1}], 'tablas de componentes en el GeoPackage');
+          const filas = (t, id) => q("SELECT COUNT(*) n FROM " + t + " WHERE ID_LITOLOGIA='" + id + "'")[0].n;
+          eq([filas('SED_CLASTICA', ids[4]), filas('LITO_SEDIMENTARIA', ids[4]), filas('VOL_PIROCLASTICA', ids[5]), filas('LITO_INTRUSIVA', ids[7])],
+             [1, 1, 1, 0], 'fila de la rama de un clasto/fragmento sin campos propios (y la intrusiva vacía sin fila)');
+          eq(q("SELECT COUNT(*) n FROM COMP_CLASTO c LEFT JOIN SED_CLASTICA s ON s.ID_LITOLOGIA = c.ID_LITOLOGIA WHERE s.ID_LITOLOGIA IS NULL")
+             .concat(q("SELECT COUNT(*) n FROM COMP_FRAGMENTO c LEFT JOIN VOL_PIROCLASTICA v ON v.ID_LITOLOGIA = c.ID_LITOLOGIA WHERE v.ID_LITOLOGIA IS NULL")),
+             [{n:0}, {n:0}], 'componentes sin su fila de rama');
         } finally { db.close(); }
-      } finally { for (const [s, id] of [['litologia',ids[0]],['litologia',ids[1]],['estructural',ids[2]],['clasto',ids[3]]]) await w.del(s, id); }
+      } finally { for (const [s, id] of [['litologia',ids[0]],['litologia',ids[1]],['estructural',ids[2]],['clasto',ids[3]],['clasto',ids[3]+'b'],
+                                     ['litologia',ids[4]],['litologia',ids[5]],['fragmento',ids[6]],['litologia',ids[7]]]) await w.del(s, id); }
       return 'migración idempotente · fichas que aparecen según el tipo · listas CDC · hijas 1:1 en el GeoPackage';
     });
 
