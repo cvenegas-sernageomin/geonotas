@@ -7040,7 +7040,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v154';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v155';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7737,6 +7737,7 @@ async function importBackup(file, destinoColeccion = null) {
 // ============================ UI Backup/Import (modal) ============================
 function openBackupModal() {
   document.getElementById('backup-modal').style.display = 'flex';
+  pintarNube();
 }
 
 function closeBackupModal() {
@@ -7754,6 +7755,7 @@ function switchBackupTab(tab, btn) {
 async function exportBackupUI(coleccion) {
   try {
     const blob = await buildBackupBlob(coleccion);
+    stat('respaldo_descarga');
     const fecha = new Date().toISOString().slice(0, 10);
     const hora = new Date().toTimeString().slice(0, 5).replace(':', '');
     const filename = `captura-terreno_${coleccion}_${fecha}_${hora}.json`;
@@ -7817,6 +7819,205 @@ async function importBackupUI(coleccion) {
     const statusDiv = document.getElementById(`backup-status-${coleccion}`);
     statusDiv.innerHTML = `<span style="color:var(--rojo);">✗ Error: ${err.message}</span>`;
   }
+}
+
+// ============================ Nube: estadísticas y respaldo (Worker pwa-sync) ============================
+// Backend común de las PWAs en Cloudflare (proyecto `proyectos/pwa-sync`, cuenta geologiadechile).
+// Estadísticas ANÓNIMAS: un id aleatorio por instalación, sin nombre, correo ni IP. Se encolan en
+// localStorage y se mandan cuando hay conexión, así el uso offline en terreno también cuenta. Solo
+// salen desde el sitio publicado y fuera de iframes: ni localhost ni el smoke ensucian los números.
+// Respaldo: el mismo JSON de "Archivar día" (buildBackupBlob), comprimido con gzip, va a R2 bajo un
+// código de recuperación que genera la app y que el servidor nunca guarda (solo su hash). Restaurar
+// pasa por importBackup(), con sus migraciones: la nube no tiene un formato propio.
+const NUBE_URL = 'https://pwa-sync.geologiadechile.workers.dev';
+const NUBE_APP = 'geonotas';
+const K_UID = 'geonotas-uid', K_COLA = 'geonotas-stats-cola', K_STATS_NO = 'geonotas-stats-no',
+      K_CODIGO = 'geonotas-nube-codigo', K_NUBE_AUTO = 'geonotas-nube-auto', K_NUBE_ULT = 'geonotas-nube-ultimo';
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const statsActivas = () => location.hostname === 'cvenegas-sernageomin.github.io' && window.top === window
+  && lsGet(K_STATS_NO) !== '1';
+const leerCola = () => { try { return JSON.parse(lsGet(K_COLA) || '[]'); } catch (e) { return []; } };
+
+function stat(e) {
+  if (!statsActivas()) return;
+  // fecha LOCAL del teléfono (sv-SE da YYYY-MM-DD): con toISOString lo de la noche caía al día siguiente
+  const cola = leerCola(); cola.push({ e, d: new Date().toLocaleDateString('sv-SE') });
+  lsSet(K_COLA, JSON.stringify(cola.slice(-500)));
+  clearTimeout(stat._t); stat._t = setTimeout(enviarStats, 4000);
+}
+async function enviarStats() {
+  if (!statsActivas() || !navigator.onLine || enviarStats._enCurso) return;
+  const cola = leerCola(); if (!cola.length) return;
+  let id = lsGet(K_UID); if (!id) { id = crypto.randomUUID(); lsSet(K_UID, id); }
+  const lote = cola.slice(0, 200);
+  enviarStats._enCurso = true;
+  try {
+    // text/plain = petición "simple": sin preflight CORS, y keepalive deja que salga al cerrar la app
+    const r = await fetch(NUBE_URL + '/v1/eventos', { method: 'POST', keepalive: true,
+      headers: { 'content-type': 'text/plain' },
+      body: JSON.stringify({ app: NUBE_APP, uid: id, ver: APP_VER, eventos: lote }) });
+    if (r.ok) {
+      // se relee: lo que se encoló mientras viajaba el lote se conserva
+      const resto = leerCola().slice(lote.length);
+      lsSet(K_COLA, JSON.stringify(resto));
+      if (resto.length) setTimeout(enviarStats, 1000);
+    }
+  } catch (e) {} finally { enviarStats._enCurso = false; }
+}
+window.addEventListener('online', () => { enviarStats(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') enviarStats(); });
+
+// Código de recuperación: 12 símbolos Crockford base32 (60 bits), sin I, L, O ni U para dictarlo sin dudas.
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+function nuevoCodigoNube() {
+  const c = [...crypto.getRandomValues(new Uint8Array(12))].map(x => CROCKFORD[x & 31]).join('');
+  return 'GEO-' + c.slice(0, 4) + '-' + c.slice(4, 8) + '-' + c.slice(8);
+}
+// Acepta el código escrito a mano: minúsculas, sin guiones, con espacios, y O/I/L confundidas con 0/1.
+function normalizarCodigoNube(s) {
+  let c = String(s || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (c.length === 15 && c.startsWith('GEO')) c = c.slice(3);
+  c = c.replace(/O/g, '0').replace(/[IL]/g, '1');
+  if (c.length !== 12 || [...c].some(x => !CROCKFORD.includes(x))) return null;
+  return 'GEO-' + c.slice(0, 4) + '-' + c.slice(4, 8) + '-' + c.slice(8);
+}
+
+async function nubeFetch(ruta, opts = {}) {
+  const codigo = lsGet(K_CODIGO);
+  if (!codigo) throw new Error('Activa primero el respaldo en la nube');
+  if (!navigator.onLine) throw new Error('Sin conexión');
+  const r = await fetch(NUBE_URL + ruta, Object.assign({}, opts,
+    { headers: Object.assign({ 'x-codigo': codigo }, opts.headers || {}) }));
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    if (d.error === 'r2_no_habilitado') throw new Error('El almacenamiento en la nube todavía no está habilitado en el servidor.');
+    throw new Error(d.error || ('HTTP ' + r.status));
+  }
+  return r;
+}
+
+async function subirNube(manual) {
+  const hechos = [];
+  for (const col of ['terreno', 'gabinete']) {
+    const n = (await all(col === 'gabinete' ? 'punto_gabinete' : 'punto')).length;
+    // colección sin puntos: no se sube. El servidor guarda los 5 últimos por colección, y respaldos
+    // vacíos (app recién reinstalada, por ejemplo) desplazarían a los buenos.
+    if (!n) continue;
+    const gz = await new Response((await buildBackupBlob(col)).stream().pipeThrough(new CompressionStream('gzip'))).blob();
+    if (gz.size > 95 * 1048576)
+      throw new Error(`El respaldo de ${col} pesa ${tamLegible(gz.size)} comprimido y supera el máximo de 95 MB. Usa «Descargar».`);
+    await nubeFetch(`/v1/respaldo/${NUBE_APP}/${col}`, { method: 'PUT', body: gz, headers: { 'x-registros': String(n) } });
+    hechos.push(`${col === 'gabinete' ? 'Gabinete' : 'Terreno'}: ${n} puntos (${tamLegible(gz.size)})`);
+  }
+  if (!hechos.length) throw new Error('No hay puntos que respaldar');
+  lsSet(K_NUBE_ULT, new Date().toISOString());
+  stat(manual ? 'respaldo_nube' : 'respaldo_nube_auto');
+  return hechos;
+}
+
+async function restaurarNube(item) {
+  const r = await nubeFetch(`/v1/respaldo/${NUBE_APP}/${item.coleccion}/${item.ts}`);
+  const blob = await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).blob();
+  return importBackup(blob, item.coleccion);   // FileReader lee un Blob igual que un File
+}
+
+// Subida automática: una vez al día al abrir la app, si está activada y no se está usando datos móviles
+// (navigator.connection solo existe en Chrome Android; donde no existe se sube igual).
+function nubeAutoAlAbrir() {
+  if (!lsGet(K_CODIGO) || lsGet(K_NUBE_AUTO) === '0' || !navigator.onLine || window.top !== window) return;
+  const ult = Date.parse(lsGet(K_NUBE_ULT) || 0) || 0;
+  if (Date.now() - ult < 20 * 3600e3) return;
+  const cx = navigator.connection;
+  if (cx && (cx.saveData || cx.type === 'cellular')) return;
+  setTimeout(() => subirNube(false).catch(e => console.warn('Respaldo automático en la nube:', e.message)), 20000);
+}
+
+function pintarNube() {
+  const box = document.getElementById('nube-box'); if (!box) return;
+  const codigo = lsGet(K_CODIGO);
+  box.innerHTML = '';
+  box.append(el('h4', {}, '☁️ Respaldo en la nube'));
+  const estado = el('div', { style: 'margin-top:8px;font-size:0.9em;' });
+  const ok = m => estado.innerHTML = `<span style="color:var(--verde);">${m}</span>`;
+  const mal = m => estado.innerHTML = `<span style="color:var(--rojo);">✗ ${esc(m)}</span>`;
+  if (!codigo) {
+    box.append(el('p', {}, 'Guarda una copia de Terreno y Gabinete fuera del teléfono. Si borras los datos del navegador, '
+      + 'pierdes o cambias el teléfono, la recuperas con tu código. No se pide cuenta ni correo.'));
+    const inp = el('input', { type: 'text', placeholder: 'GEO-XXXX-XXXX-XXXX', autocapitalize: 'characters',
+      style: 'width:100%;margin:6px 0;font-size:16px;' });
+    box.append(
+      el('button', { class: 'btn', onclick: () => {
+        lsSet(K_CODIGO, nuevoCodigoNube()); lsSet(K_NUBE_AUTO, '1'); stat('nube_activar'); pintarNube();
+      } }, '☁️ Activar respaldo en la nube'),
+      el('h4', { style: 'margin-top:14px;' }, '¿Ya tienes un código? (otro teléfono o reinstalación)'),
+      inp,
+      el('button', { class: 'btn sec', onclick: () => {
+        const c = normalizarCodigoNube(inp.value);
+        if (!c) return mal('El código tiene la forma GEO-XXXX-XXXX-XXXX (12 letras o números).');
+        lsSet(K_CODIGO, c); lsSet(K_NUBE_AUTO, '1'); stat('nube_usar_codigo'); pintarNube();
+      } }, 'Usar este código'),
+      estado, casillaStats());
+    return;
+  }
+  const ult = lsGet(K_NUBE_ULT);
+  box.append(
+    el('p', {}, 'Tu código de recuperación. Anótalo fuera del teléfono: es la única forma de recuperar los respaldos.'),
+    el('div', { style: 'font:700 20px ui-monospace,monospace;letter-spacing:1px;text-align:center;padding:10px;'
+      + 'border:1px dashed var(--bd2);border-radius:10px;user-select:all;margin-bottom:8px;' }, codigo),
+    el('p', {}, ult ? 'Último respaldo desde este teléfono: ' + new Date(ult).toLocaleString('es-CL') : 'Aún no se ha subido nada desde este teléfono.'));
+  const auto = el('input', { type: 'checkbox' }); auto.checked = lsGet(K_NUBE_AUTO) !== '0';
+  auto.addEventListener('change', () => lsSet(K_NUBE_AUTO, auto.checked ? '1' : '0'));
+  const lista = el('div', { style: 'margin-top:8px;' });
+  box.append(
+    el('label', { style: 'display:flex;gap:8px;align-items:center;font-size:12.5px;margin:4px 0 10px;' }, auto,
+      'Subir solo, una vez al día al abrir la app (no con datos móviles)'),
+    el('div', { class: 'btnbar', style: 'display:flex;gap:8px;flex-wrap:wrap;' },
+      el('button', { class: 'btn', onclick: async (ev) => {
+        ev.target.disabled = true; estado.textContent = 'Subiendo…';
+        try { ok('✓ Subido: ' + (await subirNube(true)).map(esc).join(' · ')); pintarNubeUltimo(box); }
+        catch (e) { mal(e.message); } finally { ev.target.disabled = false; }
+      } }, '☁️ Subir ahora'),
+      el('button', { class: 'btn sec', onclick: async () => {
+        estado.textContent = 'Consultando…'; lista.innerHTML = '';
+        try {
+          const items = (await (await nubeFetch('/v1/respaldo/' + NUBE_APP)).json()).respaldos;
+          estado.textContent = items.length ? '' : 'No hay respaldos con este código.';
+          for (const it of items) lista.append(el('div', { style: 'display:flex;justify-content:space-between;'
+              + 'align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:12.5px;' },
+            el('span', {}, `${it.coleccion === 'gabinete' ? '📋' : '🏔️'} ${new Date(it.ts).toLocaleString('es-CL')} · `
+              + (it.registros != null ? it.registros + ' puntos · ' : '') + tamLegible(it.bytes)),
+            el('button', { class: 'btn sec mini', onclick: async () => {
+              if (!confirm(`¿Restaurar el respaldo de ${it.coleccion} del ${new Date(it.ts).toLocaleString('es-CL')}?\n\n`
+                + 'Se SUMA a lo que hay en el teléfono: los registros con el mismo id se sobrescriben con la versión del respaldo.')) return;
+              estado.textContent = 'Descargando y restaurando…';
+              try {
+                const res = await restaurarNube(it); stat('nube_restaurar');
+                (res.ok ? ok : mal)(`${res.ok ? '✓ ' : ''}Restaurados ${res.insertadas} registros en ${res.coleccion}`
+                  + (res.errores.length ? ` (${res.errores.length} con error, ver consola)` : '') + '.');
+                if (!res.ok) console.warn('Errores al restaurar desde la nube:', res.errores);
+                await render();
+              } catch (e) { mal(e.message); }
+            } }, 'Restaurar')));
+        } catch (e) { mal(e.message); }
+      } }, '📋 Ver respaldos en la nube'),
+      el('button', { class: 'btn sec', onclick: () => {
+        if (!confirm('¿Desconectar este teléfono de la nube?\n\nLos respaldos NO se borran: siguen disponibles con el código. '
+          + 'Asegúrate de tenerlo anotado: ' + codigo)) return;
+        lsSet(K_CODIGO, null); lsSet(K_NUBE_ULT, null); pintarNube();
+      } }, 'Desconectar')),
+    estado, lista, casillaStats());
+}
+// estadísticas: aviso visible y forma de apagarlas
+function casillaStats() {
+  const st = el('input', { type: 'checkbox' }); st.checked = lsGet(K_STATS_NO) !== '1';
+  st.addEventListener('change', () => lsSet(K_STATS_NO, st.checked ? null : '1'));
+  return el('label', { style: 'display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);margin-top:14px;' },
+    st, 'Enviar estadísticas anónimas de uso (cuántas personas usan la app y qué funciones; sin datos de terreno)');
+}
+function pintarNubeUltimo(box) {
+  const p = [...box.querySelectorAll('p')].find(x => /respaldo desde este teléfono|Aún no se ha subido/.test(x.textContent));
+  if (p) p.textContent = 'Último respaldo desde este teléfono: ' + new Date(lsGet(K_NUBE_ULT)).toLocaleString('es-CL');
 }
 
 async function parseKmzFile(file) {
@@ -13826,7 +14027,7 @@ async function renderPuntoIconos(app){
     curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, stickyGet(), ahora())
                      : await get(storeActivo(),vista.id);
     if(!curPunto)return nav({n:'proyecto',id:curProyecto.id});
-    if(nuevo){const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
+    if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
     if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);coordsPendientes=null;}
     $('#btnBack').style.display='';
     $('#ttl').textContent = curPunto.ID_PUNTO_CONTROL || (nuevo?'Nuevo punto':'Punto');
@@ -14095,7 +14296,7 @@ async function renderPunto(app){
   // punto nuevo: precarga colector y campos constantes recordados + fecha/hora automáticas
   curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, stickyGet(), ahora())
                    : await get(storeActivo(),vista.id);
-  if(nuevo){const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
+  if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
   if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);coordsPendientes=null;}
   if(!curPunto)return nav({n:'proyecto',id:curProyecto.id});
   $('#btnBack').style.display='';
@@ -15899,6 +16100,7 @@ function enriquecerFK(r,fks,store){
 }
 
 async function exportCSV(proyectoId){
+  stat('exportar_csv');
   const files=[];
   const idsPuntos = proyectoId ? await idsPuntosProyecto(proyectoId) : null;
   const fks = await mapasFKCodigos();
@@ -15956,6 +16158,7 @@ async function kmzGaleriaPunto(p,files){
 }
 
 async function exportKMZ(proyectoId){
+  stat('exportar_kmz');
   const proyectos=proyectoId?[await get('proyecto',proyectoId)]:await all('proyecto');
   const latF=p=>p['Coordenadas Geográficas Decimales_Lat']||p.LAT;
   const lonF=p=>p['Coordenadas Geográficas Decimales_Long']||p.LONG;
@@ -16255,6 +16458,7 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
 }
 
 async function exportGPKG(proyectoId){
+  stat('exportar_gpkg');
   try{
     toast('Generando GeoPackage…');
     const r=await construirGPKG(proyectoId);
@@ -16265,6 +16469,7 @@ async function exportGPKG(proyectoId){
 }
 
 async function exportGDB(proyectoId){
+  stat('exportar_gdb');
   try{
     toast('Preparando conversor GDB…');
     if(!window.initGdalJs)await cargarLib('vendor/gdal3.js');
@@ -17283,6 +17488,7 @@ async function generarProsaProyecto(){
 
 // -------- PDF libreta de terreno (print) --------
 async function exportPDF(proyectoId){
+  stat('exportar_pdf');
   const proyectos=proyectoId?[await get('proyecto',proyectoId)]:await all('proyecto');
   let paginas='';
   for(const pr of proyectos){
@@ -17522,6 +17728,8 @@ window.addEventListener('unhandledrejection',e=>{
     return pantallaError('No se pudo abrir la base de datos', m);
   }
   try{ render(); }catch(e){ pantallaError('Error al dibujar', String(e&&e.message||e)); }
+  // nube (ver «Nube: estadísticas y respaldo»): nada de esto bloquea ni avisa si falla
+  try{ stat('abrir'); enviarStats(); nubeAutoAlAbrir(); }catch(e){}
   // La campaña entera vive en IndexedDB del navegador. Sin almacenamiento persistente el
   // navegador puede borrarla sola bajo presión de espacio (o, en Safari, tras días sin abrir la
   // app). Hasta v137 solo se pedía al bajar una zona offline. Se pide al arrancar; si el
@@ -17614,6 +17822,9 @@ toggleColeccion(coleccionGuardada);
         <button onclick="importBackupUI('gabinete')" class="btn sec">📤 Importar</button>
         <div id="backup-status-gabinete" style="margin-top:10px; font-size:0.9em;"></div>
       </div>
+
+      <!-- Respaldo en la nube (Worker pwa-sync): lo dibuja pintarNube() al abrir el modal -->
+      <div id="nube-box" style="margin-top:20px;padding-top:14px;border-top:1px solid var(--bd);"></div>
     </div>
   </div>
 </div>
