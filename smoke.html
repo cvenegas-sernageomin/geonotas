@@ -2630,7 +2630,10 @@ async function correr(){
           ok(w2.overlayAbierto() === hoja, 'el botón atrás no ve la hoja abierta');
           w2.cerrarOverlay(hoja);
           ok(!doc.querySelector('.hoja'), 'el botón atrás no cerró la hoja');
-          return dock.querySelectorAll('.di').length + ' iconos en ' + Math.round(r.width) + ' px · hoja desde ' + Math.round(ht) + ' px · atrás la cierra';
+          // v157: el header va en una sola fila en el teléfono (antes tres, ~144 px)
+          const hh = doc.querySelector('header').offsetHeight;
+          ok(hh <= 72, 'el header ocupa ' + hh + ' px a 375 px: debía ir en una fila');
+          return dock.querySelectorAll('.di').length + ' iconos en ' + Math.round(r.width) + ' px · hoja desde ' + Math.round(ht) + ' px · atrás la cierra · header de ' + hh + ' px';
         });
       } finally {
         // el último del() resuelve antes de que su transacción se confirme: quitar el iframe en
@@ -2638,6 +2641,90 @@ async function correr(){
         await new Promise(r => setTimeout(r, 600));
         ifr.remove();
       }
+    });
+
+    // ---- v157: calidad del GPS, registro rápido con foto y header compacto ----
+    await prueba('v157 GPS: categoría y semáforo según el umbral del proyecto; anillo en el mapa', async () => {
+      eq([4, 8, 12].map(a => w.precisionGpsCategoria(a, 10)), ['muy confiable', 'confiable', 'Poco confiable'], 'categorías con umbral 10 m');
+      eq([2, 4, 6].map(a => w.precisionGpsCategoria(a, 5)), ['muy confiable', 'confiable', 'Poco confiable'], 'categorías con umbral 5 m');
+      eq([3, 9, 25, NaN].map(a => w.calidadGPS(a, 10)), ['ok', 'medio', 'malo', ''], 'semáforo con umbral 10 m');
+      eq(w.calidadDePunto({ERROR_GPS_M:'7,5'}, 10), 'medio', 'el error en metros (coma decimal) manda');
+      eq(w.calidadDePunto({PRECISION_GPS:'Poco confiable'}, 10), 'malo', 'un punto viejo sin metros usa su categoría');
+      eq(w.calidadDePunto({}, 10), '', 'sin dato no hay calidad');
+      eq(w.umbralGPS({_gpsUmbral:5}), 5, 'el umbral del proyecto'); eq(w.umbralGPS({_gpsUmbral:7}), 10, 'un umbral fuera de la lista vuelve a 10 m');
+      ok(w.svgPunto([], [], null, 0, 'malo').includes('#d0453a'), 'el punto fuera del umbral no lleva anillo rojo');
+      ok(!w.svgPunto([], [], null, 0).includes('stroke-dasharray'), 'sin calidad pedida no se dibuja anillo (otras llamadas)');
+      ok(w.eval('MODELO').tablas.PUNTO_CONTROL.campos.some(c => c.nombre === 'ERROR_GPS_M'), 'ERROR_GPS_M no está en el modelo');
+      return 'categorías, semáforo, umbral por proyecto, anillo en el mapa y ERROR_GPS_M en el modelo';
+    });
+
+    await prueba('v157 GPS: señal buena registra sola; mala abre el diálogo con «Registrar igual» y «Ubicar en el mapa»', async () => {
+      const g = w.navigator.geolocation, conf = w.confirm;
+      let fijos = [];
+      g.watchPosition = ok => { fijos.forEach((a, i) => setTimeout(() => ok({coords:{latitude:-33.4, longitude:-70.6, accuracy:a, altitude:null}}), 40 * (i + 1))); return 77; };
+      g.clearWatch = () => {};
+      const doc = w.document;
+      try {
+        w.eval('curProyecto = null');   // umbral por defecto: 10 m
+        fijos = [40, 6];
+        let r = await w.capturarPosicion();
+        eq([r.fuente, r.acc], ['gps', 6], 'con ±6 m debía registrar sola');
+        ok(!doc.querySelector('.gpsdlg-ov'), 'con buena señal no debe quedar diálogo');
+        // mala señal: aparece el diálogo con el error en vivo
+        fijos = [30, 25];
+        let p = w.capturarPosicion();
+        await esperar(() => doc.querySelector('.gpsdlg-ov'), 4000, 'el diálogo de GPS');
+        await esperar(() => /±25 m/.test(doc.querySelector('.gpsdlg-num').textContent), 3000, 'el error en vivo ±25 m');
+        w.confirm = () => true;
+        [...doc.querySelectorAll('.gpsdlg button')].find(b => /Registrar igual/.test(b.textContent)).click();
+        r = await p;
+        eq([r.fuente, r.acc], ['forzado', 25], '«Registrar igual» debía devolver el mejor fix');
+        ok(!doc.querySelector('.gpsdlg-ov'), 'el diálogo no se cerró');
+        // ubicar a mano
+        fijos = [50];
+        p = w.capturarPosicion();
+        await esperar(() => doc.querySelector('.gpsdlg-ov'), 4000, 'el diálogo de GPS');
+        [...doc.querySelectorAll('.gpsdlg button')].find(b => /Ubicar en el mapa/.test(b.textContent)).click();
+        eq(await p, {fuente:'manual'}, '«Ubicar en el mapa» debía devolver manual');
+        // cancelar desde afuera (cámara cerrada sin foto)
+        fijos = [];
+        p = w.capturarPosicion(); p.cancelar();
+        eq(await p, null, '.cancelar() debía devolver null');
+      } finally { delete g.watchPosition; delete g.clearWatch; w.confirm = conf; doc.querySelectorAll('.gpsdlg-ov').forEach(n => n.remove()); }
+      return 'buena señal sin diálogo · mala: error en vivo, registrar igual, ubicar a mano, cancelar';
+    });
+
+    await prueba('v157 foto rápida: crea el punto con su error GPS y la foto colgando', async () => {
+      const pr = {id:P+'fr-pr', ID_PROYECTO:P+'fr', NOMBRE_PROYECTO:'Foto rápida', _naming:{pc:{on:true, prefix:'FR-', pad:2, next:7}}};
+      await w.put('proyecto', pr);
+      const creados = [];
+      try {
+        w.__smokePr = pr; w.eval('curProyecto = window.__smokePr');
+        const img = 'data:image/jpeg;base64,/9j/smoke';
+        const a = await w.registrarPuntoRapido(img, {fuente:'gps', lat:-33.45, lon:-70.65, acc:6.43, alt:null}); creados.push(a.id);
+        eq([a.ID_PUNTO_CONTROL, a.ERROR_GPS_M, a.PRECISION_GPS, a.FUENTE_COORDENADAS, a._parent], ['FR-07', '6.4', 'confiable', 'GPS navegador', pr.id], 'punto por GPS');
+        eq((await w.get(w.storeActivo(), a.id)).ID_PUNTO_CONTROL, 'FR-07', 'el punto no quedó en la base');
+        const fotos = await w.childrenOf('foto', a.id);
+        eq(fotos.map(f => f._img), [img], 'la foto no quedó colgando del punto');
+        eq((await w.get('proyecto', pr.id))._naming.pc.next, 8, 'la autonumeración no avanzó');
+        const b = await w.registrarPuntoRapido(img, {fuente:'manual', lat:-33.46, lon:-70.66}); creados.push(b.id);
+        eq([b.FUENTE_COORDENADAS, b.ERROR_GPS_M, b['Coordenadas Geográficas Decimales_Lat']], ['Google Earth / imagen', undefined, '-33.460000'], 'punto ubicado a mano');
+        eq(w.calidadDePunto(b), '', 'un punto a mano no debe aparentar calidad de GPS');
+      } finally {
+        for (const id of creados) { for (const f of await w.childrenOf('foto', id)) await w.del('foto', f.id); await w.del(w.storeActivo(), id); }
+        await w.del('proyecto', pr.id); w.eval('curProyecto = null');
+      }
+      return 'autonumeración FR-07 · ±6.4 m confiable · foto adjunta · ubicación a mano sin error en metros';
+    });
+
+    await prueba('v157 header: Terreno/Gabinete compacto y menú ⋮ con respaldo y carga de geometrías', async () => {
+      const doc = w.document;
+      eq(doc.querySelectorAll('header .seg input[name="coleccion-toggle"]').length, 2, 'el interruptor perdió los radios de colección');
+      const items = [...doc.querySelectorAll('#hdrMenu button')].map(b => b.textContent);
+      ok(items.some(t => /Archivar/.test(t)) && items.some(t => /geometrías/.test(t)), 'el menú ⋮ no trae respaldo y geometrías: ' + items.join(' | '));
+      w.menuHeader(); ok(doc.getElementById('hdrMenu').classList.contains('on'), '⋮ no abrió el menú');
+      doc.body.click(); ok(!doc.getElementById('hdrMenu').classList.contains('on'), 'tocar fuera no cerró el menú');
+      return items.length + ' opciones en el menú';
     });
 
     await prueba('No quedó basura ni se tocaron datos ajenos', async () => {

@@ -51,19 +51,32 @@
      del mapa en varias filas (v105-v107), un piso mas arriba. Al envolverse el header cambia
      de alto, asi que su alto lo mide el JS en --headh y el mapa lo descuenta: la constante
      de 117 px que habia antes solo era correcta con el header de una sola forma. */
-  header{background:linear-gradient(135deg,var(--header1),var(--header2));color:#fff;padding:calc(12px + env(safe-area-inset-top)) 15px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:0 4px 14px -6px rgba(0,0,0,.4)}
+  /* v157: el header va en UNA fila en el teléfono (antes eran tres, ~144 px: título; Terreno/
+     Gabinete + 💾; 📂). Terreno/Gabinete es un interruptor compacto y 💾/📂 viven en el menú ⋮.
+     Sigue con flex-wrap por si algo no cabe (p.ej. el botón de bloqueo de Gabinete): baja de
+     fila en vez de salirse de la pantalla, y --headh lo mide el JS igual que antes. */
+  header{background:linear-gradient(135deg,var(--header1),var(--header2));color:#fff;padding:calc(8px + env(safe-area-inset-top)) 10px 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:10;box-shadow:0 4px 14px -6px rgba(0,0,0,.4)}
   /* El flex del bloque de titulo vive AQUI y no en un style inline: inline gana sobre la
-     hoja de estilos y dejaba sin efecto la media query de abajo. */
-  #hdr-titulo{min-width:0;flex:1 1 auto}
-  /* Los controles van en UN contenedor propio para que el corte sea predecible: en telefono
-     baja el grupo entero a la segunda fila y el titulo se queda con la primera, junto al
-     boton de volver. Marcar el titulo con flex-basis:100% no servia -- se llevaba una fila
-     para el solo y dejaba tres. El flex del titulo vive aqui y no en un style inline, que
-     gana sobre la hoja de estilos y dejaba sin efecto la media query. */
-  #hdr-acciones{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  @media (max-width:560px){ #hdr-acciones{flex:1 1 100%} }
-  header h1{font-size:16px;margin:0;flex:1;font-weight:650;letter-spacing:.2px}
+     hoja de estilos. min-width:0 deja que el título se corte con … en vez de empujar los
+     controles fuera de la pantalla. */
+  #hdr-titulo{min-width:0;flex:1 1 0}
+  #hdr-titulo h1,#hdr-titulo .ctx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #hdr-acciones{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 1 auto;flex-wrap:wrap;max-width:100%;position:relative}
+  @media (max-width:420px){ .seg-ic{display:none} }
+  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
   header .ctx{font-size:11px;opacity:.88;font-weight:400}
+  /* interruptor Terreno | Gabinete: los radios siguen ahí (toggleColeccion y READONLY_EXENTOS
+     los usan por nombre), solo se ven como dos segmentos */
+  .seg{display:inline-flex;border-radius:16px;background:rgba(255,255,255,.14);padding:2px}
+  .seg label{position:relative;display:flex;align-items:center;gap:4px;padding:5px 9px;border-radius:14px;font-size:12.5px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.82);white-space:nowrap}
+  .seg input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+  .seg label:has(input:checked){background:#fff;color:var(--header2)}
+  .seg label:has(input:focus-visible){outline:2px solid #fff;outline-offset:1px}
+  .hdr-mas{width:36px;height:34px;padding:0;font-size:20px;line-height:1}
+  .hdr-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:230px;background:var(--surface);color:var(--txt);border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.45);padding:6px;display:none}
+  .hdr-menu.on{display:block}
+  .hdr-menu button{display:flex;width:100%;align-items:center;gap:10px;text-align:left;border:none;background:none;color:inherit;font:inherit;font-size:14px;padding:11px 10px;border-radius:8px;cursor:pointer}
+  .hdr-menu button:active,.hdr-menu button:hover{background:var(--surface2)}
   main{max-width:820px;margin:0 auto;padding:14px 12px calc(96px + env(safe-area-inset-bottom))}
   .card{background:var(--surface);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:13px;box-shadow:var(--shadow)}
   .card h2{font-size:14px;margin:0 0 11px;color:var(--verde);display:flex;align-items:center;gap:8px;font-weight:650;letter-spacing:.2px}
@@ -307,6 +320,27 @@
   .sel-iconos{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin:10px 0}
   .sel-iconos .di{width:auto;border:1px solid var(--bd)}
   .sel-iconos .di.apagado{opacity:.35;border-style:dashed}
+  /* === calidad del GPS (v157) === */
+  .di[data-cal]::before{content:'';position:absolute;top:6px;right:8px;width:10px;height:10px;border-radius:50%;border:2px solid var(--surface);background:#8a948c;z-index:1}
+  .di[data-cal="ok"]::before{background:#2e9d5b} .di[data-cal="medio"]::before{background:#d39b1c} .di[data-cal="malo"]::before{background:#d0453a}
+  .ctx-gps{white-space:nowrap}
+  .ctx-gps::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin:0 4px 0 1px;box-shadow:0 0 0 1.5px rgba(255,255,255,.8)}
+  .gps-pill{position:absolute;top:42px;left:50%;transform:translateX(-50%);z-index:500;color:#fff;font-size:13px;font-weight:650;padding:5px 12px;border-radius:16px;box-shadow:0 4px 12px -4px rgba(0,0,0,.5);pointer-events:none;white-space:nowrap}
+  .cam-fab{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:500;width:58px;height:58px;border-radius:50%;border:none;background:var(--surface);color:var(--verde);box-shadow:0 6px 18px -6px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .cam-fab svg{width:30px;height:30px}
+  .cam-fab:active{transform:translateY(-50%) scale(.94)}
+  .gpsdlg-ov{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+  .gpsdlg{width:100%;max-width:520px;background:var(--surface);color:var(--txt);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;text-align:center}
+  .gpsdlg>b{font-size:16px}
+  .gpsdlg-num{font-size:44px;font-weight:750;line-height:1.1;font-variant-numeric:tabular-nums}
+  .gpsdlg-barra{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
+  .gpsdlg-barra i{display:block;height:100%;width:4%;border-radius:4px;transition:width .4s}
+  .gpsdlg-meta{font-size:13px;color:var(--muted)}
+  .gpsdlg-umbral{display:flex;gap:6px;justify-content:center;align-items:center;font-size:13px;color:var(--muted)}
+  .gpsdlg-umbral button{border:1px solid var(--bd);background:var(--surface2);color:var(--txt);border-radius:14px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+  .gpsdlg-umbral button[aria-pressed="true"]{background:var(--verde);border-color:var(--verde);color:#fff}
+  .gpsdlg-aviso{font-size:12.5px}
+  .gpsdlg-acc{display:flex;flex-direction:column;gap:8px;margin-top:4px}
   .leaflet-control-savetiles a{font-size:15px;line-height:26px}
 /* v141: aguja de orientación del mapa (norte / girado / sigue tu rumbo) */
 .leaflet-control-norte a{position:relative;display:grid!important;place-items:center;padding:0}
@@ -417,22 +451,25 @@
     <div class="ctx" id="ctx"></div>
   </div>
   <div id="hdr-acciones">
-  <div style="margin:0 10px 0 0; display:inline-flex; gap:10px;">
-    <label style="font-weight:bold;">
+  <div class="seg" role="radiogroup" aria-label="Colección">
+    <label title="Terreno">
       <input type="radio" name="coleccion-toggle" value="terreno" checked onchange="toggleColeccion('terreno')">
-      🏔️ Terreno
+      <span class="seg-ic">🏔️</span> Terreno
     </label>
-    <label>
+    <label title="Gabinete">
       <input type="radio" name="coleccion-toggle" value="gabinete" onchange="toggleColeccion('gabinete')">
-      📋 Gabinete
+      <span class="seg-ic">📋</span> Gabinete
     </label>
   </div>
   <button id="btn-bloqueo-gabinete" class="btn sec mini" style="display:none" onclick="toggleBloqueoGabinete()"></button>
-  <button class="btn sec mini" onclick="openBackupModal()" title="Archivar/Cargar día">💾</button>
+  <button class="btn sec mini hdr-mas" id="btnHdrMas" type="button" aria-haspopup="menu" aria-expanded="false" title="Más opciones" onclick="menuHeader()">⋮</button>
+  <div class="hdr-menu" id="hdrMenu" role="menu">
+    <button type="button" role="menuitem" onclick="menuHeader(false);openBackupModal()">💾 Archivar o cargar el día</button>
+    <button type="button" role="menuitem" onclick="menuHeader(false);document.getElementById('kmz-file-input').click()">📂 Cargar geometrías (KMZ, KML, shapefile)</button>
+  </div>
   <!-- El id se conserva: lo nombra READONLY_EXENTOS, que exime este control del barrido de
        updateFormReadonly(). Renombrarlo lo dejaria deshabilitado al bloquear Gabinete. -->
   <input type="file" id="kmz-file-input" accept=".kmz,.kml,.zip,.shp,.shx,.dbf,.prj" multiple style="display:none;">
-  <button class="btn sec mini" onclick="document.getElementById('kmz-file-input').click()" title="Cargar geometrías: KMZ, KML o shapefile">📂</button>
   </div>
 </header>
 <main id="app"></main>
@@ -1204,6 +1241,12 @@ const MODELO = {
           "obligatorio": true,
           "dominio": "LV_CALIDAD_COORDENADAS",
           "nota": null
+        },
+        {
+          "nombre": "ERROR_GPS_M",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Error de la posición GPS en metros (radio del 68 % que informa el teléfono) al registrar el punto. Vacío si se ubicó a mano en el mapa. PRECISION_GPS es su categoría según el umbral del proyecto."
         },
         {
           "nombre": "METODO_UBICACION",
@@ -7039,11 +7082,12 @@ const MODELO = {
       ]
     }
   ]
-};
+}
+;
 </script>
 <script>
 "use strict";
-const APP_VER = 'v156';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v157';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7543,6 +7587,17 @@ function storeLineaActivo() {
   }
   return LINE_STORE;
 }
+
+// Menú ⋮ del header (v157): archivar/cargar el día y cargar geometrías, que antes ocupaban su
+// propia fila en el teléfono. Se cierra al elegir, al tocar fuera o con Escape.
+function menuHeader(abrir) {
+  const m = document.getElementById('hdrMenu'), b = document.getElementById('btnHdrMas');
+  if (!m) return;
+  const on = abrir == null ? !m.classList.contains('on') : !!abrir;
+  m.classList.toggle('on', on); if (b) b.setAttribute('aria-expanded', String(on));
+}
+document.addEventListener('click', e => { if (!e.target.closest('#hdrMenu,#btnHdrMas')) menuHeader(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') menuHeader(false); });
 
 function toggleColeccion(nuevoValor) {
   const radio = document.querySelector(`input[name="coleccion-toggle"][value="${nuevoValor}"]`);
@@ -10441,12 +10496,16 @@ function initMapPunto(reg, f, opts){
   const fijo=!!(opts&&opts.fijo);
   if(fijo) marcador.dragging.disable();
   const iLat=()=>f.node.querySelector('[name="'+inLat+'"]'), iLon=()=>f.node.querySelector('[name="'+inLon+'"]');
-  const sync=()=>{const ll=marcador.getLatLng();
+  // manual (v157): el pin lo puso el usuario sobre el mapa, no el GPS. FUENTE_COORDENADAS lo dice,
+  // y el error en metros y la categoría del GPS anterior se borran: ya no describen esta posición.
+  const setF=(n,v)=>{const i=f.node.querySelector('[name="'+n+'"]');if(i&&i.value!==v){i.value=v;i.dispatchEvent(new Event('change',{bubbles:true}));}};
+  const sync=manual=>{const ll=marcador.getLatLng();
     if(iLat()){iLat().value=ll.lat.toFixed(6);iLat().dispatchEvent(new Event('change',{bubbles:true}));}
     if(iLon()){iLon().value=ll.lng.toFixed(6);iLon().dispatchEvent(new Event('change',{bubbles:true}));}
+    if(manual===true){ setF('FUENTE_COORDENADAS','Google Earth / imagen'); setF('ERROR_GPS_M',''); setF('PRECISION_GPS',''); }
     const cl=document.getElementById('coordlbl');if(cl)cl.textContent='📍 '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6);};
-  marcador.on('dragend',sync);
-  mapa._mover=e=>{marcador.setLatLng(e.latlng);sync();};   // tocar el mapa reubica el pin
+  marcador.on('dragend',()=>sync(true));
+  mapa._mover=e=>{marcador.setLatLng(e.latlng);sync(true);};   // tocar el mapa reubica el pin
   if(!fijo) mapa.on('click',mapa._mover);
   if(!isNaN(la))sync();
   f.node.addEventListener('change',e=>{if(e.target.name===inLat||e.target.name===inLon){
@@ -10456,10 +10515,6 @@ function initMapPunto(reg, f, opts){
   // chico de ubicar el punto, no el sitio de un mapa de fondo.
   setTimeout(()=>mapa.invalidateSize(),120);
 }
-function ubicarGPSmapa(){if(!navigator.geolocation||!marcador)return;toast('Obteniendo GPS…');
-  navigator.geolocation.getCurrentPosition(p=>{anotarPosGPS(p);marcador.setLatLng([p.coords.latitude,p.coords.longitude]);
-    mapa.setView([p.coords.latitude,p.coords.longitude],16);marcador.fire('dragend');
-    toast('GPS ✓ ±'+Math.round(p.coords.accuracy)+' m');},e=>toast('GPS: '+e.message),{enableHighAccuracy:true,timeout:15000});}
 function descargarTiles(){zonasPanel();}
 
 async function capturarSatelital(){
@@ -14031,7 +14086,7 @@ async function renderPuntoIconos(app){
                      : await get(storeActivo(),vista.id);
     if(!curPunto)return nav({n:'proyecto',id:curProyecto.id});
     if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
-    if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);coordsPendientes=null;}
+    if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);curPunto.FUENTE_COORDENADAS='Google Earth / imagen';coordsPendientes=null;}   // tocado en el mapa: a mano, no GPS
     $('#btnBack').style.display='';
     $('#ttl').textContent = curPunto.ID_PUNTO_CONTROL || (nuevo?'Nuevo punto':'Punto');
     $('#ctx').textContent = curProyecto.NOMBRE_PROYECTO||'';
@@ -14054,6 +14109,7 @@ async function renderPuntoIconos(app){
     // Autoguardado: aquí no hay «✓ Guardar punto». Se engancha DESPUÉS de initMapPunto, cuyo
     // primer sync dispara un change que no es una edición del usuario.
     f.node.addEventListener('change',()=>guardarPuntoForm(f));
+    f.node.addEventListener('change',pintarCalidadPunto);
     const fotos=(await childrenOf('foto',curPunto.id)).filter(x=>x._img);
     if(fotos.length){
       fotoBox.append(el('img',{src:fotos[0]._img,alt:''}));
@@ -14082,7 +14138,23 @@ async function refrescarDock(){
   // relleno que deja centrar el primer icono); después se respeta donde la dejó el usuario
   if(!pv.dockIni){ pv.dockIni=true; dock.scrollLeft=Math.max(0,dock.clientWidth/2-26); } else dock.scrollLeft=sl;
   lupaDock(dock);
+  pintarCalidadPunto();
   marcarActivo();
+}
+// Calidad del GPS del punto a la vista (v157), sin tener que mirar la imagen satelital: el icono
+// «Punto» lleva un punto de semáforo, el subtítulo del header dice el error y el mapa dibuja el
+// círculo de error alrededor del pin.
+function pintarCalidadPunto(){
+  if(!pv||!curPunto) return;
+  const d=Object.assign({},curPunto,pv.f.getData()), cal=calidadDePunto(d), txt=textoErrorPunto(d);
+  const b=document.querySelector('.pv .di[data-clave="punto"]');
+  if(b){ b.dataset.cal=cal||'nada'; b.title='Punto de control · GPS '+(txt?txt+', ':'')+TEXTO_CALIDAD[cal]; }
+  // el error va PRIMERO: el subtítulo se corta con … y un nombre de proyecto largo lo escondía
+  $('#ctx').innerHTML='<span class="ctx-gps" style="--c:'+COLOR_CALIDAD[cal]+'">'+esc(txt||'sin GPS')+'</span> · '+esc(curProyecto.NOMBRE_PROYECTO||'');
+  if(!mapa||!marcador) return;
+  if(pv.circ){ try{ mapa.removeLayer(pv.circ); }catch(_){} pv.circ=null; }
+  const e=parseFloat(String(d.ERROR_GPS_M||'').replace(',','.'));
+  if(e>0) pv.circ=L.circle(marcador.getLatLng(),{radius:e,color:COLOR_CALIDAD[cal],weight:1.5,fillOpacity:.12,interactive:false}).addTo(mapa);
 }
 // Lupa de la barra: k (0..1) según la distancia del centro de cada icono al centro de la barra
 // (o al mouse, en el computador). Curva suave (smoothstep) en LUPA_RADIO. Escribe el transform y
@@ -14309,7 +14381,7 @@ async function renderPunto(app){
   curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, stickyGet(), ahora())
                    : await get(storeActivo(),vista.id);
   if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
-  if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);coordsPendientes=null;}
+  if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);curPunto.FUENTE_COORDENADAS='Google Earth / imagen';coordsPendientes=null;}   // tocado en el mapa: a mano, no GPS
   if(!curPunto)return nav({n:'proyecto',id:curProyecto.id});
   $('#btnBack').style.display='';
   $('#ttl').textContent = curPunto.ID_PUNTO_CONTROL || (nuevo?'Nuevo punto':'Punto');
@@ -14331,7 +14403,7 @@ async function renderPunto(app){
     onOpen:()=>{ if(!mapIniciado){mapIniciado=true;setTimeout(()=>initMapPunto(curPunto,f),80);} else if(mapa){setTimeout(()=>mapa.invalidateSize(),80);} }});
   cm.body.append(el('div',{id:'map',class:'mapbox'}));
   cm.body.append(el('div',{class:'btnbar'},
-    el('button',{class:'btn blue mini',onclick:ubicarGPSmapa},'📡 GPS'),
+    el('button',{class:'btn blue mini',onclick:e=>tomarGPS(f,e.currentTarget)},'📡 GPS'),
     el('button',{class:'btn sec mini',onclick:descargarTiles},'📦 Mapas offline'),
     el('button',{class:'btn orange mini',onclick:capturarSatelital},'📸 Capturar satelital')));
   cm.body.append(el('div',{class:'muted',id:'coordlbl'},''));
@@ -15277,6 +15349,9 @@ async function renderMapa(app){
   const modo=toggleModo('mapa'); modo.id='modoBarMapa'; app.append(modo);
   const card=el('div',{class:'card mapcard'});
   card.append(el('div',{id:'projmap',class:'mapbig'}));
+  // v157: registro rápido con foto, a mano derecha sobre el mapa
+  card.append(el('button',{type:'button',class:'cam-fab',title:'Foto rápida: crea un punto con la foto y el GPS',
+    'aria-label':'Foto rápida: crea un punto con la foto y el GPS',onclick:fotoRapida,html:iconoDe('foto')}));
   app.append(card);
   const puntos=await childrenOf(storeActivo(),curProyecto.id);
   const conC=puntos.filter(p=>!isNaN(parseFloat(p['Coordenadas Geográficas Decimales_Lat']))&&!isNaN(parseFloat(p['Coordenadas Geográficas Decimales_Long'])));
@@ -15512,8 +15587,9 @@ async function initMapaVista(puntos){
     if(isNaN(lat)||isNaN(lon))continue;
     const estr=await childrenOf('estructural',p.id), mus=await childrenOf('muestreo',p.id);
     const ck=p._estiloKml&&p._estiloKml.punto;
-    const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus,ck,mapaVista.getBearing())}).addTo(mapaVista);
-    if(estr.length) giroMapa.marcas.push({m,estr,mus,ck});   // se redibujan al girar el mapa
+    const cal=calidadDePunto(p);
+    const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus,ck,mapaVista.getBearing(),cal)}).addTo(mapaVista);
+    if(estr.length) giroMapa.marcas.push({m,estr,mus,ck,cal});   // se redibujan al girar el mapa
     if(p.ID_PUNTO_CONTROL)m.bindTooltip(p.ID_PUNTO_CONTROL,{permanent:true,direction:'bottom',offset:[0,18],className:'ptlabel'});
     m.on('click',()=>{if(editandoVertices)return;curPunto=null;vista={n:'punto',id:p.id};render();});
     pts.push([lat,lon]);
@@ -15628,7 +15704,7 @@ function giroIconos(){
   if(giroMapa.rafIco)return;
   giroMapa.rafIco=requestAnimationFrame(()=>{ giroMapa.rafIco=0; if(!giroMapa.map)return;
     const g=giroMapa.map.getBearing();
-    for(const k of giroMapa.marcas){ k.m.options.icon=iconoPunto(k.estr,k.mus,k.ck,g); if(k.m._icon) k.m._icon.innerHTML=svgPunto(k.estr,k.mus,k.ck,g); } });
+    for(const k of giroMapa.marcas){ k.m.options.icon=iconoPunto(k.estr,k.mus,k.ck,g,k.cal); if(k.m._icon) k.m._icon.innerHTML=svgPunto(k.estr,k.mus,k.ck,g,k.cal); } });
 }
 function giroMontar(map){
   giroMapa.marcas=[]; giroMapa.map=map;
@@ -15785,12 +15861,25 @@ function toggleGPSLive(btn){
     } else {
       gpsDot.setLatLng(ll); gpsAcc.setLatLng(ll).setRadius(p.coords.accuracy);
     }
+    pillGPS(p.coords.accuracy);
     if(gpsPrimerFix){ gpsPrimerFix=false; mapaVista.setView(ll, mapaVista.getZoom()<15?17:mapaVista.getZoom()); }
     else if(gpsSiguiendo) mapaVista.panTo(ll,{animate:false});
   }, e=>toast('GPS: '+e.message), {enableHighAccuracy:true, maximumAge:0, timeout:20000});
   gpsPintarBtn();
 }
+// v157: mientras se sigue el GPS, una pastilla sobre el mapa dice el error actual con el color del
+// semáforo del umbral del proyecto: se sabe si conviene registrar ahí sin mirar el círculo azul.
+function pillGPS(acc){
+  let p=document.getElementById('gpsPill');
+  if(acc==null){ if(p) p.remove(); return; }
+  const cont=document.querySelector('.mapcard'); if(!cont) return;
+  if(!p){ p=el('div',{id:'gpsPill',class:'gps-pill',role:'status'}); cont.append(p); }
+  const c=calidadGPS(acc);
+  p.style.background=COLOR_CALIDAD[c];
+  p.textContent='📡 ±'+Math.round(acc)+' m'+(c==='malo'?' · sobre ±'+umbralGPS()+' m':'');
+}
 function pararGPSLive(){
+  pillGPS(null);
   if(mapaVista) mapaVista.off('dragstart',gpsPausar);
   gpsSiguiendo=true; gpsUltimo=null;
   if(gpsWatchId!=null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
@@ -15947,11 +16036,14 @@ function formPlanoProy(pl,onSave,onDelete){
 // giro = bearing del mapa (v141): los símbolos se dibujan en az+giro para seguir apuntando al
 // rumbo real con el mapa girado, y los números de manteo/plunge quedan derechos (por eso no se
 // usa rotateWithView, que giraría también el texto y el triángulo de muestras).
-function iconoPunto(estr,mus,colorKml,giro){
-  return L.divIcon({className:'estsym',html:svgPunto(estr,mus,colorKml,giro),iconSize:[60,60],iconAnchor:[30,30]});
+function iconoPunto(estr,mus,colorKml,giro,cal){
+  return L.divIcon({className:'estsym',html:svgPunto(estr,mus,colorKml,giro,cal),iconSize:[60,60],iconAnchor:[30,30]});
 }
-function svgPunto(estr,mus,colorKml,giro){
+// cal (v157): calidad del GPS del punto ('ok'|'medio'|'malo'|''), un anillo de semáforo alrededor
+// de la estación para ver la calidad del dato en el mapa sin abrir el punto.
+function svgPunto(estr,mus,colorKml,giro,cal){
   const cx=30,cy=30;let inner='';
+  if(cal!=null) inner+='<circle cx="30" cy="30" r="8.5" fill="none" stroke="'+COLOR_CALIDAD[cal||'']+'" stroke-width="2.6"'+(cal?'':' stroke-dasharray="3 2.4"')+'/>';
   (estr||[]).forEach(e=>inner+=svgEstructura(e,cx,cy,giro));   // símbolos estructurales orientados
   // estación; un punto importado de KMZ usa el color de su icono original, un poco más grande
   const ck=hexSeguro(colorKml);
@@ -16013,47 +16105,201 @@ async function duplicarPunto(srcId){
 // más tiempo, dé un valor mucho mejor para el mismo punto. Se cambia a watchPosition(): sigue
 // escuchando fixes y se queda con el de MENOR accuracy hasta que baja de un umbral bueno o se
 // cumple un tiempo máximo de espera, en vez de quedarse con el primero que llegue.
+// ---- Calidad del GPS (v157) ----
+// Un punto se registra por GPS solo si el error que informa el teléfono (accuracy: radio del
+// 68 %; el 95 % de las veces el punto real está a menos de ~2× ese valor) es ≤ el UMBRAL del
+// proyecto: 10 m por defecto, que sobra para cartografía 1:25.000–1:50.000 (1 mm de carta =
+// 25–50 m) y todavía se alcanza en quebradas; 5 m es para trabajo de detalle a cielo abierto.
+// Si no llega, la app espera mostrando el error en vivo y el usuario decide: «Registrar igual»
+// (queda Poco confiable, con su error en metros) o ubicarlo a mano en el mapa. Nunca en silencio.
+// El error en metros queda en ERROR_GPS_M; PRECISION_GPS es su categoría según el umbral.
+const UMBRALES_GPS=[5,10,20];
+function umbralGPS(pr){ const u=+((pr||curProyecto||{})._gpsUmbral); return UMBRALES_GPS.includes(u)?u:10; }
+async function fijarUmbralGPS(u){ if(curProyecto&&UMBRALES_GPS.includes(u)){ curProyecto._gpsUmbral=u; await put('proyecto',curProyecto); } }
 // PRECISION_GPS es un <select> de dominio (Poco confiable/confiable/muy confiable), no texto
 // libre: escribirle "±58 m" directamente no calzaba con ninguna opción y lo dejaba en blanco
 // pese a ser obligatorio. Se traduce la accuracy en metros a la categoría correspondiente.
-function precisionGpsCategoria(accM){
-  if(accM<=5) return 'muy confiable';
-  if(accM<=15) return 'confiable';
+function precisionGpsCategoria(accM, umbral){
+  umbral=umbral||umbralGPS();
+  if(accM<=umbral/2) return 'muy confiable';
+  if(accM<=umbral) return 'confiable';
   return 'Poco confiable';
 }
-function tomarGPS(f,btn){
-  if(!navigator.geolocation){toast('Sin geolocalización');return;}
+// Semáforo: 'ok' (≤ umbral/2), 'medio' (≤ umbral), 'malo' (> umbral), '' sin dato.
+function calidadGPS(accM, umbral){
+  if(accM==null||isNaN(accM)) return '';
+  umbral=umbral||umbralGPS();
+  return accM<=umbral/2?'ok':accM<=umbral?'medio':'malo';
+}
+// Calidad de un punto ya registrado: por su error en metros o, en puntos viejos sin él, por la
+// categoría. Un punto ubicado a mano no tiene error en metros: cuenta su categoría.
+function calidadDePunto(p, umbral){
+  const e=parseFloat(String(p&&p.ERROR_GPS_M!=null?p.ERROR_GPS_M:'').replace(',','.'));
+  if(!isNaN(e)) return calidadGPS(e, umbral);
+  const c=p&&p.PRECISION_GPS;
+  return c==='muy confiable'?'ok':c==='confiable'?'medio':c==='Poco confiable'?'malo':'';
+}
+const COLOR_CALIDAD={ok:'#2e9d5b',medio:'#d39b1c',malo:'#d0453a','':'#8a948c'};
+const TEXTO_CALIDAD={ok:'muy buena',medio:'dentro del umbral',malo:'fuera del umbral','':'sin dato de GPS'};
+function textoErrorPunto(p){
+  const e=parseFloat(String(p&&p.ERROR_GPS_M!=null?p.ERROR_GPS_M:'').replace(',','.'));
+  if(!isNaN(e)) return '±'+Math.round(e)+' m';
+  return p&&p.FUENTE_COORDENADAS&&!/GPS/.test(p.FUENTE_COORDENADAS)?'a mano':'';
+}
+
+// Pide una posición que cumpla el umbral. Devuelve una promesa con
+//   {fuente:'gps'|'forzado', lat, lon, acc, alt}  — GPS dentro del umbral, o «Registrar igual»
+//   {fuente:'manual'}                              — el usuario prefirió ubicarlo en el mapa
+//   null                                           — canceló
+// Si la señal llega buena enseguida, no se ve nada; si no, a los ~1,2 s aparece el diálogo con
+// el error en vivo, el umbral (cambiable) y las dos salidas explícitas. La promesa trae
+// .cancelar() para cortarla desde afuera (p.ej. si el usuario cierra la cámara sin foto).
+function capturarPosicion(){
+  let cancelar=()=>{};
+  const prom=new Promise(res=>{
+    if(!navigator.geolocation){ toast('Este dispositivo no entrega GPS: ubícalo en el mapa'); res({fuente:'manual'}); return; }
+    let mejor=null, watchId=null, fin=false, ov=null, error='';
+    const t0=Date.now();
+    const pos=f=>({fuente:f, lat:mejor.coords.latitude, lon:mejor.coords.longitude, acc:mejor.coords.accuracy, alt:mejor.coords.altitude});
+    const cerrar=v=>{ if(fin) return; fin=true; if(watchId!=null) navigator.geolocation.clearWatch(watchId);
+      clearInterval(tic); clearTimeout(tDlg); if(ov) ov.remove(); res(v); };
+    cancelar=()=>cerrar(null);
+    const n=el('div',{class:'gpsdlg-num'}), meta=el('div',{class:'gpsdlg-meta'}), barra=el('i'), aviso=el('div',{class:'muted gpsdlg-aviso'});
+    const forzar=el('button',{type:'button',class:'btn sec',disabled:'',onclick:()=>{
+      if(!mejor) return;
+      if(confirm('El punto quedará como «Poco confiable», con ±'+Math.round(mejor.coords.accuracy)+' m de error. ¿Registrar igual?')) cerrar(pos('forzado'));
+    }},'Registrar igual');
+    const chips=el('div',{class:'gpsdlg-umbral'});
+    const pintarChips=()=>{ chips.innerHTML=''; chips.append(el('span',{},'Umbral'));
+      UMBRALES_GPS.forEach(u=>chips.append(el('button',{type:'button','aria-pressed':String(u===umbralGPS()),
+        onclick:async()=>{ await fijarUmbralGPS(u); pintarChips(); pintar(); if(mejor&&mejor.coords.accuracy<=u) cerrar(pos('gps')); }},'±'+u+' m'))); };
+    const pintar=()=>{
+      const u=umbralGPS(), s=Math.round((Date.now()-t0)/1000);
+      if(mejor){ const a=mejor.coords.accuracy, c=calidadGPS(a,u);
+        n.textContent='±'+Math.round(a)+' m'; n.style.color=COLOR_CALIDAD[c];
+        barra.style.width=Math.max(4,Math.min(100,100*u/a))+'%'; barra.style.background=COLOR_CALIDAD[c];
+        forzar.disabled=false; forzar.textContent='Registrar igual (±'+Math.round(a)+' m)';
+      } else { n.textContent='…'; n.style.color=''; }
+      meta.textContent='Meta ±'+u+' m · '+s+' s'+(error?' · '+error:'');
+      aviso.textContent=s<25?'A cielo abierto suele bajar en 10–30 s. Quédate quieto con el teléfono despejado.'
+        :'Bajo paredes, en quebradas o con nubes densas puede no bajar más. Puedes esperar, registrar igual o ubicarlo a mano.';
+    };
+    const abrir=()=>{ if(fin||ov) return;
+      pintarChips();
+      ov=el('div',{class:'gpsdlg-ov',role:'dialog','aria-label':'Buscando señal GPS'},el('div',{class:'gpsdlg'},
+        el('b',{},'📡 Buscando señal GPS'), n, el('div',{class:'gpsdlg-barra'},barra), meta, chips, aviso,
+        el('div',{class:'gpsdlg-acc'},forzar,
+          el('button',{type:'button',class:'btn sec',onclick:()=>cerrar({fuente:'manual'})},'📍 Ubicar en el mapa'),
+          el('button',{type:'button',class:'btn del',onclick:()=>cerrar(null)},'Cancelar'))));
+      document.body.append(ov); pintar(); };
+    const tDlg=setTimeout(abrir,1200), tic=setInterval(()=>{ if(ov) pintar(); },1000);
+    watchId=navigator.geolocation.watchPosition(p=>{
+      anotarPosGPS(p);
+      if(!mejor||p.coords.accuracy<mejor.coords.accuracy) mejor=p;
+      if(mejor.coords.accuracy<=umbralGPS()) return cerrar(pos('gps'));
+      if(ov) pintar();
+    },e=>{ error=e.code===1?'sin permiso de ubicación':e.message; if(e.code===1) abrir(); if(ov) pintar(); },
+    {enableHighAccuracy:true,maximumAge:0,timeout:60000});
+  });
+  prom.cancelar=()=>cancelar();
+  return prom;
+}
+// Escribe una posición en el formulario del punto (los change disparan el autoguardado y mueven
+// el pin del mapa). Manual: borra el error en metros y la categoría, que eran del GPS anterior.
+function aplicarPosicion(f, r){
   const set=(name,val)=>{const i=f.node.querySelector('[name="'+name+'"]');if(i){i.value=val;i.dispatchEvent(new Event('change',{bubbles:true}));}};
-  const UMBRAL_BUENO=8, ESPERA_MAX=20000;
-  let mejor=null, watchId=null, listo=false;
+  set('Coordenadas Geográficas Decimales_Lat',r.lat.toFixed(6));
+  set('Coordenadas Geográficas Decimales_Long',r.lon.toFixed(6));
+  // altura elipsoidal (Android) → cota sobre el nivel del mar con el geoide EGM96
+  if(r.alt!=null)set('COTA',Math.round(cotaSobreNivelMar(r.alt,r.lat,r.lon)));
+  set('PRECISION_GPS',precisionGpsCategoria(r.acc));
+  set('ERROR_GPS_M',String(Math.round(r.acc*10)/10));
+  set('FUENTE_COORDENADAS','GPS navegador');
+  const now=new Date();
+  set('FECHA',now.toISOString().slice(0,10));set('HORA',now.toTimeString().slice(0,5));
+}
+// Valores del punto para una posición (lo usa el registro rápido con foto, que no tiene formulario).
+function camposDePosicion(r){
+  const o={'Coordenadas Geográficas Decimales_Lat':r.lat.toFixed(6),'Coordenadas Geográficas Decimales_Long':r.lon.toFixed(6),
+    PRECISION_GPS:precisionGpsCategoria(r.acc),ERROR_GPS_M:String(Math.round(r.acc*10)/10),FUENTE_COORDENADAS:'GPS navegador'};
+  if(r.alt!=null) o.COTA=String(Math.round(cotaSobreNivelMar(r.alt,r.lat,r.lon)));
+  return o;
+}
+async function tomarGPS(f,btn){
   const textoOrig=btn?btn.textContent:null;
-  const terminar=()=>{
-    if(listo)return; listo=true;
-    if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null;}
-    // si el usuario ya navegó fuera de esta ficha, f.node quedó desmontado: escribir ahí no
-    // guarda nada (el auto-guardado depende del evento 'change' sobre el DOM montado) y el
-    // toast de éxito mentiría — las coordenadas se habrían perdido igual.
-    if(!f.node.isConnected)return;
-    if(btn){btn.disabled=false;btn.textContent=textoOrig;}
-    if(!mejor){toast('No se pudo obtener GPS');return;}
-    set('Coordenadas Geográficas Decimales_Lat',mejor.coords.latitude.toFixed(6));
-    set('Coordenadas Geográficas Decimales_Long',mejor.coords.longitude.toFixed(6));
-    // altura elipsoidal (Android) → cota sobre el nivel del mar con el geoide EGM96
-    if(mejor.coords.altitude!=null)set('COTA',Math.round(cotaSobreNivelMar(mejor.coords.altitude,mejor.coords.latitude,mejor.coords.longitude)));
-    set('PRECISION_GPS',precisionGpsCategoria(mejor.coords.accuracy));
-    const now=new Date();
-    set('FECHA',now.toISOString().slice(0,10));set('HORA',now.toTimeString().slice(0,5));
-    toast('GPS ✓ ±'+Math.round(mejor.coords.accuracy)+' m');
-  };
   if(btn){btn.disabled=true;btn.textContent='📡 Buscando…';}
-  toast('Obteniendo GPS — esperando mejor señal…');
-  watchId=navigator.geolocation.watchPosition(p=>{
-    anotarPosGPS(p);
-    if(!mejor||p.coords.accuracy<mejor.coords.accuracy)mejor=p;
-    if(btn)btn.textContent='📡 ±'+Math.round(p.coords.accuracy)+' m…';
-    if(p.coords.accuracy<=UMBRAL_BUENO)terminar();
-  },e=>{if(!mejor)toast('GPS: '+e.message);},{enableHighAccuracy:true,maximumAge:0,timeout:ESPERA_MAX});
-  setTimeout(terminar,ESPERA_MAX);
+  const r=await capturarPosicion();
+  if(btn){btn.disabled=false;btn.textContent=textoOrig;}
+  if(!r) return;
+  // si el usuario ya navegó fuera de esta ficha, f.node quedó desmontado: escribir ahí no
+  // guarda nada (en la lista el guardado depende del DOM montado) y el aviso mentiría. En la
+  // vista iconos el formulario del punto vive fuera del DOM con la hoja cerrada y sí se guarda.
+  if(!f.node.isConnected && !(pv&&pv.f===f)) return;
+  if(r.fuente==='manual'){
+    if(document.querySelector('.pv')) modoMoverPunto(true);
+    else toast('Toca el mapa satelital o arrastra el pin para ubicar el punto');
+    return;
+  }
+  aplicarPosicion(f,r);
+  const c=calidadGPS(r.acc);
+  toast((c==='malo'?'⚠️ GPS fuera del umbral: ±':'GPS ✓ ±')+Math.round(r.acc)+' m');
+}
+
+// ---- Registro rápido con foto (v157) ----
+// 📷 en el mapa del proyecto: abre la cámara y, a la vez, el GPS (mientras se encuadra la foto el
+// chip afina la señal). Con la foto tomada crea un punto nuevo en esa posición, con la foto
+// colgando de él, y deja al usuario en el mapa para seguir; el punto se completa después. La
+// posición pasa por el mismo control de calidad que «Tomar GPS».
+function fotoRapida(){
+  if(bloqueoGabineteActivo()) return;
+  if(!curProyecto){ toast('Abre un proyecto'); return; }
+  const gps=capturarPosicion();
+  const inp=el('input',{type:'file',accept:'image/*',capture:'environment',style:'display:none'});
+  document.body.append(inp);
+  // cerrar la cámara sin foto: el evento 'cancel' (Chrome 113+) corta el GPS; si no llega, el
+  // diálogo del GPS ofrece Cancelar
+  inp.addEventListener('cancel',()=>{ inp.remove(); gps.cancelar(); });
+  inp.addEventListener('change',async()=>{
+    const file=inp.files[0]; inp.remove();
+    if(!file){ gps.cancelar(); return; }
+    const img=await comprimir(file,1280,.72);
+    const r=await gps;
+    if(!r){ toast('Registro cancelado: la foto no se guardó'); return; }
+    if(r.fuente==='manual') return ubicarFotoEnMapa(img);
+    const p=await registrarPuntoRapido(img,r);
+    toast('📷 '+p.ID_PUNTO_CONTROL+' registrado · ±'+Math.round(r.acc)+' m'+(calidadGPS(r.acc)==='malo'?' (fuera del umbral)':''));
+    if(vista.n==='mapa') render();
+  });
+  inp.click();
+}
+// GPS insuficiente y el usuario eligió ubicarlo a mano: un toque en el mapa fija el punto.
+function ubicarFotoEnMapa(img){
+  if(!mapaVista||vista.n!=='mapa'){ toast('Abre el mapa del proyecto para ubicar la foto'); return; }
+  salirModosMapa();
+  const cont=document.querySelector('.mapcard'); let b=document.getElementById('drawbanner'); if(b) b.remove();
+  const salir=()=>{ mapaVista.off('click',tocar); mapaVista.getContainer().style.cursor=''; if(b) b.remove(); };
+  const tocar=async e=>{ salir();
+    const p=await registrarPuntoRapido(img,{fuente:'manual',lat:e.latlng.lat,lon:e.latlng.lng});
+    toast('📷 '+p.ID_PUNTO_CONTROL+' ubicado a mano'); render(); };
+  b=el('div',{id:'drawbanner',class:'drawbanner'},el('span',{},'📷 Toca el mapa donde tomaste la foto'),
+    el('button',{class:'btn del mini',onclick:()=>{ salir(); toast('Registro cancelado: la foto no se guardó'); }},'✕'));
+  if(cont) cont.append(b);
+  mapaVista.getContainer().style.cursor='crosshair';
+  mapaVista.on('click',tocar);
+}
+// Crea el punto (con la autonumeración del proyecto, los valores recordados y la fecha/hora) y su
+// foto. r: la posición de capturarPosicion() o {fuente:'manual',lat,lon}. Devuelve el punto.
+async function registrarPuntoRapido(img, r){
+  const nc=namingCfg(curProyecto).pc, ah=ahora();
+  const p=Object.assign({id:uid(),_parent:curProyecto.id}, stickyGet(), ah,
+    {ID_PROYECTO:curProyecto.ID_PROYECTO||curProyecto.id, _idDone:true});
+  if(nc.on){ p.ID_PUNTO_CONTROL=fmtName(nc); const full=namingCfg(curProyecto); full.pc.next=nc.next+1; curProyecto._naming=full; await put('proyecto',curProyecto); }
+  else p.ID_PUNTO_CONTROL='FOTO-'+ah.HORA.replace(':','')+String(new Date().getSeconds()).padStart(2,'0');   // sin autonumeración: un nombre que se pueda cambiar
+  if(r.fuente==='manual'){ p[inLat]=r.lat.toFixed(6); p[inLon]=r.lon.toFixed(6); p.FUENTE_COORDENADAS='Google Earth / imagen'; }
+  else Object.assign(p, camposDePosicion(r));
+  await put(storeActivo(),p);
+  await put('foto',{id:uid(),_parent:p.id,_img:img});
+  return p;
 }
 
 // ============================ Exportación ============================
