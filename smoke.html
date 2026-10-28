@@ -2573,7 +2573,7 @@ async function correr(){
       });
     });
 
-    await prueba('v153 vista iconos a 375×812: la barra no desborda, botones ≥44 px y la hoja no tapa el header', async () => {
+    await prueba('v153 vista iconos a 375×812: la barra no desborda, botones ≥44 px, lupa en el centro (v154) y la hoja no tapa el header', async () => {
       const ifr = document.createElement('iframe');
       ifr.style.cssText = 'width:375px;height:812px;border:0;position:absolute;left:-9999px;top:0';
       ifr.src = 'index.html';
@@ -2599,6 +2599,26 @@ async function correr(){
           const chicos = [...dock.querySelectorAll('.di')].filter(b => b.offsetWidth < 44 || b.offsetHeight < 44).map(b => b.dataset.clave);
           eq(chicos, [], 'iconos de menos de 44 px');
           ok(dock.scrollWidth > dock.clientWidth || dock.querySelectorAll('.di').length <= 5, 'con muchos iconos la barra debe deslizarse');
+          // v154, lupa: la barra visible es baja, los iconos chicos, y crece SOLO el que pasa por el centro
+          const fondo = doc.querySelector('.pv .dock-fondo');
+          ok(fondo && fondo.offsetHeight <= 60, 'la barra visible debe ser baja (≤60 px): ' + (fondo && fondo.offsetHeight));
+          ok(w2.getComputedStyle(dock).pointerEvents === 'none', 'la franja transparente sobre la barra no debe tapar el mapa');
+          const k = b => parseFloat(b.style.getPropertyValue('--k')) || 0;
+          const dis = [...dock.querySelectorAll('.di')];
+          for (const clave of ['punto', 'geomorf', '__ajustes']) {   // el primero, uno del medio y el último
+            const b = dis.find(x => x.dataset.clave === clave);
+            dock.scrollLeft = b.offsetLeft + b.offsetWidth / 2 - dock.clientWidth / 2;
+            w2.lupaDock(dock);
+            ok(k(b) > 0.9, clave + ' en el centro no se agranda: --k=' + k(b));
+            const grandes = dis.filter(x => k(x) > 0.5).map(x => x.dataset.clave);
+            ok(grandes.length <= 3, 'demasiados iconos agrandados a la vez: ' + grandes.join(', '));
+            ok(dis.filter(x => k(x) === 0).length >= dis.length - 5, 'los iconos lejos del centro deben quedar chicos');
+            // el tamaño final, sin la transición de 0,09 s: con la pestaña sin pintar (panel oculto,
+            // segundo plano) las transiciones no avanzan y se mediría el tamaño de partida
+            const medir = s => { s.style.transition = 'none'; const w = s.getBoundingClientRect().width; s.style.transition = ''; return w; };
+            const wc = medir(b.querySelector('svg')), wb = medir(dis.find(x => k(x) === 0).querySelector('svg'));
+            ok(wc > wb * 1.6, 'el icono central no se ve más grande: ' + wc + ' vs ' + wb);
+          }
           doc.querySelector('.dock .di[data-clave="aflora"]').click();
           await esperar(() => doc.querySelector('.hoja'), 3000, 'la hoja');
           await new Promise(res => setTimeout(res, 300));   // fin de la animación de entrada

@@ -259,7 +259,21 @@
   .pv-herr{position:absolute;top:10px;right:10px;z-index:3;display:flex;flex-direction:column;gap:8px}
   .pv-herr button{width:44px;height:44px;border-radius:50%;border:1px solid var(--bd);background:var(--surface);color:var(--txt);font-size:18px;box-shadow:var(--shadow);cursor:pointer;padding:0}
   .pv-aviso{position:absolute;top:10px;left:10px;right:64px;z-index:3;display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:8px 10px;font-size:14px;box-shadow:var(--shadow)}
-  .dock{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:3;max-width:804px;margin:0 auto;display:flex;gap:2px;overflow-x:auto;padding:5px;border-radius:18px;background:var(--surface);border:1px solid var(--bd);box-shadow:0 8px 24px -10px rgba(0,0,0,.45);scrollbar-width:none}
+  /* Lupa (v154, como el Dock de macOS): los iconos son chicos y crecen hacia arriba a medida que
+     pasan por el centro de la barra (o bajo el mouse). La barra visible es .dock-fondo, baja; el
+     carrusel (.dock) es transparente y más alto para que el icono agrandado tenga dónde crecer, y
+     no recibe toques (pointer-events) salvo en los botones: el mapa sigue vivo detrás. El relleno
+     lateral de medio ancho deja llevar cualquier icono, también el primero y el último, al centro.
+     El tamaño cambia con transform: el botón sigue de 44 px y no se mueve nada al agrandar. */
+  .dock-fondo{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));height:54px;max-width:804px;margin:0 auto;z-index:3;border-radius:16px;background:var(--surface);border:1px solid var(--bd);box-shadow:0 8px 24px -10px rgba(0,0,0,.45);pointer-events:none}
+  .dock{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:4;max-width:804px;margin:0 auto;display:flex;gap:2px;overflow-x:auto;padding:30px calc(50% - 22px) 3px;scroll-snap-type:x proximity;pointer-events:none;scrollbar-width:none}
+  .dock .di{pointer-events:auto;width:44px;min-height:48px;padding:9px 0 0;scroll-snap-align:center;--k:0}
+  .dock .di svg{width:22px;height:22px;transform-origin:50% 100%;transform:translateY(calc(var(--k) * -15px)) scale(calc(1 + var(--k) * .8));transition:transform .09s linear}
+  .dock .di span{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);max-width:none;padding:0 4px;border-radius:6px;background:var(--surface);opacity:calc(var(--k) * 2.4 - 1.4);pointer-events:none}
+  .dock .di b{transform:translateY(calc(var(--k) * -20px));transition:transform .09s linear}
+  .dock .di.activo{background:none}
+  .dock .di.activo span{opacity:1}
+  .dock .di.falta::after{top:auto;bottom:0;width:5px;height:5px;margin-left:-2.5px;box-shadow:none;background:var(--naranja)}
   .dock::-webkit-scrollbar{display:none}
   .di{position:relative;flex:0 0 auto;width:62px;min-height:60px;padding:7px 2px 4px;border:none;border-radius:12px;background:none;color:var(--verde);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font:inherit}
   .di svg{width:28px;height:28px;flex:0 0 auto}
@@ -7026,7 +7040,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v153';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v154';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -13826,8 +13840,10 @@ async function renderPuntoIconos(app){
       el('button',{type:'button',title:'Ver como lista','aria-label':'Ver como lista',onclick:()=>fijarModoVistaPunto('lista')},'≡'),
       el('button',{type:'button',title:'Centrar en el punto','aria-label':'Centrar en el punto',
         onclick:()=>{ if(mapa&&marcador) mapa.setView(marcador.getLatLng(),Math.max(mapa.getZoom(),16)); }},'⌖'));
+    const dock=el('div',{class:'dock',role:'toolbar','aria-label':'Fichas del punto'});
     const raiz=el('div',{class:'pv','data-id':curPunto.id},el('div',{id:'map',class:'pv-mapa'}),fotoBox,herr,
-      el('div',{class:'pv-aviso'}),el('div',{class:'dock',role:'toolbar','aria-label':'Fichas del punto'}));
+      el('div',{class:'pv-aviso'}),el('div',{class:'dock-fondo'}),dock);
+    armarLupa(dock);
     app.append(raiz);
     medirHeader();
     initMapPunto(curPunto,f,{fijo:true});
@@ -13854,10 +13870,32 @@ async function refrescarDock(){
   if(tok!==pv.tokDock) return;
   curPunto._nlito=litos.length;
   pv.items=itemsDock({hijas:HIJAS,tiposRoca:tiposRoca(),litos,conteo,ocultos:iconosOcultos()});
+  const sl=dock.scrollLeft;
   dock.innerHTML='';
   for(const it of pv.items) dock.append(botonIcono(it,()=>abrirHoja(it.clave)));
   dock.append(botonIcono({clave:'__ajustes',titulo:'Elegir iconos'},abrirSelectorIconos));
+  // primera vez: la barra arranca llena desde la izquierda (no con medio ancho vacío por el
+  // relleno que deja centrar el primer icono); después se respeta donde la dejó el usuario
+  if(!pv.dockIni){ pv.dockIni=true; dock.scrollLeft=Math.max(0,dock.clientWidth/2-26); } else dock.scrollLeft=sl;
+  lupaDock(dock);
   marcarActivo();
+}
+// Lupa de la barra: k (0..1) según la distancia del centro de cada icono al centro de la barra
+// (o al mouse, en el computador); el CSS agranda con --k. Curva suave (smoothstep) en LUPA_RADIO.
+const LUPA_RADIO=100;
+function lupaDock(dock, x){
+  const r=dock.getBoundingClientRect(), cx=x==null?r.left+r.width/2:x;
+  for(const b of dock.children){
+    const q=b.getBoundingClientRect(), t=Math.max(0,1-Math.abs(q.left+q.width/2-cx)/LUPA_RADIO);
+    b.style.setProperty('--k',(t*t*(3-2*t)).toFixed(3));
+  }
+}
+function armarLupa(dock){
+  let raf=0, x=null;
+  const pedir=()=>{ if(!raf) raf=requestAnimationFrame(()=>{ raf=0; lupaDock(dock,x); }); };
+  dock.addEventListener('scroll',pedir,{passive:true});
+  dock.addEventListener('pointermove',e=>{ if(e.pointerType==='mouse'){ x=e.clientX; pedir(); } });
+  dock.addEventListener('pointerleave',()=>{ x=null; pedir(); });
 }
 function botonIcono(it,accion){
   const n=it.n||0;
