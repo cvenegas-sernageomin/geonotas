@@ -2539,6 +2539,11 @@ async function correr(){
         const doc = w.document;
         ok(!doc.getElementById('fab').children.length, 'la barra de acciones vieja no debe quedar bajo el mapa');
         ok(doc.querySelector('.pv #map.leaflet-container'), 'el mapa de fondo no se inició');
+        // v158: 📷 en la vista del punto; la foto se cuelga de ESTE punto
+        ok(doc.querySelector('.pv .cam-fab'), 'falta el 📷 en la vista del punto');
+        const ft = await w.agregarFotoAlPunto('data:image/jpeg;base64,/9j/smoke-pv');
+        eq((await w.childrenOf('foto', pt.id)).map(f => f._img), ['data:image/jpeg;base64,/9j/smoke-pv'], 'la foto del 📷 no quedó en el punto');
+        await w.del('foto', ft.id);
         doc.querySelector('.dock .di[data-clave="lito:Volcánica"]').click();
         await esperar(() => doc.querySelector('.hoja .hoja-vacia button'), 3000, 'la hoja vacía con «+ Agregar»');
         doc.querySelector('.hoja .hoja-vacia button').click();
@@ -2630,6 +2635,11 @@ async function correr(){
           ok(w2.overlayAbierto() === hoja, 'el botón atrás no ve la hoja abierta');
           w2.cerrarOverlay(hoja);
           ok(!doc.querySelector('.hoja'), 'el botón atrás no cerró la hoja');
+          // v158: el 📷 a la derecha, dentro de la pantalla, sin tapar la barra ni los botones de arriba
+          const cam = doc.querySelector('.pv .cam-fab').getBoundingClientRect(), herr = doc.querySelector('.pv-herr').getBoundingClientRect();
+          const fondoR = doc.querySelector('.pv .dock-fondo').getBoundingClientRect();
+          ok(cam.right <= ifr.clientWidth + 0.5 && cam.left > ifr.clientWidth / 2, 'el 📷 no está a la derecha dentro de la pantalla: ' + cam.left + '–' + cam.right);
+          ok(cam.bottom < fondoR.top && cam.top > herr.bottom, 'el 📷 se monta sobre la barra o los botones de arriba');
           // v157: el header va en una sola fila en el teléfono (antes tres, ~144 px)
           const hh = doc.querySelector('header').offsetHeight;
           ok(hh <= 72, 'el header ocupa ' + hh + ' px a 375 px: debía ir en una fila');

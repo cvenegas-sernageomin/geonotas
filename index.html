@@ -7087,7 +7087,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v157';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v158';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -14101,7 +14101,10 @@ async function renderPuntoIconos(app){
         onclick:()=>{ if(mapa&&marcador) mapa.setView(marcador.getLatLng(),Math.max(mapa.getZoom(),16)); }},'⌖'));
     const dock=el('div',{class:'dock',role:'toolbar','aria-label':'Fichas del punto'});
     const raiz=el('div',{class:'pv','data-id':curPunto.id},el('div',{id:'map',class:'pv-mapa'}),fotoBox,herr,
-      el('div',{class:'pv-aviso'}),el('div',{class:'dock-fondo'}),dock);
+      el('div',{class:'pv-aviso'}),el('div',{class:'dock-fondo'}),dock,
+      // v158: el 📷 también aquí, a la derecha del mapa como en el del proyecto; la foto va a ESTE punto
+      el('button',{type:'button',class:'cam-fab',title:'Foto para este punto','aria-label':'Tomar una foto para este punto',
+        onclick:fotoAlPunto,html:iconoDe('foto')}));
     armarLupa(dock);
     app.append(raiz);
     medirHeader();
@@ -16286,6 +16289,26 @@ function ubicarFotoEnMapa(img){
   if(cont) cont.append(b);
   mapaVista.getContainer().style.cursor='crosshair';
   mapaVista.on('click',tocar);
+}
+// 📷 de la vista del punto (v158): la foto se suma a las del punto abierto, sin crear otro punto.
+function fotoAlPunto(){
+  if(bloqueoGabineteActivo()||!pv) return;
+  const inp=el('input',{type:'file',accept:'image/*',capture:'environment',style:'display:none'});
+  document.body.append(inp);
+  inp.addEventListener('cancel',()=>inp.remove());
+  inp.addEventListener('change',async()=>{
+    const file=inp.files[0]; inp.remove(); if(!file) return;
+    await agregarFotoAlPunto(await comprimir(file,1280,.72));
+    toast('📷 Foto agregada a '+(curPunto.ID_PUNTO_CONTROL||'el punto'));
+    if(document.querySelector('.pv')) await renderPuntoIconos($('#app'));   // la cuenta del icono Fotos
+  });
+  inp.click();
+}
+async function agregarFotoAlPunto(img){
+  await guardarPuntoForm(pv.f);   // un punto nuevo todavía sin guardar tiene que existir para colgarle la foto
+  const reg={id:uid(),_parent:curPunto.id,_img:img};
+  await put('foto',reg);
+  return reg;
 }
 // Crea el punto (con la autonumeración del proyecto, los valores recordados y la fecha/hora) y su
 // foto. r: la posición de capturarPosicion() o {fuente:'manual',lat,lon}. Devuelve el punto.
