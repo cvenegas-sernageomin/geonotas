@@ -266,13 +266,16 @@
      lateral de medio ancho deja llevar cualquier icono, también el primero y el último, al centro.
      El tamaño cambia con transform: el botón sigue de 44 px y no se mueve nada al agrandar. */
   .dock-fondo{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));height:54px;max-width:804px;margin:0 auto;z-index:3;border-radius:16px;background:var(--surface);border:1px solid var(--bd);box-shadow:0 8px 24px -10px rgba(0,0,0,.45);pointer-events:none}
-  .dock{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:4;max-width:804px;margin:0 auto;display:flex;gap:2px;overflow-x:auto;padding:30px calc(50% - 22px) 3px;scroll-snap-type:x proximity;pointer-events:none;scrollbar-width:none}
-  .dock .di{pointer-events:auto;width:44px;min-height:48px;padding:9px 0 0;scroll-snap-align:center;--k:0}
-  .dock .di svg{width:22px;height:22px;transform-origin:50% 100%;transform:translateY(calc(var(--k) * -15px)) scale(calc(1 + var(--k) * .8));transition:transform .09s linear}
-  .dock .di span{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);max-width:none;padding:0 4px;border-radius:6px;background:var(--surface);opacity:calc(var(--k) * 2.4 - 1.4);pointer-events:none}
-  .dock .di b{transform:translateY(calc(var(--k) * -20px));transition:transform .09s linear}
+  /* v155: el carrusel SÍ recibe toques (con pointer-events:none el deslizamiento con el dedo no
+     llegaba a la barra en el teléfono) y el agrandado lo escribe lupaDock() en cada icono, en vez
+     de calc(var(--k)) dentro de transform/opacity: en el teléfono del usuario no se agrandaba. */
+  .dock{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:4;max-width:804px;margin:0 auto;display:flex;gap:2px;overflow-x:auto;padding:30px calc(50% - 22px) 3px;scroll-snap-type:x proximity;scrollbar-width:none;touch-action:pan-x}
+  .dock .di{width:44px;min-height:48px;padding:9px 0 0;scroll-snap-align:center}
+  .dock .di svg{width:22px;height:22px;transform-origin:50% 100%;transition:transform .09s linear;will-change:transform}
+  .dock .di span{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);max-width:none;padding:0 4px;border-radius:6px;background:var(--surface);opacity:0;pointer-events:none}
+  .dock .di b{transition:transform .09s linear}
   .dock .di.activo{background:none}
-  .dock .di.activo span{opacity:1}
+  .dock .di.activo span{opacity:1!important}
   .dock .di.falta::after{top:auto;bottom:0;width:5px;height:5px;margin-left:-2.5px;box-shadow:none;background:var(--naranja)}
   .dock::-webkit-scrollbar{display:none}
   .di{position:relative;flex:0 0 auto;width:62px;min-height:60px;padding:7px 2px 4px;border:none;border-radius:12px;background:none;color:var(--verde);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font:inherit}
@@ -13881,19 +13884,28 @@ async function refrescarDock(){
   marcarActivo();
 }
 // Lupa de la barra: k (0..1) según la distancia del centro de cada icono al centro de la barra
-// (o al mouse, en el computador); el CSS agranda con --k. Curva suave (smoothstep) en LUPA_RADIO.
+// (o al mouse, en el computador). Curva suave (smoothstep) en LUPA_RADIO. Escribe el transform y
+// la opacidad de cada icono directamente (--k queda como dato, lo lee el smoke).
 const LUPA_RADIO=100;
 function lupaDock(dock, x){
   const r=dock.getBoundingClientRect(), cx=x==null?r.left+r.width/2:x;
   for(const b of dock.children){
-    const q=b.getBoundingClientRect(), t=Math.max(0,1-Math.abs(q.left+q.width/2-cx)/LUPA_RADIO);
-    b.style.setProperty('--k',(t*t*(3-2*t)).toFixed(3));
+    const q=b.getBoundingClientRect(), t=Math.max(0,1-Math.abs(q.left+q.width/2-cx)/LUPA_RADIO), k=t*t*(3-2*t);
+    b.style.setProperty('--k',k.toFixed(3));
+    const svg=b.querySelector('svg'), nom=b.querySelector('span'), n=b.querySelector('b');
+    if(svg) svg.style.transform='translateY('+(-15*k).toFixed(1)+'px) scale('+(1+.8*k).toFixed(3)+')';
+    if(nom) nom.style.opacity=Math.max(0,Math.min(1,k*2.4-1.4)).toFixed(2);
+    if(n) n.style.transform='translateY('+(-20*k).toFixed(1)+'px)';
   }
 }
 function armarLupa(dock){
   let raf=0, x=null;
   const pedir=()=>{ if(!raf) raf=requestAnimationFrame(()=>{ raf=0; lupaDock(dock,x); }); };
+  // scroll, y además touchmove/scrollend: si un navegador no avisa el scroll en cada cuadro del
+  // deslizamiento, la lupa igual sigue al dedo y queda bien al soltar
   dock.addEventListener('scroll',pedir,{passive:true});
+  dock.addEventListener('touchmove',pedir,{passive:true});
+  dock.addEventListener('scrollend',pedir);
   dock.addEventListener('pointermove',e=>{ if(e.pointerType==='mouse'){ x=e.clientX; pedir(); } });
   dock.addEventListener('pointerleave',()=>{ x=null; pedir(); });
 }

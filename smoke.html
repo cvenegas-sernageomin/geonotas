@@ -2602,7 +2602,8 @@ async function correr(){
           // v154, lupa: la barra visible es baja, los iconos chicos, y crece SOLO el que pasa por el centro
           const fondo = doc.querySelector('.pv .dock-fondo');
           ok(fondo && fondo.offsetHeight <= 60, 'la barra visible debe ser baja (≤60 px): ' + (fondo && fondo.offsetHeight));
-          ok(w2.getComputedStyle(dock).pointerEvents === 'none', 'la franja transparente sobre la barra no debe tapar el mapa');
+          // v155: el carrusel debe recibir el dedo (con pointer-events:none no se deslizaba en el teléfono)
+          ok(w2.getComputedStyle(dock).pointerEvents !== 'none', 'el carrusel no recibe toques: no se puede deslizar con el dedo');
           const k = b => parseFloat(b.style.getPropertyValue('--k')) || 0;
           const dis = [...dock.querySelectorAll('.di')];
           for (const clave of ['punto', 'geomorf', '__ajustes']) {   // el primero, uno del medio y el último
