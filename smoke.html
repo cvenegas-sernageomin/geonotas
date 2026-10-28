@@ -2472,6 +2472,153 @@ async function correr(){
       return 'migración idempotente · fichas que aparecen según el tipo · listas CDC · hijas 1:1 en el GeoPackage';
     });
 
+    // ---- v153: vista iconos (el punto sobre el mapa, barra de iconos y hoja inferior) ----
+    const esperar = async (fn, ms = 4000, que = 'condición') => {
+      const t0 = Date.now();
+      while (!(await fn())) { if (Date.now() - t0 > ms) throw new Error('no se cumplió a tiempo: ' + que); await new Promise(r => setTimeout(r, 60)); }
+    };
+    // Monta un proyecto y un punto smoke- en la vista iconos de la ventana dada; fn recibe el
+    // punto. Restaura después la vista, las preferencias y borra lo creado (las fichas nuevas
+    // llevan uid() y no el prefijo smoke-, así que se borran por _parent).
+    const enVistaIconos = async (win, sufijo, fn) => {
+      const pr = {id:P+'pv-pr'+sufijo, ID_PROYECTO:P+'pv'+sufijo, NOMBRE_PROYECTO:'Prueba iconos'};
+      const pt = {id:P+'pv-pt'+sufijo, _parent:pr.id, ID_PUNTO_CONTROL:'PV-1', _idDone:true, [LAT]:'-33.450000', [LON]:'-70.650000'};
+      const ls = win.localStorage, guardadas = {};
+      ['gt-vista-punto','gt-iconos-defecto','gt-sticky'].forEach(k => guardadas[k] = ls.getItem(k));   // el autoguardado del punto toca gt-sticky
+      await win.put('proyecto', pr); await win.put(win.storeActivo(), pt);
+      try {
+        ls.setItem('gt-vista-punto', 'iconos'); ls.removeItem('gt-iconos-defecto');
+        win.__smokePr = pr;
+        win.eval('curProyecto = window.__smokePr; vista = {n:"punto", id:' + JSON.stringify(pt.id) + '}');
+        await win.render();
+        await esperar(() => win.document.querySelector('.pv .dock .di'), 4000, 'la barra de iconos');
+        return await fn(pt, pr);
+      } finally {
+        for (const [k, v] of Object.entries(guardadas)) v == null ? ls.removeItem(k) : ls.setItem(k, v);
+        win.eval('cerrarHojas(); vista = {n:"home"}');
+        await win.render();
+        for (const h of win.eval('HIJAS')) for (const r of await win.childrenOf(h.store, pt.id)) await win.del(h.store, r.id);
+        await win.del(win.storeActivo(), pt.id); await win.del('proyecto', pr.id);
+      }
+    };
+
+    await prueba('v153 vista iconos: la barra sale de HIJAS y TIPO_ROCA; ocultar un icono nunca esconde datos', async () => {
+      const H = w.eval('HIJAS'), tipos = w.tiposRoca();
+      ok(tipos.length >= 5, 'el dominio TIPO_ROCA llegó vacío: ' + JSON.stringify(tipos));
+      const base = {hijas:H, tiposRoca:tipos, litos:[], conteo:{}, ocultos:[]};
+      let it = w.itemsDock(base), cl = it.map(i => i.clave);
+      eq(cl[0], 'punto', 'el primer icono debe ser el punto');
+      tipos.forEach(t => ok(cl.includes('lito:' + t), 'falta el icono de la roca ' + t));
+      H.filter(h => h.store !== 'litologia' && !h.rama).forEach(h => ok(cl.includes(h.store), 'falta el icono de ' + h.store));
+      ok(cl.includes('fotomapa'), 'falta el icono del foto-mapa');
+      H.filter(h => h.rama).forEach(h => ok(!cl.includes(h.store), h.store + ' sin litología de su rama no debe aparecer'));
+      ok(it.filter(i => i.clave.startsWith('lito:')).every(i => i.falta), 'sin litologías, los iconos de roca deben marcar que falta (oblig)');
+      // ocultos sin datos: fuera de la barra
+      it = w.itemsDock(Object.assign({}, base, {ocultos:['lito:Metamórfica', 'geomorf']}));
+      ok(!it.some(i => i.clave === 'lito:Metamórfica' || i.clave === 'geomorf'), 'un icono oculto y vacío sigue en la barra');
+      // ocultos CON datos: se ven atenuados y con su cuenta; la litología sin tipo siempre se ve
+      it = w.itemsDock(Object.assign({}, base, {ocultos:['lito:Metamórfica', 'geomorf'], conteo:{geomorf:2},
+        litos:[{TIPO_ROCA:'Metamórfica'}, {TIPO_ROCA:''}, {TIPO_ROCA:'Depósito'}]}));
+      const met = it.find(i => i.clave === 'lito:Metamórfica'), geo = it.find(i => i.clave === 'geomorf');
+      ok(met && met.oculto && met.n === 1, 'la metamórfica oculta con datos debe verse atenuada con n=1: ' + JSON.stringify(met));
+      ok(geo && geo.oculto && geo.n === 2, 'geomorfología oculta con datos debe verse atenuada con n=2: ' + JSON.stringify(geo));
+      const sin = it.find(i => i.clave === 'lito:');
+      ok(sin && sin.n === 2, 'las litologías sin tipo (o con un tipo fuera del dominio) necesitan su icono: ' + JSON.stringify(sin));
+      ok(!it.filter(i => i.clave.startsWith('lito:')).some(i => i.falta), 'con litologías ya no falta nada');
+      // una ficha de rama con registros se ve aunque el punto ya no tenga la litología de la rama
+      for (const h of H.filter(h => h.rama)) {
+        const c = w.itemsDock(Object.assign({}, base, {conteo:{[h.store]:1}})).find(i => i.clave === h.store);
+        ok(c && c.n === 1, h.store + ' con fichas debe verse');
+      }
+      const genericos = w.catalogoIconos().filter(i => w.iconoDe(i.clave) === w.iconoDe('__sin_dibujo__')).map(i => i.clave);
+      return it.length + ' iconos' + (genericos.length ? ' · con dibujo genérico: ' + genericos.join(', ') : ' · todas las fichas tienen dibujo propio');
+    });
+
+    await prueba('v153 vista iconos: la hoja escribe en la base, se cierra con atrás y el proyecto recuerda los iconos', async () => {
+      return enVistaIconos(w, '', async (pt, pr) => {
+        const doc = w.document;
+        ok(!doc.getElementById('fab').children.length, 'la barra de acciones vieja no debe quedar bajo el mapa');
+        ok(doc.querySelector('.pv #map.leaflet-container'), 'el mapa de fondo no se inició');
+        doc.querySelector('.dock .di[data-clave="lito:Volcánica"]').click();
+        await esperar(() => doc.querySelector('.hoja .hoja-vacia button'), 3000, 'la hoja vacía con «+ Agregar»');
+        doc.querySelector('.hoja .hoja-vacia button').click();
+        await esperar(() => doc.querySelector('.hoja .child-block'), 3000, 'la ficha nueva en la hoja');
+        const lit = await w.childrenOf('litologia', pt.id);
+        eq(lit.map(L => L.TIPO_ROCA), ['Volcánica'], 'la ficha creada desde el icono debe traer su TIPO_ROCA');
+        // el contenido, no el conector: lo escrito en la hoja tiene que llegar a IndexedDB
+        const inp = doc.querySelector('.hoja .child-block textarea, .hoja .child-block input[type=text]');
+        ok(inp, 'la hoja no trae ningún campo de texto');
+        inp.value = 'smoke-escrito-en-la-hoja'; inp.dispatchEvent(new w.Event('change', {bubbles:true}));
+        await esperar(async () => (await w.get('litologia', lit[0].id))[inp.name] === 'smoke-escrito-en-la-hoja', 3000, 'el autoguardado de ' + inp.name);
+        await esperar(() => /\b1\b/.test((doc.querySelector('.dock .di[data-clave="lito:Volcánica"] b') || {}).textContent || ''), 3000, 'la cuenta 1 en el icono');
+        // (el botón atrás se prueba en el iframe de 375 px: en este de 1 px cualquier capa fija,
+        // hasta el toast, mide "pantalla completa" y le gana a la hoja)
+        w.cerrarHojas();
+        ok(!doc.querySelector('.hoja'), 'cerrarHojas no cerró la hoja');
+        // preferencia por proyecto
+        await w.guardarIconosOcultos(['lito:Metamórfica', 'lito:Volcánica']); await w.refrescarDock();
+        eq((await w.get('proyecto', pr.id))._iconos, {ocultos:['lito:Metamórfica', 'lito:Volcánica']}, 'la preferencia no quedó en el proyecto');
+        ok(!doc.querySelector('.dock .di[data-clave="lito:Metamórfica"]'), 'la metamórfica oculta sigue en la barra');
+        ok(doc.querySelector('.dock .di.oculto[data-clave="lito:Volcánica"]'), 'la volcánica oculta tiene datos: debe verse atenuada');
+        // el selector usa botones: en Gabinete bloqueado updateFormReadonly no debe desactivarlos
+        doc.querySelector('.dock .di[data-clave="__ajustes"]').click();
+        w.updateFormReadonly();
+        ok(doc.querySelectorAll('.hoja .sel-iconos button').length >= w.tiposRoca().length, 'el selector no lista los iconos');
+        ok(![...doc.querySelectorAll('.hoja .sel-iconos button')].some(b => b.disabled), 'updateFormReadonly desactivó el selector');
+        // la lista de siempre sigue disponible
+        w.localStorage.setItem('gt-vista-punto', 'lista'); await w.render();
+        ok(doc.querySelector('.card.collap') && !doc.querySelector('.pv'), '«≡ Lista» no volvió a las tarjetas');
+        ok([...doc.querySelectorAll('#fab button')].some(b => /Iconos/.test(b.textContent)), 'la lista no ofrece volver a los iconos');
+        return 'ficha creada con su tipo · autoguardado · iconos por proyecto · selector usable en Gabinete · lista intacta';
+      });
+    });
+
+    await prueba('v153 vista iconos a 375×812: la barra no desborda, botones ≥44 px y la hoja no tapa el header', async () => {
+      const ifr = document.createElement('iframe');
+      ifr.style.cssText = 'width:375px;height:812px;border:0;position:absolute;left:-9999px;top:0';
+      ifr.src = 'index.html';
+      document.body.appendChild(ifr);
+      try {
+        const w2 = await new Promise((res, rej) => {
+          const t0 = Date.now();
+          (async function poll(){
+            const cw = ifr.contentWindow;
+            if (cw && typeof cw.all === 'function') { try { await cw.all('proyecto'); return res(cw); } catch(e){} }
+            if (Date.now() - t0 > 35000) return rej(new Error('la app no arrancó en el iframe de 375 px'));
+            setTimeout(poll, 150);
+          })();
+        });
+        const t1 = Date.now();
+        while (w2.document.querySelector('header').offsetHeight === 0 && Date.now() - t1 < 8000) await new Promise(r => setTimeout(r, 200));
+        return await enVistaIconos(w2, '-375', async () => {
+          const doc = w2.document, dock = doc.querySelector('.pv .dock');
+          const r = dock.getBoundingClientRect();
+          ok(r.left >= 0 && r.right <= ifr.clientWidth + 0.5, 'la barra se sale del ancho: ' + r.left + '–' + r.right);
+          ok(doc.documentElement.scrollWidth <= ifr.clientWidth + 1, 'la página desborda a lo ancho: ' + doc.documentElement.scrollWidth);
+          ok(r.bottom <= ifr.clientHeight + 0.5 && r.top > ifr.clientHeight / 2, 'la barra no está abajo: ' + r.top + '–' + r.bottom);
+          const chicos = [...dock.querySelectorAll('.di')].filter(b => b.offsetWidth < 44 || b.offsetHeight < 44).map(b => b.dataset.clave);
+          eq(chicos, [], 'iconos de menos de 44 px');
+          ok(dock.scrollWidth > dock.clientWidth || dock.querySelectorAll('.di').length <= 5, 'con muchos iconos la barra debe deslizarse');
+          doc.querySelector('.dock .di[data-clave="aflora"]').click();
+          await esperar(() => doc.querySelector('.hoja'), 3000, 'la hoja');
+          await new Promise(res => setTimeout(res, 300));   // fin de la animación de entrada
+          const hb = doc.querySelector('header').getBoundingClientRect().bottom, ht = doc.querySelector('.hoja').getBoundingClientRect().top;
+          ok(ht >= hb - 0.5, 'la hoja tapa el header: arriba en ' + ht + ' y el header termina en ' + hb);
+          // atrás (Android): la hoja no cubre la pantalla, pero overlayAbierto debe verla y cerrarla
+          const hoja = doc.querySelector('.hoja');
+          ok(w2.overlayAbierto() === hoja, 'el botón atrás no ve la hoja abierta');
+          w2.cerrarOverlay(hoja);
+          ok(!doc.querySelector('.hoja'), 'el botón atrás no cerró la hoja');
+          return dock.querySelectorAll('.di').length + ' iconos en ' + Math.round(r.width) + ' px · hoja desde ' + Math.round(ht) + ' px · atrás la cierra';
+        });
+      } finally {
+        // el último del() resuelve antes de que su transacción se confirme: quitar el iframe en
+        // el acto la aborta y el proyecto smoke- quedaba en la base
+        await new Promise(r => setTimeout(r, 600));
+        ifr.remove();
+      }
+    });
+
     await prueba('No quedó basura ni se tocaron datos ajenos', async () => {
       for (const s of STORES_LIMPIAR) eq((await w.all(s)).filter(mio).length, 0, 'quedaron registros smoke- en ' + s);
       const despues = await censo(w);
