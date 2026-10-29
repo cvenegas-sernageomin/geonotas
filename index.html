@@ -1457,6 +1457,12 @@ const MODELO = {
           "nota": "Inclinación de la lineación (0-90°)."
         },
         {
+          "nombre": "RAKE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Rake (Aki & Richards), -180° a 180°, medido en el plano desde el rumbo (mano derecha) hasta el deslizamiento del bloque colgante: + inversa, - normal, 0 sinistral, ±180 dextral. Se calcula de TREND/PLUNGE con el sentido de TIPO_FALLA/CATEGORIA_FALLA (sin sentido, se asume el de la inmersión); escrito a mano, calcula TREND/PLUNGE."
+        },
+        {
           "nombre": "TIPO_MEDIDA_ESTRUCTURAL",
           "obligatorio": true,
           "dominio": "TIPO_MEDIDA_ESTRUCTURAL",
@@ -7083,6 +7089,7 @@ const MODELO = {
         "MANTEO_BUZAMIENTO",
         "TREND",
         "PLUNGE",
+        "RAKE",
         "TIPO_MEDIDA_ESTRUCTURAL",
         "GRADO_CONFIANZA_ESTRUCTURA",
         "DESCRIPCION_ESTRUCTURA"
@@ -7175,7 +7182,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v160';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v161';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -8756,7 +8763,7 @@ function tipoWidget(campo){
   if(campo.dominio) return 'select';
   if(/^(LAT|LONG)/.test(n)||/Lat$|Long$/.test(n)) return 'number';
   // _M$ (v152): metros de las fichas CDC de falla y pliegue (ANCHO_FALLA_MIN_M, AMPLITUD_MAX_M…)
-  if(/COTA|AZIMUT|MANTEO|BUZAMIENTO|PESO|VOLUMEN|RUMBO|ORIENTACION|TREND|PLUNGE|ESPESOR|_PCT$|_CM$|_MM$|_M$|_UTM$/.test(n)) return 'number';
+  if(/COTA|AZIMUT|MANTEO|BUZAMIENTO|PESO|VOLUMEN|RUMBO|ORIENTACION|TREND|PLUNGE|RAKE|ESPESOR|_PCT$|_CM$|_MM$|_M$|_UTM$/.test(n)) return 'number';
   if(n==='FECHA') return 'date';
   if(n==='HORA') return 'time';
   if(/DESCRIPCION|OBSERVACION|COMENTARIO|RELACION_LITOLOGIA|DISTRIBUCION|TEXTO|PROSA/.test(n)) return 'textarea';
@@ -9143,6 +9150,7 @@ function familiasDe(store){ const f=FAMILIAS_DE[store]; return f && MODELO[f[0]]
 // carga de campos condicionales que motivó esto.
 // Para apagar por completo y volver al comportamiento de siempre: REVELADO_PROGRESIVO_ACTIVO=false.
 const REVELADO_PROGRESIVO_ACTIVO = true;
+const REVELADO_LIBRE = {geomorf:['AZIMUT']};
 const FICHAS_CON_REVELADO = new Set(HIJAS.map(h=>h.store));
 function revelarProgresivo(store){
   return REVELADO_PROGRESIVO_ACTIVO && FICHAS_CON_REVELADO.has(store);
@@ -9687,6 +9695,10 @@ function formulario(store, reg, ctx){
       // TIPO_DEPOSITO) nunca oculta, solo deshabilita -- un campo deshabilitado tampoco es
       // candidato, o se queda "pendiente" sin forma posible de llenarse.
       if(fld.style.display==='none' || (inp && inp.disabled)) continue;
+      // Opcionales que no frenan la secuencia (v161): se ven siempre, sin «Omitir», y el campo
+      // siguiente se revela igual. El AZIMUT de geomorfología, opcional en el modelo, se sentía
+      // obligatorio porque la descripción no aparecía hasta llenarlo u omitirlo.
+      if((REVELADO_LIBRE[store]||[]).includes(n)){ fld.classList.remove('fld-pendiente'); if(b)b.style.display='none'; continue; }
       const tieneValor = omitidos.has(n) || (inp && (inp._multi ? !!valorMultichips(inp) : !!inp.value));
       if(tieneValor){ fld.classList.remove('fld-pendiente'); if(b)b.style.display='none'; continue; }
       if(!siguienteAbierto){
@@ -9868,6 +9880,7 @@ function formulario(store, reg, ctx){
     actualizarRevelado();
   });
 
+  if(store==='estructural') enlazarRake(cont);   // v161: rake <-> trend/plunge
   return {node:cont, getData(){const o={};for(const n in inputs){const i=inputs[n];
     o[n]= i._multi ? valorMultichips(i) : i.value;
   } return o;}};
@@ -13410,6 +13423,75 @@ function lineaDeVector(L){
   const plunge=-Math.asin(Math.max(-1,Math.min(1,L[2])))*R2D;
   const trend=((Math.atan2(L[0],L[1])*R2D)+360)%360;
   return {trend, plunge};
+}
+// ---- Rake (v161, convención de Aki & Richards) ----
+// AZIMUT es el rumbo con la regla de la mano derecha (manteo hacia rumbo+90), que es justo la
+// referencia de Aki & Richards: rake = ángulo en el plano desde el rumbo hasta el deslizamiento
+// del bloque colgante, -180..180 (+ inversa, - normal, 0 sinistral, ±180 dextral). Marco ENU.
+// Una lineación medida es una LÍNEA (trend/plunge apunta hacia abajo): fija el rake salvo 180°.
+// El sentido sale de TIPO_FALLA/CATEGORIA_FALLA; sin sentido (o en una polifásica) se deja el de
+// la inmersión, que da rake ≤ 0.
+const normRake=r=>{ r=((r+180)%360+360)%360-180; return r===-180?180:r; };
+function ejesPlano(az,dip){
+  const f=az*D2R, d=dip*D2R;
+  const s=[Math.sin(f),Math.cos(f),0];                                    // rumbo
+  const U=[-Math.cos(f)*Math.cos(d), Math.sin(f)*Math.cos(d), Math.sin(d)];  // subida por el manteo
+  const n=[Math.cos(f)*Math.sin(d), -Math.sin(f)*Math.sin(d), Math.cos(d)];  // normal (arriba)
+  return {s,U,n};
+}
+function sentidoFalla(v){
+  const t=String((v&&v.TIPO_FALLA)||'')+' '+String((v&&v.CATEGORIA_FALLA)||'');
+  if(/reactiv|polif/i.test(t)) return {dip:0,str:0};
+  return {dip:/invers/i.test(t)?1:/normal/i.test(t)?-1:0, str:/dextral/i.test(t)?-1:/sinistral/i.test(t)?1:0};
+}
+// {rake, desvio}: desvio = ángulo (°) entre la lineación y el plano (error de medida)
+function rakeDeLinea(az,dip,tr,pl,sentido){
+  const {s,U,n}=ejesPlano(az,dip), t=tr*D2R, q=pl*D2R;
+  const l=[Math.sin(t)*Math.cos(q), Math.cos(t)*Math.cos(q), -Math.sin(q)];
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const a=normRake(Math.atan2(dot(l,U),dot(l,s))*R2D), b=normRake(a+180);
+  const sen=sentido||{dip:0,str:0}, sin=r=>Math.sin(r*D2R), cos=r=>Math.cos(r*D2R);
+  let rake=a;
+  if(sen.dip && Math.abs(sin(a))>0.1) rake=Math.sign(sin(a))===sen.dip?a:b;
+  else if(sen.str && Math.abs(cos(a))>0.1) rake=Math.sign(cos(a))===sen.str?a:b;
+  return {rake, desvio:Math.asin(Math.min(1,Math.abs(dot(l,n))))*R2D};
+}
+function lineaDeRake(az,dip,rake){
+  const {s,U}=ejesPlano(az,dip), r=rake*D2R;
+  return lineaDeVector([0,1,2].map(i=>Math.cos(r)*s[i]+Math.sin(r)*U[i]));
+}
+// Enlaza RAKE con TREND/PLUNGE en la ficha estructural: la lineación medida manda (rake calculado);
+// un rake escrito a mano calcula la lineación. `ocupado` corta el rebote de los 'change'.
+function enlazarRake(cont){
+  const q=n=>cont.querySelector('[name="'+n+'"]');
+  if(!q('RAKE')) return;
+  const num=n=>{const i=q(n); return i?parseFloat(String(i.value).replace(',','.')):NaN;};
+  const val=n=>{const i=q(n); return i?i.value:'';};
+  let ocupado=false;
+  const fijar=(n,v)=>{const i=q(n); if(!i||i.value===v) return; i.value=v; i.dispatchEvent(new Event('change',{bubbles:true}));};
+  const plano=()=>{const az=num('AZIMUT'), dip=num('MANTEO_BUZAMIENTO'); return isNaN(az)||isNaN(dip)||dip<=0?null:{az,dip};};
+  const desdeLinea=()=>{
+    const p=plano(), tr=num('TREND'), pl=num('PLUNGE'); if(!p||isNaN(tr)||isNaN(pl)) return false;
+    const r=rakeDeLinea(p.az,p.dip,tr,pl,sentidoFalla({TIPO_FALLA:val('TIPO_FALLA'),CATEGORIA_FALLA:val('CATEGORIA_FALLA')}));
+    if(r.desvio>20) toast('La lineación queda a '+Math.round(r.desvio)+'° del plano: revisa la medida (el rake usa su proyección)');
+    ocupado=true; try{ fijar('RAKE',String(Math.round(r.rake))); } finally{ ocupado=false; }
+    return true;
+  };
+  const desdeRake=()=>{
+    const p=plano(), rk=num('RAKE'); if(!p||isNaN(rk)) return;
+    if(rk<-180||rk>180){ toast('El rake va de -180° a 180° (Aki & Richards)'); return; }
+    const l=lineaDeRake(p.az,p.dip,rk);
+    ocupado=true; try{ fijar('TREND',String(Math.round(l.trend))); fijar('PLUNGE',String(Math.round(l.plunge))); } finally{ ocupado=false; }
+  };
+  cont.addEventListener('change',e=>{
+    if(ocupado) return;
+    const n=e.target&&e.target.name;
+    if(n==='TREND'||n==='PLUNGE') desdeLinea();
+    else if(n==='RAKE') desdeRake();
+    else if(n==='AZIMUT'||n==='MANTEO_BUZAMIENTO'||n==='TIPO_FALLA'||n==='CATEGORIA_FALLA'){
+      if(!desdeLinea() && n!=='TIPO_FALLA' && n!=='CATEGORIA_FALLA') desdeRake();
+    }
+  });
 }
 function dispersionGrados(vecs,m){    // ángulo medio entre cada lectura y la media (calidad)
   if(!vecs.length)return 99;
@@ -17830,6 +17912,8 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       // define la cinemática de la falla. Notación estándar: el plano N208/64, la línea 115/32.
       const tr=parseFloat(e.TREND), pg=parseFloat(e.PLUNGE);
       if(!isNaN(tr)&&!isNaN(pg)) s+=(isNaN(az)||isNaN(mz)?' ':' con lineación ')+Math.round(tr)+'/'+Math.round(pg);
+      const rk=parseFloat(String(e.RAKE??'').replace(',','.'));
+      if(!isNaN(rk)&&!isNaN(tr)&&!isNaN(az)) s+=' (rake '+Math.round(rk)+'°)';
       // En qué roca se midió: solo cuando el punto tiene MÁS DE UNA litología. Con una sola es
       // información redundante ("estratificación N120/30 en la arenisca", si la arenisca es lo
       // único descrito); con dos o más, sin esta referencia el informe no puede saber cuál de

@@ -2725,6 +2725,48 @@ async function correr(){
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
     });
 
+    // ---- v161: rake (Aki & Richards) y azimut de geomorfología opcional ----
+    await prueba('v161 rake ↔ trend/plunge (Aki & Richards) y azimut de geomorfología sin frenar el revelado', async () => {
+      const cerca = (a, b, tol, msg) => ok(Math.abs(a - b) <= tol, msg + ': ' + a + ' ≠ ' + b);
+      const M = w.eval('MODELO'), nom = M.tablas.TBL_DATOS_ESTRUCTURALES.campos.map(c => c.nombre);
+      eq(nom.slice(nom.indexOf('TREND'), nom.indexOf('TREND') + 3), ['TREND','PLUNGE','RAKE'], 'RAKE va tras PLUNGE');
+      ok(M.familias_estructura.find(f => f.padre).campos.includes('RAKE'), 'RAKE debe exportarse en el padre');
+      // casos a mano: plano 000/60 (mantea al E). sen(pl)=sen60·sen45 → 37.8; tan(tr)=cos60·tan45 → 26.6
+      let l = w.lineaDeRake(0, 60, -45); cerca(l.trend, 26.57, 0.05, 'trend de rake -45'); cerca(l.plunge, 37.76, 0.05, 'plunge de rake -45');
+      cerca(w.rakeDeLinea(0, 60, 26.57, 37.76, {dip:-1, str:0}).rake, -45, 0.1, 'normal-sinistral');
+      cerca(w.rakeDeLinea(0, 60, 26.57, 37.76, {dip:1, str:0}).rake, 135, 0.1, 'la misma línea en una inversa');
+      eq(Math.round(w.rakeDeLinea(0, 60, 90, 60, {dip:-1, str:0}).rake), -90, 'normal pura');
+      eq(Math.round(w.rakeDeLinea(0, 60, 90, 60, {dip:1, str:0}).rake), 90, 'inversa pura');
+      eq(Math.round(w.rakeDeLinea(0, 60, 0, 0, {dip:0, str:-1}).rake), 180, 'dextral pura');
+      eq(Math.round(w.rakeDeLinea(0, 60, 180, 0, {dip:0, str:1}).rake), 0, 'sinistral pura');
+      eq(Math.round(w.rakeDeLinea(0, 60, 90, 60, {dip:0, str:0}).rake), -90, 'sin sentido: el de la inmersión');
+      // ida y vuelta en planos cualquiera (rumbo mano derecha)
+      for (const [az, dip, rk] of [[200, 35, 70], [315, 80, -120], [45, 10, 10], [130, 55, 179]]) {
+        const ln = w.lineaDeRake(az, dip, rk), sen = {dip: rk > 0 ? 1 : -1, str: Math.abs(rk) < 90 ? 1 : -1};   // casi horizontal: decide dextral/sinistral
+        cerca(w.rakeDeLinea(az, dip, ln.trend, ln.plunge, sen).rake, rk, 0.1, 'ida y vuelta ' + az + '/' + dip + ' rake ' + rk);
+        ok(w.rakeDeLinea(az, dip, ln.trend, ln.plunge, sen).desvio < 0.01, 'la línea calculada debe estar en el plano');
+      }
+      eq(w.sentidoFalla({TIPO_FALLA:'Falla con desplazamiento oblicuo-inverso, sentido dextral'}), {dip:1, str:-1}, 'sentido oblicuo-inverso dextral');
+      eq(w.sentidoFalla({TIPO_FALLA:'Falla inversa con reactivacion normal'}), {dip:0, str:0}, 'una polifásica no impone sentido');
+      // formulario
+      const f = w.formulario('estructural', {TIPO_ESTRUCTURA:'Estructura falla', AZIMUT:'0', MANTEO_BUZAMIENTO:'60', CATEGORIA_FALLA:'Falla Normal', TIPO_FALLA:'Falla normal'});
+      const q = n => f.node.querySelector('[name="' + n + '"]');
+      const cambiar = (n, v) => { q(n).value = v; q(n).dispatchEvent(new w.Event('change', {bubbles:true})); };
+      eq(q('RAKE').type, 'number', 'RAKE numérico');
+      cambiar('TREND', '90'); cambiar('PLUNGE', '60');
+      eq(q('RAKE').value, '-90', 'trend/plunge → rake');
+      cambiar('RAKE', '-45');
+      eq([q('TREND').value, q('PLUNGE').value], ['27', '38'], 'rake a mano → trend/plunge');
+      eq(q('RAKE').value, '-45', 'el rake escrito no debe reescribirse por el rebote');
+      // geomorfología: el azimut se ve sin «Omitir» y no frena la descripción
+      const g = w.formulario('geomorf', {});
+      const fld = n => g.node.querySelector('[name="' + n + '"]').closest('.fld');
+      ok(!fld('AZIMUT').classList.contains('fld-pendiente'), 'el azimut de geomorfología quedó pendiente');
+      ok(!g.node.querySelector('[name="AZIMUT"]').required, 'el azimut de geomorfología no debe ser obligatorio');
+      ok(!M.tablas.TBL_GEOMORFOLOGIA.campos.find(c => c.nombre === 'AZIMUT').obligatorio, 'AZIMUT obligatorio en el modelo');
+      return 'casos a mano, sentido de la falla, ida y vuelta, formulario y azimut de geomorfología libre';
+    });
+
     // ---- v160: alteración como ficha propia de la litología ----
     await prueba('v160 alteración: TBL_ALTERACION por ID_LITOLOGIA, listas CDC, máximo 3, migración y prosa', async () => {
       const M = w.eval('MODELO'), nom = t => M.tablas[t].campos.map(c => c.nombre);
