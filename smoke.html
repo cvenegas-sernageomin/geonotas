@@ -36,8 +36,8 @@ const P = 'smoke-';                       // prefijo de aislamiento
 // inLat/inLon son `const` dentro de la app y por eso NO son visibles desde aquí (ver
 // esperarApp). Se replican y la primera prueba los contrasta contra el modelo, para que
 // un cambio de nombre haga fallar el test en vez de dejarlo pasar en falso.
-const LAT = 'Coordenadas Geográficas Decimales_Lat';
-const LON = 'Coordenadas Geográficas Decimales_Long';
+const LAT = 'LAT_DECIMAL';   // v159 (antes 'Coordenadas Geográficas Decimales_Lat')
+const LON = 'LONG_DECIMAL';
 const STORES_TODOS = ['proyecto','punto','punto_gabinete','linea','linea_gabinete','litologia',
   'aflora','estructural','contacto','muestreo','foto','esquema','geomorf','fotomapa','nota'];
 // 'planoproy' existe en la base y cuelga del proyecto (tiene índice parent), pero NO es una
@@ -2654,9 +2654,7 @@ async function correr(){
     });
 
     // ---- v157: calidad del GPS, registro rápido con foto y header compacto ----
-    await prueba('v157 GPS: categoría y semáforo según el umbral del proyecto; anillo en el mapa', async () => {
-      eq([4, 8, 12].map(a => w.precisionGpsCategoria(a, 10)), ['muy confiable', 'confiable', 'Poco confiable'], 'categorías con umbral 10 m');
-      eq([2, 4, 6].map(a => w.precisionGpsCategoria(a, 5)), ['muy confiable', 'confiable', 'Poco confiable'], 'categorías con umbral 5 m');
+    await prueba('v157 GPS: semáforo según el umbral del proyecto; anillo en el mapa', async () => {
       eq([3, 9, 25, NaN].map(a => w.calidadGPS(a, 10)), ['ok', 'medio', 'malo', ''], 'semáforo con umbral 10 m');
       eq(w.calidadDePunto({ERROR_GPS_M:'7,5'}, 10), 'medio', 'el error en metros (coma decimal) manda');
       eq(w.calidadDePunto({PRECISION_GPS:'Poco confiable'}, 10), 'malo', 'un punto viejo sin metros usa su categoría');
@@ -2665,7 +2663,7 @@ async function correr(){
       ok(w.svgPunto([], [], null, 0, 'malo').includes('#d0453a'), 'el punto fuera del umbral no lleva anillo rojo');
       ok(!w.svgPunto([], [], null, 0).includes('stroke-dasharray'), 'sin calidad pedida no se dibuja anillo (otras llamadas)');
       ok(w.eval('MODELO').tablas.PUNTO_CONTROL.campos.some(c => c.nombre === 'ERROR_GPS_M'), 'ERROR_GPS_M no está en el modelo');
-      return 'categorías, semáforo, umbral por proyecto, anillo en el mapa y ERROR_GPS_M en el modelo';
+      return 'semáforo, umbral por proyecto, anillo en el mapa y ERROR_GPS_M en el modelo';
     });
 
     await prueba('v157 GPS: señal buena registra sola; mala abre el diálogo con «Registrar igual» y «Ubicar en el mapa»', async () => {
@@ -2712,19 +2710,65 @@ async function correr(){
         w.__smokePr = pr; w.eval('curProyecto = window.__smokePr');
         const img = 'data:image/jpeg;base64,/9j/smoke';
         const a = await w.registrarPuntoRapido(img, {fuente:'gps', lat:-33.45, lon:-70.65, acc:6.43, alt:null}); creados.push(a.id);
-        eq([a.ID_PUNTO_CONTROL, a.ERROR_GPS_M, a.PRECISION_GPS, a.FUENTE_COORDENADAS, a._parent], ['FR-07', '6.4', 'confiable', 'GPS navegador', pr.id], 'punto por GPS');
+        eq([a.ID_PUNTO_CONTROL, a.ERROR_GPS_M, a.PRECISION_GPS, a.HUSO_UTM, a.ESTE_UTM, a.FUENTE_COORDENADAS, a._parent], ['FR-07', '6.4', undefined, '19S', '346643', 'GPS navegador', pr.id], 'punto por GPS');
         eq((await w.get(w.storeActivo(), a.id)).ID_PUNTO_CONTROL, 'FR-07', 'el punto no quedó en la base');
         const fotos = await w.childrenOf('foto', a.id);
         eq(fotos.map(f => f._img), [img], 'la foto no quedó colgando del punto');
         eq((await w.get('proyecto', pr.id))._naming.pc.next, 8, 'la autonumeración no avanzó');
         const b = await w.registrarPuntoRapido(img, {fuente:'manual', lat:-33.46, lon:-70.66}); creados.push(b.id);
-        eq([b.FUENTE_COORDENADAS, b.ERROR_GPS_M, b['Coordenadas Geográficas Decimales_Lat']], ['Google Earth / imagen', undefined, '-33.460000'], 'punto ubicado a mano');
+        eq([b.FUENTE_COORDENADAS, b.ERROR_GPS_M, b.LAT_DECIMAL], ['Google Earth / imagen', undefined, '-33.460000'], 'punto ubicado a mano');
         eq(w.calidadDePunto(b), '', 'un punto a mano no debe aparentar calidad de GPS');
       } finally {
         for (const id of creados) { for (const f of await w.childrenOf('foto', id)) await w.del('foto', f.id); await w.del(w.storeActivo(), id); }
         await w.del('proyecto', pr.id); w.eval('curProyecto = null');
       }
-      return 'autonumeración FR-07 · ±6.4 m confiable · foto adjunta · ubicación a mano sin error en metros';
+      return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
+    });
+
+    // ---- v159: coordenadas del punto (lat/long decimales + UTM), error GPS obligatorio, afloramiento ----
+    await prueba('v159 punto: LAT/LONG_DECIMAL, UTM en los dos sentidos, ERROR_GPS_M obligatorio y migración', async () => {
+      const M = w.eval('MODELO'), pc = M.tablas.PUNTO_CONTROL.campos, nom = pc.map(c => c.nombre);
+      eq(nom.slice(nom.indexOf('LAT_DECIMAL'), nom.indexOf('LAT_DECIMAL') + 5), ['LAT_DECIMAL','LONG_DECIMAL','ESTE_UTM','NORTE_UTM','HUSO_UTM'], 'orden de los campos de coordenadas');
+      eq(nom.filter(n => /Decimales|PRECISION_GPS/.test(n)), [], 'quedaron los nombres viejos o PRECISION_GPS en el modelo');
+      eq(pc.find(c => c.nombre === 'ERROR_GPS_M').obligatorio, true, 'ERROR_GPS_M debe ser obligatorio');
+      eq(M.dominios.HUSO_UTM.valores, ['17S','18S','19S'], 'dominio de husos');
+      const af = M.tablas.TBL_AFLORAMIENTO.campos.map(c => c.nombre);
+      eq(af.filter(n => /TIPO_AFLORAMIENTO/.test(n)), [], 'el afloramiento aún tiene tipo/subtipo');
+      ok(!M.dominios.TIPO_AFLORAMIENTO && !M.dominios.SUBTIPO_AFLORAMIENTO, 'quedaron los dominios de tipo/subtipo de afloramiento');
+      ok(!w.formulario('aflora', {}).node.querySelector('[name="TIPO_AFLORAMIENTO"],[name="SUBTIPO_AFLORAMIENTO"]'), 'la ficha de afloramiento aún muestra tipo/subtipo');
+      // formulario: etiquetas, widgets y conversión
+      const f = w.formulario('punto', {});
+      const q = n => f.node.querySelector('[name="' + n + '"]');
+      ok(!q('PRECISION_GPS'), 'el formulario aún muestra PRECISION_GPS');
+      ok(q('ERROR_GPS_M').required, 'ERROR_GPS_M no está marcado como obligatorio en el formulario');
+      eq([q('LAT_DECIMAL').type, q('ESTE_UTM').type, q('NORTE_UTM').type, q('HUSO_UTM').tagName], ['number','number','number','SELECT'], 'widgets de coordenadas');
+      eq(q('LAT_DECIMAL').closest('.fld').querySelector('label').firstChild.textContent, 'LAT DECIMAL', 'etiqueta de latitud');
+      w.bloqueUTM(f);
+      const cambiar = (n, v) => { q(n).value = v; q(n).dispatchEvent(new w.Event('change', {bubbles:true})); };
+      cambiar('LAT_DECIMAL', '-33.450000'); cambiar('LONG_DECIMAL', '-70.650000');
+      eq([q('ESTE_UTM').value, q('NORTE_UTM').value, q('HUSO_UTM').value], ['346643', '6297607', '19S'], 'lat/long → UTM (pyproj: 346642.7, 6297606.8)');
+      cambiar('ESTE_UTM', '350000'); cambiar('NORTE_UTM', '6300000');
+      const u = w.latLonAUtm(+q('LAT_DECIMAL').value, +q('LONG_DECIMAL').value);
+      ok(Math.abs(u.este - 350000) < 1 && Math.abs(u.norte - 6300000) < 1, 'UTM → lat/long no vuelve al mismo punto: ' + q('LAT_DECIMAL').value + ', ' + q('LONG_DECIMAL').value);
+      eq([q('ESTE_UTM').value, q('NORTE_UTM').value], ['350000', '6300000'], 'la UTM escrita a mano no debe reescribirse por el rebote');
+      cambiar('NORTE_UTM', '63000');
+      ok(Math.abs(w.latLonAUtm(+q('LAT_DECIMAL').value, +q('LONG_DECIMAL').value).norte - 6300000) < 1, 'una UTM fuera de rango no debe mover el punto');
+      // migración: registro de v158 y punto creado por la light
+      const viejo = {id:'x', 'Coordenadas Geográficas Decimales_Lat':'-33.450000', 'Coordenadas Geográficas Decimales_Long':'-70.650000', PRECISION_GPS:'confiable'};
+      ok(w.migrarRegistroV159('punto', viejo), 'migrarRegistroV159 no informó cambio');
+      eq([viejo.LAT_DECIMAL, viejo.LONG_DECIMAL, viejo.ESTE_UTM, viejo.HUSO_UTM, viejo.PRECISION_GPS], ['-33.450000','-70.650000','346643','19S','confiable'], 'migración v159');
+      ok(!w.migrarRegistroV159('punto', viejo), 'la migración debe ser idempotente');
+      viejo.LAT_DECIMAL = ''; w.migrarRegistroV159('punto', viejo);
+      eq([viejo.LAT_DECIMAL, viejo['Coordenadas Geográficas Decimales_Lat']], ['', ''], 'una latitud vaciada no debe volver desde el nombre viejo (y la light debe verla vacía)');
+      ok(!w.migrarRegistroV159('litologia', {a:1}), 'solo migra puntos');
+      // put(): espeja para la light y completa la UTM
+      const pt = {id:P+'v159-pt', _parent:P+'v159-pr', LAT_DECIMAL:'-20.000000', LONG_DECIMAL:'-69.000000'};
+      try {
+        await w.put('punto', pt);
+        const g = await w.get('punto', pt.id);
+        eq([g['Coordenadas Geográficas Decimales_Lat'], g.HUSO_UTM], ['-20.000000', '19S'], 'put() no espejó la latitud o no completó la UTM');
+      } finally { await w.del('punto', pt.id); }
+      return 'modelo, formulario, lat/long ↔ UTM, rango, migración idempotente y espejo para la light';
     });
 
     await prueba('v157 header: Terreno/Gabinete compacto y menú ⋮ con respaldo y carga de geometrías', async () => {
