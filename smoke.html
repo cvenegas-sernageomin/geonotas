@@ -1989,7 +1989,9 @@ async function correr(){
       const litos = [{id:'L1', NOMBRE_ROCA:'Arenisca'}, {id:'L2', NOMBRE_ROCA:'Andesita'}];
       const fc = w.formulario('contacto', {}, {litologias:litos}).node;
       eq([...fc.querySelectorAll('[name="ID_LITOLOGIA"] option')].map(o => o.value), ['', 'L1', 'L2'], 'selector de litología del contacto');
-      ok(fc.querySelector('[name="LITOLOGIA_TECHO"]').list, 'LITOLOGIA_TECHO sin sugerencias');
+      // v162: con dos o más litologías el techo se ELIGE entre ellas; con una, texto con sugerencias
+      eq([...fc.querySelectorAll('[name="ID_LITOLOGIA_TECHO"] option')].map(o => o.value), ['', 'L1', 'L2'], 'LITOLOGIA_TECHO sin selector de litologías');
+      ok(w.formulario('contacto', {}, {litologias:[litos[0]]}).node.querySelector('[name="LITOLOGIA_TECHO"]').list, 'LITOLOGIA_TECHO sin sugerencias con una litología');
       return 'contacto, línea y muestra con nombres CDC; migración idempotente; granulometrías según tipo de roca';
     });
 
@@ -2723,6 +2725,42 @@ async function correr(){
         await w.del('proyecto', pr.id); w.eval('curProyecto = null');
       }
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
+    });
+
+    // ---- v162: techo y base del contacto vinculados a las litologías del punto ----
+    await prueba('v162 contacto: techo/base se eligen entre las litologías si y solo si hay más de una', async () => {
+      const M = w.eval('MODELO'), nom = M.tablas.TBL_CONTACTO.campos.map(c => c.nombre);
+      ok(nom.includes('ID_LITOLOGIA_TECHO') && nom.includes('ID_LITOLOGIA_BASE'), 'faltan las FK en el modelo');
+      ok(['ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE'].every(c => M.relaciones.some(r => r.padre === 'TBL_LITOLOGIA' && r.hijo === 'TBL_CONTACTO' && r.campo === c)), 'faltan las relaciones');
+      const dos = [{id:'La', NOMBRE_ROCA:'Andesita'}, {id:'Lb', NOMBRE_ROCA:'Toba de lapilli'}];
+      const tag = (f, n) => { const i = f.node.querySelector('[name="' + n + '"]'); return i ? i.tagName + (i.type === 'hidden' ? ':hidden' : '') : null; };
+      // con dos litologías: selector (FK) + texto oculto que sigue a la elegida
+      let f = w.formulario('contacto', {}, {litologias:dos});
+      eq([tag(f, 'ID_LITOLOGIA_TECHO'), tag(f, 'LITOLOGIA_TECHO'), tag(f, 'ID_LITOLOGIA_BASE')], ['SELECT', 'INPUT:hidden', 'SELECT'], 'widgets con dos litologías');
+      const sel = f.node.querySelector('[name="ID_LITOLOGIA_TECHO"]');
+      eq([...sel.options].map(o => o.value), ['', 'La', 'Lb'], 'opciones = litologías del punto');
+      sel.value = 'Lb'; sel.dispatchEvent(new w.Event('change', {bubbles:true}));
+      let d = f.getData();
+      eq([d.ID_LITOLOGIA_TECHO, d.LITOLOGIA_TECHO], ['Lb', 'Toba de lapilli'], 'elegir el techo guarda FK y nombre');
+      ok(sel.required, 'el techo sigue siendo obligatorio');
+      // registro viejo con texto que calza con una litología: se vincula solo
+      f = w.formulario('contacto', {LITOLOGIA_BASE:'Andesita'}, {litologias:dos});
+      eq(f.getData().ID_LITOLOGIA_BASE, 'La', 'texto viejo que calza con una sola litología');
+      // texto viejo que no calza: se conserva y avisa
+      f = w.formulario('contacto', {LITOLOGIA_BASE:'Brecha'}, {litologias:dos});
+      d = f.getData();
+      eq([d.ID_LITOLOGIA_BASE, d.LITOLOGIA_BASE], ['', 'Brecha'], 'texto viejo sin litología');
+      ok(/Brecha/.test(f.node.querySelector('[name="ID_LITOLOGIA_BASE"]').closest('.fld').textContent), 'falta el aviso del texto anterior');
+      // con una litología: texto libre y FK vacía (borra un vínculo viejo)
+      f = w.formulario('contacto', {LITOLOGIA_TECHO:'Andesita', ID_LITOLOGIA_TECHO:'La'}, {litologias:[dos[0]]});
+      eq([tag(f, 'LITOLOGIA_TECHO'), tag(f, 'ID_LITOLOGIA_TECHO')], ['INPUT', 'INPUT:hidden'], 'widgets con una litología');
+      d = f.getData();
+      eq([d.LITOLOGIA_TECHO, d.ID_LITOLOGIA_TECHO], ['Andesita', ''], 'con una litología la FK va vacía');
+      // prosa: manda el nombre vigente de la litología vinculada
+      const p = w.prosaPunto({id:'pt'}, {litos:[{id:'La', TIPO_ROCA:'Volcánica', NOMBRE_ROCA:'Dacita'}, {id:'Lb', TIPO_ROCA:'Volcánica', NOMBRE_ROCA:'Toba de lapilli'}],
+        aflora:[], estr:[], geomorf:[], mues:[], cont:[{id:'c', TIPO_CONTACTO:'Estratigráfico', LITOLOGIA_TECHO:'Andesita', ID_LITOLOGIA_TECHO:'La', LITOLOGIA_BASE:'Toba de lapilli', ID_LITOLOGIA_BASE:'Lb'}]}, null, null, 500);
+      ok(/dacita/i.test(p) && !/andesita/i.test(p), 'la prosa debe usar el nombre actual de la litología: ' + p);
+      return 'selector con 2+, texto con 1, registros viejos y prosa con el nombre vigente';
     });
 
     // ---- v161: rake (Aki & Richards) y azimut de geomorfología opcional ----

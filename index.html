@@ -1848,13 +1848,25 @@ const MODELO = {
           "nombre": "LITOLOGIA_TECHO",
           "obligatorio": true,
           "dominio": null,
-          "nota": "Litologia superior (techo) en el contacto (texto; sugiere las litologias del punto). La norma CDC (TBL_AF_CONTACTO) registra aqui la unidad geologica (UNIDAD_GEOL_SUP/INF); se cambio a litologia por decision del usuario (2026-10-23): la unidad se lee de la ficha de litologia."
+          "nota": "Litología superior (techo) en el contacto. Con más de una litología en el punto se elige entre ellas (ID_LITOLOGIA_TECHO); con una o ninguna, texto libre. La norma CDC (TBL_AF_CONTACTO) registra aquí la unidad geológica (UNIDAD_GEOL_SUP/INF); se cambió a litología por decisión del usuario."
+        },
+        {
+          "nombre": "ID_LITOLOGIA_TECHO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "FK a TBL_LITOLOGIA: litología superior (techo) del contacto. Se llena solo si el punto tiene más de una litología (LITOLOGIA_TECHO se elige entre ellas y guarda su nombre); vacía si no."
         },
         {
           "nombre": "LITOLOGIA_BASE",
           "obligatorio": true,
           "dominio": null,
-          "nota": "Litologia inferior (base) en el contacto (texto; sugiere las litologias del punto). La norma CDC (TBL_AF_CONTACTO) registra aqui la unidad geologica (UNIDAD_GEOL_SUP/INF); se cambio a litologia por decision del usuario (2026-10-23): la unidad se lee de la ficha de litologia."
+          "nota": "Litología inferior (base) en el contacto. Con más de una litología en el punto se elige entre ellas (ID_LITOLOGIA_BASE); con una o ninguna, texto libre. La norma CDC (TBL_AF_CONTACTO) registra aquí la unidad geológica (UNIDAD_GEOL_SUP/INF); se cambió a litología por decisión del usuario."
+        },
+        {
+          "nombre": "ID_LITOLOGIA_BASE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "FK a TBL_LITOLOGIA: litología inferior (base) del contacto. Se llena solo si el punto tiene más de una litología (LITOLOGIA_BASE se elige entre ellas y guarda su nombre); vacía si no."
         },
         {
           "nombre": "GRADO_CONFIANZA_CONTACTO",
@@ -2538,6 +2550,16 @@ const MODELO = {
       "padre": "TBL_LITOLOGIA",
       "hijo": "TBL_ALTERACION",
       "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "TBL_LITOLOGIA",
+      "hijo": "TBL_CONTACTO",
+      "campo": "ID_LITOLOGIA_TECHO"
+    },
+    {
+      "padre": "TBL_LITOLOGIA",
+      "hijo": "TBL_CONTACTO",
+      "campo": "ID_LITOLOGIA_BASE"
     }
   ],
   "dominios": {
@@ -7182,7 +7204,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v161';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v162';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -8930,7 +8952,7 @@ function etiquetaCampo(n){
     .replace(/_/g,' ');
 }
 const esPK = (store,n)=> n===pkDe(store);
-const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_LITOLOGIA','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
+const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_LITOLOGIA','ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
 // Claves de negocio que el usuario SÍ nombra (visibles/editables); el resto de ids son técnicos y se ocultan.
 const NOMBRABLES = new Set(['ID_PROYECTO','ID_PUNTO_CONTROL','ID_MUESTRA']);
 function hideField(store,n){
@@ -8939,6 +8961,7 @@ function hideField(store,n){
   if(n===pkDe(store)) return !NOMBRABLES.has(n);                                                          // PK propio: ocultar salvo nombrables
   if(n==='ID_LITOLOGIA') return store==='litologia';                                                      // FK selector en estructural/foto; PK oculto en litología
   if(n==='ID_AFLORAMIENTO') return true;                                                                   // PK en afloramiento; FK en litología que llena el export (v147)
+  if(n==='ID_LITOLOGIA_TECHO'||n==='ID_LITOLOGIA_BASE') return true;                                     // v162: las dibuja el selector de LITOLOGIA_TECHO/BASE
   if(n==='ID_CONTACTO') return store==='contacto';                                                       // FK selector en estructural (v146); PK oculto en contacto
   if(['ID_ESTRUCTURA','ID_FOTOGRAFIA','ID_ESQUEMA'].includes(n)) return true;               // ids técnicos
   return false;
@@ -9561,10 +9584,38 @@ function formulario(store, reg, ctx){
     }
     // LITOLOGIA_TECHO/BASE (v151): texto libre, con las litologías del punto como sugerencia
     // (la del otro lado del contacto puede no estar descrita en este punto).
-    if((n==='LITOLOGIA_TECHO'||n==='LITOLOGIA_BASE') && store==='contacto' && ctx && ctx.litologias && ctx.litologias.length){
-      const dl=el('datalist',{id:'dl_'+n+'_'+(reg.id||'')});
-      [...new Set(ctx.litologias.map(L=>L.NOMBRE_ROCA||L.TIPO_ROCA).filter(Boolean))].forEach(v=>dl.append(el('option',{value:v})));
-      inp.setAttribute('list',dl.id); fld.append(dl);
+    // v162 (pedido del usuario): si y solo si el punto tiene MÁS DE UNA litología, se eligen entre
+    // ellas. El selector es la FK ID_LITOLOGIA_TECHO/BASE y el texto (input oculto) guarda el nombre
+    // de la elegida, que es lo que leen la prosa vieja, la light y los exports sin join. Con una o
+    // ninguna sigue el texto libre y la FK va vacía (input oculto), para no dejar un vínculo viejo.
+    if((n==='LITOLOGIA_TECHO'||n==='LITOLOGIA_BASE') && store==='contacto' && ctx && ctx.litologias){
+      const fk='ID_'+n;
+      if(ctx.litologias.length>1){
+        const nombre=(L,i)=>L.NOMBRE_ROCA||L.TIPO_ROCA||('Litología '+(i+1));
+        const sel=el('select'); sel.name=fk; if(campo.obligatorio) sel.required=true;
+        sel.append(el('option',{value:''},'— litología del punto —'));
+        ctx.litologias.forEach((L,i)=>sel.append(el('option',{value:L.id},'Lito '+(L._nLito||i+1)+': '+nombre(L,i)+(L.UNIDAD_GEOLOGICA?' — '+L.UNIDAD_GEOLOGICA:''))));
+        // registro de antes de v162: se vincula solo si su texto calza con UNA sola litología
+        const porNombre=ctx.litologias.filter((L,i)=>reg[n]&&nombre(L,i)===reg[n]);
+        sel.value=ctx.litologias.some(L=>L.id===reg[fk])?reg[fk]:(porNombre.length===1?porNombre[0].id:'');
+        const txt=el('input',{type:'hidden'}); txt.name=n; txt.value=reg[n]||'';
+        const aviso=el('div',{class:'nota'});
+        const sync=()=>{
+          const i=ctx.litologias.findIndex(L=>L.id===sel.value);
+          if(i>=0) txt.value=nombre(ctx.litologias[i],i);   // sin elegir: el texto anterior se conserva (litología borrada o registro viejo)
+          aviso.textContent=!sel.value&&txt.value?'Anotado antes como «'+txt.value+'»: elige la litología.':'';
+        };
+        sel.addEventListener('change',()=>{ if(!sel.value) txt.value=''; sync(); });
+        sync();
+        inputs[fk]=sel; fld.append(sel, aviso); inp=txt;
+      } else {
+        const fkVacia=el('input',{type:'hidden'}); fkVacia.name=fk; fkVacia.value=''; inputs[fk]=fkVacia; fld.append(fkVacia);
+        if(ctx.litologias.length){
+          const dl=el('datalist',{id:'dl_'+n+'_'+(reg.id||'')});
+          [...new Set(ctx.litologias.map(L=>L.NOMBRE_ROCA||L.TIPO_ROCA).filter(Boolean))].forEach(v=>dl.append(el('option',{value:v})));
+          inp.setAttribute('list',dl.id); fld.append(dl);
+        }
+      }
     }
     // FK PUNTOS_APOYO -> multi-selección de puntos de control del proyecto activo
     if(n==='PUNTOS_APOYO' && ctx && ctx.puntos){
@@ -16359,6 +16410,7 @@ async function duplicarPunto(srcId){
     for(const it of await childrenOf(store,srcId)){const n=Object.assign({},it,{id:uid(),_parent:np.id});mapId[it.id]=n.id;copias.push([store,n]);}
   for(const [store,n] of copias){
     if(n.ID_LITOLOGIA&&mapLito[n.ID_LITOLOGIA])n.ID_LITOLOGIA=mapLito[n.ID_LITOLOGIA];
+    for(const k of ['ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE']) if(n[k]&&mapLito[n[k]])n[k]=mapLito[n[k]];   // v162
     if(n.ID_CONTACTO&&mapId[n.ID_CONTACTO])n.ID_CONTACTO=mapId[n.ID_CONTACTO];
     if(n._medidaDe&&mapId[n._medidaDe])n._medidaDe=mapId[n._medidaDe];
     await put(store,n);
@@ -17879,7 +17931,9 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
   if(cont.length){
     const capitalizar=s=>s.charAt(0).toUpperCase()+s.slice(1);
     for(const c of cont){
-      const techo=c.LITOLOGIA_TECHO||'la litología superior', base=c.LITOLOGIA_BASE||'la litología inferior';
+      // v162: si el contacto está vinculado a una litología del punto, manda su nombre actual
+      const nomLito=id=>{const L=(litos||[]).find(x=>x.id===id); return L&&(L.NOMBRE_ROCA||L.TIPO_ROCA)||'';};
+      const techo=nomLito(c.ID_LITOLOGIA_TECHO)||c.LITOLOGIA_TECHO||'la litología superior', base=nomLito(c.ID_LITOLOGIA_BASE)||c.LITOLOGIA_BASE||'la litología inferior';
       const verbo=CONTACTO_VERBO[c.TIPO_CONTACTO+'|'+(c.SUBTIPO_CONTACTO||'')]||CONTACTO_VERBO[c.TIPO_CONTACTO];
       const clausula=verbo?verbo(techo,base):('se observó un contacto'+[c.TIPO_CONTACTO,c.SUBTIPO_CONTACTO].filter(Boolean).map(v=>' '+v.toLowerCase()).join('')+' entre '+techo+' y '+base);
       // La ficha de contacto pide rumbo y manteo del plano y su grado de exposición, y hasta v90
