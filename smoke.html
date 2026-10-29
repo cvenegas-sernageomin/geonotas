@@ -2725,6 +2725,43 @@ async function correr(){
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
     });
 
+    // ---- v160: alteración como ficha propia de la litología ----
+    await prueba('v160 alteración: TBL_ALTERACION por ID_LITOLOGIA, listas CDC, máximo 3, migración y prosa', async () => {
+      const M = w.eval('MODELO'), nom = t => M.tablas[t].campos.map(c => c.nombre);
+      eq(nom('TBL_LITOLOGIA').filter(n => /ALTERACION/.test(n)), [], 'la litología aún tiene campos de alteración');
+      eq(nom('TBL_ALTERACION'), ['ID_PUNTO_CONTROL','ID_ALTERACION','ID_LITOLOGIA','TIPO_ALTERACION','INTENSIDAD_ALTERACION','TEXTURA_ALTERACION','MINERAL_ALTERACION','OBSERVACIONES_ALTERACION'], 'campos de TBL_ALTERACION');
+      eq(M.tablas.TBL_ALTERACION.campos.filter(c => c.multiple && c.max_seleccion === 3).length, 4, 'los cuatro campos deben ser múltiples con máximo 3');
+      ok(M.relaciones.some(r => r.padre === 'TBL_LITOLOGIA' && r.hijo === 'TBL_ALTERACION' && r.campo === 'ID_LITOLOGIA'), 'falta la relación litología → alteración');
+      eq([M.dominios.TIPO_ALTERACION.valores.length, M.dominios.TEXTURA_ALTERACION.valores.length, M.dominios.MINERAL_ALTERACION.valores.length, M.dominios.INTENSIDAD_ALTERACION.valores], [21, 14, 91, ['Débil','Moderada','Fuerte']], 'listas CDC');
+      ok(M.familias_litologia.every(f => !(f.campos||[]).some(n => /ALTERACION/.test(n))), 'una familia de litología aún reparte campos de alteración');
+      ok(w.eval("HIJAS.some(h => h.store === 'alteracion' && h.rama === 'TBL_LITOLOGIA')"), 'alteración no está en HIJAS con rama de litología');
+      // formulario: textarea de observaciones y tope de 3
+      const f = w.formulario('alteracion', {}, {litologias:[{id:'L1', NOMBRE_ROCA:'Andesita'}]});
+      ok(f.node.querySelector('textarea[name="OBSERVACIONES_ALTERACION"]'), 'observaciones debe ser texto libre (textarea)');
+      ok(f.node.querySelector('select[name="ID_LITOLOGIA"]'), 'falta el selector de litología');
+      const caja = [...f.node.querySelectorAll('.multichips')].find(m => m.name === 'MINERAL_ALTERACION');
+      const cbs = [...caja.querySelectorAll('input[type=checkbox]')];
+      cbs.slice(0, 4).forEach(cb => { cb.checked = true; cb.dispatchEvent(new w.Event('change', {bubbles:true})); });
+      eq(caja.querySelectorAll('input:checked').length, 3, 'debía quedar en 3 minerales');
+      ok(!cbs[3].closest('.chip').classList.contains('on'), 'el cuarto chip quedó marcado');
+      eq(f.getData().MINERAL_ALTERACION.split(';').length, 3, 'getData debe traer 3 minerales');
+      // migración de la alteración vieja
+      const li = {id:'li-v160', _parent:'pt-v160', ID_PUNTO_CONTROL:'PC-1', TIPO_ALTERACION_LITO:'Sericitización', INTENSIDAD_ALTERACION:'MEDIA', DISTRIBUCION_ALTERACION:'en halos'};
+      const a = w.alteracionDeLitologiaV160(li);
+      eq([a.ID_LITOLOGIA, a._parent, a.TIPO_ALTERACION, a.INTENSIDAD_ALTERACION, a.OBSERVACIONES_ALTERACION], ['li-v160', 'pt-v160', 'Fílica (Cuarzo Sericítica, Sericitica)', 'Moderada', 'Distribución: en halos'], 'migración v160');
+      ok(M.dominios.TIPO_ALTERACION.valores.includes(a.TIPO_ALTERACION), 'el tipo migrado no está en la lista CDC');
+      eq(w.alteracionDeLitologiaV160(li), null, 'la migración debe correr una sola vez por litología');
+      eq(w.alteracionDeLitologiaV160({id:'x', TIPO_ROCA:'Intrusiva'}), null, 'sin alteración no se crea ficha');
+      eq(w.alteracionDeLitologiaV160({id:'y', TIPO_ALTERACION_LITO:'Oxidación'}).TIPO_ALTERACION, 'Oxidación', 'un tipo sin equivalente se conserva');
+      // prosa
+      const pt = {id:'pt-v160', ID_PUNTO_CONTROL:'PC-1'};
+      const datos = {litos:[{id:'L1', TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava', NOMBRE_ROCA:'Andesita (intermedia/silícea)'}], aflora:[], estr:[], cont:[], geomorf:[], mues:[],
+        alter:[{id:'A1', ID_LITOLOGIA:'L1', TIPO_ALTERACION:'Propilítica', INTENSIDAD_ALTERACION:'Débil; Moderada', MINERAL_ALTERACION:'Clorita; Epidota', TEXTURA_ALTERACION:'Diseminada'}]};
+      const p = w.prosaPunto(pt, datos, null, null, 500);
+      ok(p.includes('alteración propilítica de intensidad débil a moderada, con clorita y epidota, de textura diseminada'), 'prosa: ' + p);
+      return '8 campos, 4 listas CDC, máximo 3, migración idempotente y prosa';
+    });
+
     // ---- v159: coordenadas del punto (lat/long decimales + UTM), error GPS obligatorio, afloramiento ----
     await prueba('v159 punto: LAT/LONG_DECIMAL, UTM en los dos sentidos, ERROR_GPS_M obligatorio y migración', async () => {
       const M = w.eval('MODELO'), pc = M.tablas.PUNTO_CONTROL.campos, nom = pc.map(c => c.nombre);

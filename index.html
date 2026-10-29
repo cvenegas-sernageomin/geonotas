@@ -568,24 +568,6 @@ const MODELO = {
           "nota": null
         },
         {
-          "nombre": "TIPO_ALTERACION_LITO",
-          "obligatorio": false,
-          "dominio": "TIPO_ALTERACION",
-          "nota": null
-        },
-        {
-          "nombre": "INTENSIDAD_ALTERACION",
-          "obligatorio": false,
-          "dominio": "INTENSIDAD_ALTERACION",
-          "nota": null
-        },
-        {
-          "nombre": "DISTRIBUCION_ALTERACION",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": null
-        },
-        {
           "nombre": "RELACION_LITOLOGIA_ESTRUCTURA",
           "obligatorio": false,
           "dominio": null,
@@ -2369,6 +2351,70 @@ const MODELO = {
       "pk": "ID_FRAGMENTO",
       "cardinalidad": "0..N",
       "descripcion": "Fragmento de una roca o depósito piroclástico, descrito uno a uno (CDC TBL_AF_VOLC_FRAGMENTO, Vol IV). 0..N por litología VOL_PIROCLASTICA."
+    },
+    "TBL_ALTERACION": {
+      "geometria": null,
+      "pk": "ID_ALTERACION",
+      "cardinalidad": "0..N",
+      "descripcion": "Alteración de una litología (CDC TBL_AF_ALTERACION, con sus minerales y texturas como selección múltiple). 0..N por litología.",
+      "campos": [
+        {
+          "nombre": "ID_PUNTO_CONTROL",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_ALTERACION",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_LITOLOGIA",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": "Litología alterada (TBL_LITOLOGIA)."
+        },
+        {
+          "nombre": "TIPO_ALTERACION",
+          "obligatorio": false,
+          "dominio": "TIPO_ALTERACION",
+          "multiple": true,
+          "max_seleccion": 3,
+          "nota": "Tipo de alteración (hasta 3)."
+        },
+        {
+          "nombre": "INTENSIDAD_ALTERACION",
+          "obligatorio": false,
+          "dominio": "INTENSIDAD_ALTERACION",
+          "multiple": true,
+          "max_seleccion": 3,
+          "nota": "Intensidad (hasta 3: p. ej. débil a moderada)."
+        },
+        {
+          "nombre": "TEXTURA_ALTERACION",
+          "obligatorio": false,
+          "dominio": "TEXTURA_ALTERACION",
+          "multiple": true,
+          "max_seleccion": 3,
+          "nota": "Textura de la alteración (hasta 3)."
+        },
+        {
+          "nombre": "MINERAL_ALTERACION",
+          "obligatorio": false,
+          "dominio": "MINERAL_ALTERACION",
+          "multiple": true,
+          "max_seleccion": 3,
+          "nota": "Minerales de alteración (hasta 3)."
+        },
+        {
+          "nombre": "OBSERVACIONES_ALTERACION",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Texto libre: distribución, relación con estructuras, etc."
+        }
+      ]
     }
   },
   "relaciones": [
@@ -2476,6 +2522,16 @@ const MODELO = {
       "padre": "VOL_PIROCLASTICA",
       "hijo": "COMP_FRAGMENTO",
       "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "PUNTO_CONTROL",
+      "hijo": "TBL_ALTERACION",
+      "campo": "ID_PUNTO_CONTROL"
+    },
+    {
+      "padre": "TBL_LITOLOGIA",
+      "hijo": "TBL_ALTERACION",
+      "campo": "ID_LITOLOGIA"
     }
   ],
   "dominios": {
@@ -2516,11 +2572,11 @@ const MODELO = {
     "INTENSIDAD_ALTERACION": {
       "tipo": "simple",
       "valores": [
-        "ALTA",
-        "MEDIA",
-        "BAJA"
+        "Débil",
+        "Moderada",
+        "Fuerte"
       ],
-      "fuente": "Lista de Dominios.xlsx"
+      "fuente": "Norma CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_ALTERACION_GRADO_2014 ('Moderada (o)' -> 'Moderada'; orden ordinal)"
     },
     "CONTEXTO_GEOMORFOLOGICO": {
       "tipo": "simple",
@@ -4218,16 +4274,29 @@ const MODELO = {
     "TIPO_ALTERACION": {
       "tipo": "simple",
       "valores": [
-        "Silicificación",
-        "Oxidación",
-        "Argilización",
-        "Cloritización",
-        "Sericitización",
-        "Epidotización",
-        "Carbonatación"
+        "Adularia-sericítica",
+        "Albítica",
+        "Argílica",
+        "Argílica Avanzada",
+        "Biotítica",
+        "Calcosilicatada o Tipo Skarn",
+        "Carbonática",
+        "Ceolítica",
+        "Clorítica",
+        "Epidótica",
+        "Fílica (Cuarzo Sericítica, Sericitica)",
+        "Greisen",
+        "Potásica",
+        "Propilítica",
+        "Sílica Oquerosa (vuggy silica)",
+        "Silícica",
+        "Sódica Cálcica",
+        "Solfatárica",
+        "Supérgena",
+        "Turmalínica",
+        "No especificada"
       ],
-      "fuente": "diagrama_v3 / estandar CDC (PROPUESTO)",
-      "confirmar": true
+      "fuente": "Norma CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_ALTERACION"
     },
     "TIPO_CONTACTO": {
       "tipo": "simple",
@@ -6658,6 +6727,123 @@ const MODELO = {
         "19S"
       ],
       "fuente": "Husos UTM de Chile continental e insular cercano (v159)"
+    },
+    "TEXTURA_ALTERACION": {
+      "tipo": "simple",
+      "valores": [
+        "Amigdaloidal",
+        "Bandeada",
+        "Botroidal",
+        "Boxwork",
+        "Coloforme",
+        "Cúmulos",
+        "Diseminada",
+        "Masiva",
+        "Micácea",
+        "Pátina",
+        "Pulverulenta",
+        "Reniforme",
+        "Stockwork",
+        "Vetilla o Veta"
+      ],
+      "fuente": "Norma CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_TEXT_ALTERACION"
+    },
+    "MINERAL_ALTERACION": {
+      "tipo": "simple",
+      "valores": [
+        "Actinolita",
+        "Adularia",
+        "Ágata",
+        "Albita",
+        "Alofano",
+        "Alunita",
+        "Andalucita",
+        "Anfíbola",
+        "Anhidrita",
+        "Apatito",
+        "Arcilla",
+        "Argentita",
+        "Augita",
+        "Azufre",
+        "Azufre nativo",
+        "Baritina",
+        "Biotita",
+        "Calcedonia",
+        "Calcita",
+        "Caolinita",
+        "Carbonato",
+        "Celadonita",
+        "Celestina",
+        "Ceolita",
+        "Clinocloro",
+        "Clinopiroxeno",
+        "Clorita",
+        "Corrensita",
+        "Crisotilo",
+        "Cristobalita",
+        "Cuarzo",
+        "Cuarzo oqueroso/residual",
+        "Diásporo",
+        "Dickita",
+        "Diópsido",
+        "Dolomita",
+        "Epidota",
+        "Escapolita",
+        "Esmectita",
+        "Especularita",
+        "Feldespato",
+        "Feldespato potásico",
+        "Fluorita",
+        "Goethita",
+        "Granate",
+        "Halloysita",
+        "Hematita",
+        "Hidrobiotita",
+        "Hidroglosularia",
+        "Hierro",
+        "Hornblenda",
+        "Illita",
+        "Ilsemanita",
+        "Jarosita",
+        "Jaspe",
+        "Limonita",
+        "Magnetita",
+        "Marialita",
+        "Martita",
+        "Metacinabrio",
+        "Mica",
+        "Monazita",
+        "Montmorillonita",
+        "Muscovita",
+        "Natrojarosita",
+        "Oligisto",
+        "Olivino",
+        "Ópalo",
+        "Óxido de Hierro",
+        "Óxido de Manganeso",
+        "Pirita",
+        "Pirofilita",
+        "Piroxeno",
+        "Plagioclasa",
+        "Plumbojarosita",
+        "Prehnita",
+        "Pumpellyita",
+        "Rutilo",
+        "Sericita",
+        "Serpentina",
+        "Siderita",
+        "Sílice opalina",
+        "Talco",
+        "Titanita",
+        "Tremolita",
+        "Tridymita",
+        "Turmalina",
+        "Vermiculita",
+        "Wollastonita",
+        "Xenotima",
+        "Yeso"
+      ],
+      "fuente": "Norma CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_ALTERACION_MIN_2014"
     }
   },
   "avisos": [
@@ -6699,9 +6885,6 @@ const MODELO = {
         "ESTRUCTURA_TIPO_ROCA",
         "DESCRIPCION_LITOLOGIA",
         "GRADO_CONFIANZA_LITO",
-        "TIPO_ALTERACION_LITO",
-        "INTENSIDAD_ALTERACION",
-        "DISTRIBUCION_ALTERACION",
         "RELACION_LITOLOGIA_ESTRUCTURA",
         "OBSERVACION"
       ]
@@ -6992,7 +7175,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v159';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v160';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7022,7 +7205,7 @@ function restaurarAbiertos(){const a=abiertosGet();
 const STORE2TBL = {proyecto:'TBL_PROYECTO',punto:'PUNTO_CONTROL',litologia:'TBL_LITOLOGIA',
   estructural:'TBL_DATOS_ESTRUCTURALES',contacto:'TBL_CONTACTO',muestreo:'TBL_MUESTREO',
   foto:'TBL_FOTOGRAFIAS',esquema:'TBL_ESQUEMA_DIBUJO',geomorf:'TBL_GEOMORFOLOGIA',
-  aflora:'TBL_AFLORAMIENTO',clasto:'COMP_CLASTO',fragmento:'COMP_FRAGMENTO',
+  aflora:'TBL_AFLORAMIENTO',clasto:'COMP_CLASTO',fragmento:'COMP_FRAGMENTO',alteracion:'TBL_ALTERACION',
   punto_gabinete:'PUNTO_CONTROL_GABINETE',linea_gabinete:'LINEA_CONTROL_GABINETE'};
 const STORES = Object.keys(STORE2TBL);
 // 'linea' no cuelga de un punto (es una capa aparte, hermana de PUNTO_CONTROL) -> no entra
@@ -7042,6 +7225,9 @@ const HIJAS = [
   // ofrece esas litologías (ver renderPunto/bloqueHijo).
   {store:'clasto', titulo:'Clastos', clase:'', rama:'SED_CLASTICA'},
   {store:'fragmento', titulo:'Fragmentos piroclásticos', clase:'', rama:'VOL_PIROCLASTICA'},
+  // v160: alteración de una litología (CDC TBL_AF_ALTERACION), 0..N por litología. rama
+  // TBL_LITOLOGIA = cualquier litología: el panel aparece cuando el punto tiene alguna.
+  {store:'alteracion', titulo:'Alteración', clase:'', rama:'TBL_LITOLOGIA'},
   {store:'estructural', titulo:'Datos estructurales', clase:''},
   {store:'contacto', titulo:'Contactos', clase:''},
   {store:'geomorf', titulo:'Geomorfología', clase:''},
@@ -7194,7 +7380,25 @@ function migrarRegistroV159(store,r){
   if(r.LONG_DECIMAL!==undefined) r[LON_V158]=r.LONG_DECIMAL;
   return JSON.stringify([r.LAT_DECIMAL,r.LONG_DECIMAL,r.ESTE_UTM,r[LAT_V158],r[LON_V158]])!==antes;
 }
-const DB='captura-terreno', VER=20;   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+// v160 (pedido del usuario, 2026-10-29): la alteración sale de la litología a su propia ficha
+// (store 'alteracion', TBL_ALTERACION, listas CDC). La alteración vieja de cada litología
+// (TIPO_ALTERACION_LITO / INTENSIDAD_ALTERACION / DISTRIBUCION_ALTERACION) se copia a una ficha
+// nueva; la litología no se borra (la light sigue leyendo esos campos) y queda marcada con
+// _alterMigrada para no duplicar. Un tipo sin equivalente CDC (Oxidación) se conserva tal cual
+// y la ficha lo muestra como chip huérfano.
+const ALTERACION_V160={'Silicificación':'Silícica','Argilización':'Argílica','Cloritización':'Clorítica',
+  'Sericitización':'Fílica (Cuarzo Sericítica, Sericitica)','Epidotización':'Epidótica','Carbonatación':'Carbonática'};
+const INTENSIDAD_V160={'ALTA':'Fuerte','MEDIA':'Moderada','BAJA':'Débil'};
+function alteracionDeLitologiaV160(li){
+  if(!li||li._alterMigrada||!(li.TIPO_ALTERACION_LITO||li.INTENSIDAD_ALTERACION||li.DISTRIBUCION_ALTERACION)) return null;
+  li._alterMigrada=true;
+  return {id:uid(), _parent:li._parent, ID_PUNTO_CONTROL:li.ID_PUNTO_CONTROL, ID_LITOLOGIA:li.id,
+    TIPO_ALTERACION:ALTERACION_V160[li.TIPO_ALTERACION_LITO]||li.TIPO_ALTERACION_LITO||'',
+    INTENSIDAD_ALTERACION:INTENSIDAD_V160[li.INTENSIDAD_ALTERACION]||li.INTENSIDAD_ALTERACION||'',
+    TEXTURA_ALTERACION:'', MINERAL_ALTERACION:'',
+    OBSERVACIONES_ALTERACION:li.DISTRIBUCION_ALTERACION?'Distribución: '+li.DISTRIBUCION_ALTERACION:''};
+}
+const DB='captura-terreno', VER=21;   // v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -7401,6 +7605,20 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
           });
         };
       });
+    }
+    // Migración v21 (app v160): alteración de la litología -> ficha 'alteracion' (el store ya lo
+    // creó el barrido de STORES de arriba). Ver alteracionDeLitologiaV160.
+    {
+      const txM=r.transaction;
+      const noAbortar=req=>{req.onerror=ev=>{ev.preventDefault();console.warn('Migración v21: registro omitido',req.error);};return req;};
+      const q=noAbortar(txM.objectStore('litologia').getAll());
+      q.onsuccess=ev=>{
+        (ev.target.result||[]).forEach(li=>{
+          try{ const alt=alteracionDeLitologiaV160(li); if(!alt) return;
+            noAbortar(txM.objectStore('alteracion').put(alt)); noAbortar(txM.objectStore('litologia').put(li)); }
+          catch(e){ console.warn('Migración v21: no se pudo migrar la alteración',li&&li.id,e); }
+        });
+      };
     }
     // Migración v20 (app v159): coordenadas del punto -- ver migrarRegistroV159.
     {
@@ -7652,6 +7870,7 @@ async function importBackup(file, destinoColeccion = null) {
           geomorf: 'geomorf',
           clasto: 'clasto',
           fragmento: 'fragmento',
+          alteracion: 'alteracion',
           componente: 'componente',   // respaldo de pruebas de v152: cada registro va a 'clasto' o 'fragmento' (componenteASuStore)
           // el arbol se reconstituye solo: los ids viajan intactos, asi que _parent y
           // _punto siguen apuntando a donde deben. Funciona incluso al importar un
@@ -7690,7 +7909,9 @@ async function importBackup(file, destinoColeccion = null) {
               migrarRegistroV151(destino, record);   // respaldo de antes de v151
               migrarRegistroV152(destino, record);   // respaldo de antes de v152
               migrarRegistroV159(destino, record);   // respaldo de antes de v159 (put() también lo hace)
+              const alt = destino === 'litologia' ? alteracionDeLitologiaV160(record) : null;   // respaldo de antes de v160
               await put(destino, record);
+              if (alt) await put('alteracion', alt);
               totalInsertadas++;
             } catch (err) {
               errores.push(storeDestino + '/' + (record && record.id) + ': ' + (err && err.message || err));
@@ -8610,6 +8831,19 @@ function poblarChips(inp, campo, listaOpciones, valorActual){
   const sel=new Set(guardados.keys());
   const nums=campo.numeros||null;
   const exclusivos=EXCLUSIVOS_POR_CAMPO[campo.nombre]||null;
+  // Tope de selecciones (v160, `max_seleccion` del modelo: 3 en la ficha de alteración). Escucha en
+  // captura sobre el contenedor, antes que el chip y el formulario: el que se pasa se desmarca y el
+  // cambio no llega a guardarse. Una sola vez por contenedor (poblarChips se llama al repoblar).
+  if(campo.max_seleccion && !inp._maxSel){
+    inp._maxSel=campo.max_seleccion;
+    inp.addEventListener('change',e=>{
+      const cb=e.target; if(!cb||cb.type!=='checkbox'||!cb.checked) return;
+      if(inp.querySelectorAll('input[type=checkbox]:checked').length<=inp._maxSel) return;
+      cb.checked=false; const ch=cb.closest('.chip'); if(ch) ch.classList.remove('on');
+      e.stopImmediatePropagation(); e.stopPropagation();
+      toast('Máximo '+inp._maxSel+' en '+etiquetaCampo(campo.nombre).toLowerCase());
+    },true);
+  }
   // Desmarcar de verdad: el checkbox, la clase .on del chip y de su caja, y los numeros.
   // Mismo barrido que hace aplicarCondicionales() al ocultar un campo multi.
   const desmarcar=cb=>{
@@ -13954,6 +14188,7 @@ const SVG_IC={
   lito_tectonica:'<path d="M5 28L27 4"/><path d="M6 14h9l-3-3"/><path d="M26 18h-9l3 3"/>',
   lito_antropico:'<rect x="4" y="7" width="24" height="19" rx="1.5"/><path d="M4 13.3h24M4 19.6h24M12 7v6.3M20 13.3v6.3M12 19.6V26"/>',
   clasto:'<circle cx="10" cy="11" r="5.5"/><circle cx="21.5" cy="19.5" r="6"/><circle cx="9" cy="24" r="3"/><circle cx="23" cy="7" r="2.5"/>',
+  alteracion:'<path d="M3 27l5-13 7 4 6-9 8 18z"/><g fill="currentColor" stroke="none"><circle cx="11" cy="22" r="1.5"/><circle cx="17" cy="19" r="1.5"/><circle cx="22" cy="23" r="1.5"/></g><path d="M6 8l2 2M12 4v3M18 6l-1 2"/>',
   fragmento:'<path d="M4 9l8-4 3 7-7 3z"/><path d="M17 11l10-2-2 10-7-1z"/><path d="M6 20l7 1-1 7-7-3z"/><path d="M19 23l5 1-2 4z"/>',
   estructural:'<path d="M4 12h24"/><path d="M16 12v11"/><path d="M22 5l3 3"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/>',
   contacto:'<rect x="4" y="5" width="24" height="22" rx="2"/><path d="M4 19c6-5 11 3 24-5"/><path d="M4 19c6-5 11 3 24-5V27H4z" fill="currentColor" opacity=".3" stroke="none"/>',
@@ -13966,7 +14201,7 @@ const SVG_IC={
   __ajustes:'<path d="M5 9h22M5 16h22M5 23h22"/><circle cx="11" cy="9" r="2.6" fill="var(--surface)"/><circle cx="21" cy="16" r="2.6" fill="var(--surface)"/><circle cx="14" cy="23" r="2.6" fill="var(--surface)"/>'
 };
 const ETIQUETA_CORTA={punto:'Punto',aflora:'Afloram.',estructural:'Estructura',contacto:'Contactos',geomorf:'Geomorf.',
-  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',fotomapa:'Foto-mapa','lito:':'Sin tipo',__ajustes:'Iconos'};
+  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',alteracion:'Alteración',fotomapa:'Foto-mapa','lito:':'Sin tipo',__ajustes:'Iconos'};
 const COLOR_IC={sedimentaria:'sed',volcanica:'vol',intrusiva:'int',metamorfica:'met',tectonica:'tec',antropico:'ant'};
 const normIc=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function colorIc(clave){ return clave.startsWith('lito:')?(COLOR_IC[normIc(clave.slice(5))]||''):''; }
@@ -16038,7 +16273,7 @@ async function duplicarPunto(srcId){
   // dos pasadas: primero los ids nuevos de todas las fichas, después los vínculos entre ellas
   // (estructural.ID_CONTACTO -> contacto y contacto._medidaDe -> estructural, v146)
   const copias=[], mapId={};
-  for(const store of ['aflora','clasto','fragmento','estructural','contacto','muestreo','geomorf'])   // clasto/fragmento: v152
+  for(const store of ['aflora','clasto','fragmento','alteracion','estructural','contacto','muestreo','geomorf'])   // clasto/fragmento: v152; alteracion: v160
     for(const it of await childrenOf(store,srcId)){const n=Object.assign({},it,{id:uid(),_parent:np.id});mapId[it.id]=n.id;copias.push([store,n]);}
   for(const [store,n] of copias){
     if(n.ID_LITOLOGIA&&mapLito[n.ID_LITOLOGIA])n.ID_LITOLOGIA=mapLito[n.ID_LITOLOGIA];
@@ -17150,7 +17385,7 @@ function actitudFrase(rumbo,manteo){
   return '';
 }
 function prosaPunto(pt,datos,toponimo,anterior,umbral){
-  const {litos,aflora,estr,cont,geomorf,mues}=datos;
+  const {litos,aflora,estr,cont,geomorf,mues,alter}=datos;
   // ¿La unidad geológica se declara en la oración-resumen o en cada litología? Se resuelve más
   // abajo (necesita la lista completa de fichas) y fraseLitologia lo lee por cierre: si TODAS
   // las rocas del punto llevan unidad, va una sola vez en el resumen; si solo algunas la
@@ -17333,13 +17568,18 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       if(l.POTENCIA_ZONA_DEFORMACION&&l.POTENCIA_ZONA_DEFORMACION!=='Indeterminado')
         frag.push('en una zona de deformación de '+l.POTENCIA_ZONA_DEFORMACION+' de potencia');
     }
-    if(l.TIPO_ALTERACION_LITO){
-      // los valores del dominio TIPO_ALTERACION ya son sustantivos ("Silicificación",
-      // "Argilización"...): "con alteración silicificación" apilaba dos sustantivos.
-      let a='con '+minuscula(l.TIPO_ALTERACION_LITO);
-      if(l.INTENSIDAD_ALTERACION) a+=' de intensidad '+l.INTENSIDAD_ALTERACION.toLowerCase();
-      a+=parentesis(l.DISTRIBUCION_ALTERACION);
-      frag.push(a);
+    // Alteración (v160): fichas 'alteracion' de esta litología. Los tipos CDC son adjetivos
+    // ("Argílica", "Propilítica") -> "con alteración argílica y propilítica de intensidad débil a
+    // moderada, con clorita y epidota, de textura diseminada". 'No especificada' no se nombra.
+    for(const a of (alter||[]).filter(a=>a.ID_LITOLOGIA===l.id)){
+      const tipos=multi(a.TIPO_ALTERACION).filter(t=>t!=='No especificada').map(minuscula);
+      const ints=multi(a.INTENSIDAD_ALTERACION).map(minuscula), mins=multi(a.MINERAL_ALTERACION).map(minuscula), txs=multi(a.TEXTURA_ALTERACION).map(minuscula);
+      if(!tipos.length&&!ints.length&&!mins.length&&!txs.length) continue;
+      let f='con alteración'+(tipos.length?' '+lista(tipos):'');
+      if(ints.length) f+=' de intensidad '+ints.join(' a ');
+      if(mins.length) f+=', con '+lista(mins);
+      if(txs.length) f+=', de textura '+lista(txs);
+      frag.push(f);
     }
     // Confianza al final de la oración, que es donde el corpus pone la salvedad ("… y la asignó
     // tentativamente al Devónico-Carbonífero"), no delante del nombre de la roca.
@@ -17686,7 +17926,7 @@ async function generarProsaProyecto(){
         litos:await childrenOf('litologia',pt.id), aflora:await childrenOf('aflora',pt.id),
         estr:await childrenOf('estructural',pt.id),
         cont:await childrenOf('contacto',pt.id), geomorf:await childrenOf('geomorf',pt.id),
-        mues:await childrenOf('muestreo',pt.id),
+        mues:await childrenOf('muestreo',pt.id), alter:await childrenOf('alteracion',pt.id),
       };
       const lejosDelAnterior=!anterior||L.latLng(lat,lon).distanceTo(
         L.latLng(parseFloat(anterior.pt[inLat]),parseFloat(anterior.pt[inLon])))>umbral;
