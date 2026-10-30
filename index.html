@@ -616,54 +616,16 @@ const MODELO = {
           "nota": "Depósitos, rocas sedimentarias clásticas y piroclásticas."
         },
         {
-          "nombre": "REDONDEAMIENTO",
-          "obligatorio": false,
-          "dominio": "REDONDEAMIENTO",
-          "nota": "Depósitos y rocas sedimentarias clásticas."
-        },
-        {
-          "nombre": "ESFERICIDAD",
-          "obligatorio": false,
-          "dominio": "ESFERICIDAD",
-          "nota": "Depósitos y rocas sedimentarias clásticas (norma CDC 2016 Vol III, campo 'FORMA CLASTOS')."
-        },
-        {
           "nombre": "CLASTOS_TAM_MAX_CM",
           "obligatorio": false,
           "dominio": null,
-          "nota": "Tamano del CLASTO MAYOR observado, en centimetros (eje mayor). Aplica a toda roca o deposito clastico: depositos, rocas sedimentarias siliciclasticas y rocas piroclasticas -- no solo a los gravosos. Un solo numero, el maximo: es la forma dominante del corpus SGB ('clastos de hasta 40 cm'; 332+397 apariciones del maximo contra 207 de rangos) y la mas rapida de anotar en terreno; el rango fino va en la descripcion. La prosa lo escribe 'de hasta N cm de diametro' -- para clastos el corpus usa DIAMETRO (416) y no largo (15), al reves que los fenocristales -- y cambia sola de unidad bajo 1 cm (mm) y sobre 1 m (m, escala megaclastica de Terry y Goff 2014 que adopta la norma CDC Vol III). Distinto de GRANULOMETRIA, que es la clase promedio del deposito: aca importa el clasto mas grande, que es lo que no se puede reconstruir despues en gabinete."
+          "nota": "Solo rocas y depósitos piroclásticos: tamaño del clasto mayor observado, en cm (eje mayor). En las sedimentarias clásticas el tamaño va en cada ficha de clasto (COMP_CLASTO, v165)."
         },
         {
           "nombre": "COMPOSICION_CLASTICA",
           "obligatorio": false,
           "dominio": "COMPOSICION_CLASTICA",
           "nota": "Composición de los granos/clastos (norma CDC 2016 Vol III, campo 'COMPOSICIÓN CLÁSTICA-ALOQUÍMICA DEL DEPÓSITO', sistema de Folk). Depósitos y rocas sedimentarias clásticas."
-        },
-        {
-          "nombre": "LITOLOGIA_CLASTOS",
-          "obligatorio": false,
-          "dominio": "LITOLOGIA_CLASTOS_GRAVA",
-          "multiple": true,
-          "nota": "Litologia de los clastos de tamano grava (>2 mm; norma CDC 2016 Vol III, campo 'LITOLOGIA DE LOS CLASTOS DE TAMANO DE GRAVA'). Solo Conglomerado/Brecha sedimentaria/Conglomerado megaclastico y Depositos. Seleccion multiple; cada litologia marcada admite su PORCENTAJE junto al valor -- 'Clastos de andesita (55%); Clastos de arenisca (40%)' -- que es el campo PORCENTAJE DE LOS CLASTOS de la norma ('el porcentaje estimado del tipo de clastos indicado en el campo LITOLOGIA CLASTO').",
-          "numeros": [
-            {
-              "suf": "%",
-              "ph": "%",
-              "max": 100
-            }
-          ]
-        },
-        {
-          "nombre": "LITOLOGIA_CLASTOS_DETALLE",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Texto libre sobre los clastos: litologias fuera de la lista, rango de tamanos si el maximo de CLASTOS_TAM_MAX_CM no basta, o cualquier observacion del tipo de clasto. El porcentaje de cada litologia ya NO va aca: tiene su casilla junto a cada valor."
-        },
-        {
-          "nombre": "GRANULOMETRIA_CLASTOS",
-          "obligatorio": false,
-          "dominio": "GRANULOMETRIA_CLASTOS",
-          "nota": "Granulometria promedio de los clastos (norma CDC 2016 Vol III, DDA Descripcion de Depositos Sedimentarios, campo 'GRANULOMETRIA CLASTOS'). Depositos y sedimentarias gravosas. Distinto de CLASTOS_TAM_MAX_CM (el clasto mayor)."
         },
         {
           "nombre": "FABRICA_CLASTOS",
@@ -687,7 +649,7 @@ const MODELO = {
           "nombre": "SUBTIPO_SEDIMENTARIO",
           "obligatorio": false,
           "dominio": "SUBTIPO_SEDIMENTARIO",
-          "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_CLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_NO_CLASTICA; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
+          "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_CLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_CARBONATOS; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
         },
         {
           "nombre": "COMPOSICION_MINERALOGICA",
@@ -2200,13 +2162,13 @@ const MODELO = {
           "nota": "Litología sedimentaria clástica (SED_CLASTICA) a la que pertenece el clasto."
         },
         {
-          "nombre": "COMPONENTE_MIN_PCT",
+          "nombre": "CLASTO_MIN_PCT",
           "obligatorio": false,
           "dominio": null,
           "nota": "% mínimo estimado de este componente (PORCEN_MIN de la tabla CDC)."
         },
         {
-          "nombre": "COMPONENTE_MAX_PCT",
+          "nombre": "CLASTO_MAX_PCT",
           "obligatorio": false,
           "dominio": null,
           "nota": "% máximo estimado de este componente (PORCEN_MAX de la tabla CDC)."
@@ -2224,19 +2186,19 @@ const MODELO = {
           "nota": "Tamaño máximo, cm."
         },
         {
-          "nombre": "REDONDEAMIENTO_COMPONENTE",
+          "nombre": "REDONDEAMIENTO_CLASTO",
           "obligatorio": false,
           "dominio": "REDONDEAMIENTO_CDC",
           "nota": "Escala CDC completa (Powers), con rangos."
         },
         {
-          "nombre": "FORMA_COMPONENTE",
+          "nombre": "FORMA_CLASTO",
           "obligatorio": false,
           "dominio": "FORMA_CDC",
           "nota": "Esfericidad o forma (Zingg)."
         },
         {
-          "nombre": "COLOR_COMPONENTE",
+          "nombre": "COLOR_CLASTO",
           "obligatorio": false,
           "dominio": "COLOR_AFLORAMIENTO",
           "nota": null
@@ -2248,10 +2210,10 @@ const MODELO = {
           "nota": "Litología del clasto (Vol III, 46 términos)."
         },
         {
-          "nombre": "GRANULOMETRIA_CLASTO",
+          "nombre": "TAMANO_CLASTO",
           "obligatorio": false,
           "dominio": "GRANULOMETRIA_CLASTOS",
-          "nota": "Granulometría promedio de este tipo de clasto."
+          "nota": "Tamaño (granulometría) de este tipo de clasto (Vol III DDA). Antes GRANULOMETRIA_CLASTO."
         },
         {
           "nombre": "TIPO_CLASTO",
@@ -2260,7 +2222,7 @@ const MODELO = {
           "nota": "Génesis del clasto."
         },
         {
-          "nombre": "NOTA_COMPONENTE",
+          "nombre": "NOTA_CLASTO",
           "obligatorio": false,
           "dominio": null,
           "nota": "Texto libre."
@@ -4955,19 +4917,6 @@ const MODELO = {
       ],
       "fuente": "campos_plantillas_litologicas.csv (RAG Generador de Cartas Geológicas, 33 litotipos)"
     },
-    "REDONDEAMIENTO": {
-      "tipo": "simple",
-      "valores": [
-        "Muy anguloso",
-        "Anguloso",
-        "Subanguloso",
-        "Subredondeado",
-        "Redondeado",
-        "Muy redondeado",
-        "Indeterminado"
-      ],
-      "fuente": "Lista del usuario (2026-10-23), ordenada de anguloso a redondeado: terminos simples de la norma CDC 2016 Vol III ('REDONDEAMIENTO CLASTOS', Powers 1953) sin los rangos ('Angulosos a subangulosos'...); 'Muy redondeado' reemplaza a 'Bien redondeados' de la norma."
-    },
     "CEMENTO": {
       "tipo": "simple",
       "valores": [
@@ -5093,18 +5042,6 @@ const MODELO = {
         "Olivino"
       ],
       "fuente": "RAG ChromaDB 'prosa_geologica' (colección Generador de Cartas Geológicas, tipo=carta, 20.456 chunks): los minerales con más co-ocurrencia junto a 'fenocristal*' en el corpus real de Cartas SGB chilenas (Plagioclasa 647, Piroxeno 675 [cpx 364 + opx 311, fusionados 2026-09-07 a pedido del usuario: en terreno con lupa no se distingue orto- de clinopiroxeno, eso requiere sección delgada], Biotita 283, Hornblenda 231, Cuarzo 198, Olivino 120 -- este último agregado a pedido del usuario 2026-08-25 pese a quedar bajo el umbral automático, es fenocristal típico de basaltos). Subconjunto de MINERAL (25 especies), acotado SOLO para FENOCRISTALES_ESPECIE (lavas); un mineral fuera de esta lista se anota en FENOCRISTALES_DETALLE (texto libre). COMPOSICION_MINERAL_INTRUSIVA y CRISTALES_ESPECIE siguen distinguiendo orto-/clinopiroxeno: describen composición general, no fenocristales observados a ojo en terreno."
-    },
-    "ESFERICIDAD": {
-      "tipo": "simple",
-      "valores": [
-        "Esférico o equidimensional",
-        "Discoidal o tabular",
-        "Cilíndrico o elongado",
-        "Elipsoidal",
-        "Irregular",
-        "Heterogéneo"
-      ],
-      "fuente": "Norma CDC 2016 Vol III, campo verbatim 'FORMA CLASTOS' (\"esfericidad de los clastos\", clasificación de Zingg 1935). Se omiten los 6 términos combinados 'X a Y' de la norma (transición entre dos clases) para mantener el mismo nivel de detalle que SELECCION/REDONDEAMIENTO en esta app (5 categorías base, no la escala transicional completa)."
     },
     "COMPOSICION_CLASTICA": {
       "tipo": "simple",
@@ -7095,18 +7032,12 @@ const MODELO = {
     {
       "tabla": "SED_CLASTICA",
       "padre": false,
-      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Roca sedimentaria clastica o deposito sedimentario clastico (siliciclastico y volcanosedimentario): granulometria, seleccion, forma, composicion, clastos y matriz.",
+      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Roca o depósito sedimentario clástico: granulometría, selección, composición, fábrica y matriz. Los clastos se describen uno a uno en COMP_CLASTO.",
       "aplica_a": "Sedimentaria, SUBTIPO Siliciclastico o Volcanosedimentario (o NOMBRE_ROCA clastico si no hay subtipo), roca o deposito",
       "campos": [
         "GRANULOMETRIA",
         "SELECCION",
-        "REDONDEAMIENTO",
-        "ESFERICIDAD",
-        "CLASTOS_TAM_MAX_CM",
         "COMPOSICION_CLASTICA",
-        "LITOLOGIA_CLASTOS",
-        "LITOLOGIA_CLASTOS_DETALLE",
-        "GRANULOMETRIA_CLASTOS",
         "FABRICA_CLASTOS",
         "COMPOSICION_CLASTICA_MATRIZ",
         "GRANULOMETRIA_MATRIZ"
@@ -7114,9 +7045,9 @@ const MODELO = {
       "hija_de": "LITO_SEDIMENTARIA"
     },
     {
-      "tabla": "SED_NO_CLASTICA",
+      "tabla": "SED_CARBONATOS",
       "padre": false,
-      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Roca o deposito sedimentario no clastico: carbonato, salino, fosfato, organico, siliceo.",
+      "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Carbonatos y demás rocas o depósitos no clásticos (fosfato, salino, orgánico, silíceo). Antes SED_NO_CLASTICA (v165).",
       "aplica_a": "Sedimentaria, SUBTIPO distinto de Siliciclastico/Volcanosedimentario/Mixto/Indeterminado",
       "campos": [
         "TEXTURA_DUNHAM",
@@ -7175,14 +7106,14 @@ const MODELO = {
         "TIPO_DEPOSITO_VOLCANICO",
         "POSICION_CENTRO_ERUPTIVO",
         "TIPO_ERUPCION",
-        "TIPO_CENTRO_EMISION"
+        "TIPO_CENTRO_EMISION",
+        "CLASTOS_TAM_MAX_CM"
       ],
       "hija_de": "LITO_VOLCANICA",
       "campos_extra": [
         "LITIFICACION",
         "GRANULOMETRIA",
-        "SELECCION",
-        "CLASTOS_TAM_MAX_CM"
+        "SELECCION"
       ]
     },
     {
@@ -7344,7 +7275,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v164';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v165';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7583,7 +7514,39 @@ function migrarJuegoV163(e){
   CAMPOS_JUEGO_V163.forEach(k=>{ if(e[k]!=null&&e[k]!=='') j[k]=e[k]; });
   return j;
 }
-const DB='captura-terreno', VER=22;   // v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+// v165 (pedido del usuario, 2026-10-30): la sedimentaria clástica deja de repetir lo que describe
+// cada ficha de clasto. Lo que la litología tenía (LITOLOGIA_CLASTOS con sus %, GRANULOMETRIA_CLASTOS,
+// REDONDEAMIENTO, ESFERICIDAD, CLASTOS_TAM_MAX_CM y el detalle) pasa a fichas 'clasto', una por
+// litología de clasto; el redondeamiento y la forma de la roca se copian a cada una (la lista vieja
+// en singular pasa a la CDC en plural) y el clasto mayor y el detalle van en la nota de la primera.
+// La litología no se borra (la light los lee) y queda con _clastosMigrados. Además los campos de la
+// ficha de clasto dicen CLASTO en vez de COMPONENTE (renombrarClastoV165; se renombra de verdad,
+// la light no conoce esa ficha).
+const RENOMBRE_CLASTO_V165={COMPONENTE_MIN_PCT:'CLASTO_MIN_PCT',COMPONENTE_MAX_PCT:'CLASTO_MAX_PCT',REDONDEAMIENTO_COMPONENTE:'REDONDEAMIENTO_CLASTO',
+  FORMA_COMPONENTE:'FORMA_CLASTO',COLOR_COMPONENTE:'COLOR_CLASTO',NOTA_COMPONENTE:'NOTA_CLASTO',GRANULOMETRIA_CLASTO:'TAMANO_CLASTO'};
+function renombrarClastoV165(r){
+  let cambio=false;
+  for(const [v,n] of Object.entries(RENOMBRE_CLASTO_V165)) if(r&&r[v]!==undefined){ if(r[n]===undefined||r[n]==='') r[n]=r[v]; delete r[v]; cambio=true; }
+  return cambio;
+}
+const REDONDEAMIENTO_V165={'Muy anguloso':'Muy angulosos','Anguloso':'Angulosos','Subanguloso':'Subangulosos',
+  'Subredondeado':'Subredondeados','Redondeado':'Redondeados','Muy redondeado':'Bien redondeados','Indeterminado':'Indeterminado'};
+function clastosDeLitologiaV165(li){
+  const vacio=v=>v==null||v==='';
+  if(!li||li._clastosMigrados||!familiaAplica('SED_CLASTICA',li)) return [];
+  if(['LITOLOGIA_CLASTOS','LITOLOGIA_CLASTOS_DETALLE','GRANULOMETRIA_CLASTOS','REDONDEAMIENTO','ESFERICIDAD','CLASTOS_TAM_MAX_CM'].every(k=>vacio(li[k]))) return [];
+  li._clastosMigrados=true;
+  const base=()=>({id:uid(), _parent:li._parent, ID_PUNTO_CONTROL:li.ID_PUNTO_CONTROL, ID_LITOLOGIA:li.id,
+    TAMANO_CLASTO:li.GRANULOMETRIA_CLASTOS||'', REDONDEAMIENTO_CLASTO:REDONDEAMIENTO_V165[li.REDONDEAMIENTO]||li.REDONDEAMIENTO||'',
+    FORMA_CLASTO:li.ESFERICIDAD||''});
+  const items=String(li.LITOLOGIA_CLASTOS||'').split(';').map(x=>x.trim()).filter(Boolean);
+  const out=items.length?items.map(it=>{ const q=parseValorNumerado(it), c=base(); c.LITOLOGIA_CLASTO=q.valor;
+    if(q.nums['%']) c.CLASTO_MIN_PCT=c.CLASTO_MAX_PCT=q.nums['%']; return c; }):[base()];
+  const nota=[!vacio(li.CLASTOS_TAM_MAX_CM)?'Clasto mayor de la roca: '+li.CLASTOS_TAM_MAX_CM+' cm.':'', li.LITOLOGIA_CLASTOS_DETALLE||''].filter(Boolean).join(' ');
+  if(nota) out[0].NOTA_CLASTO=nota;
+  return out;
+}
+const DB='captura-terreno', VER=23;   // v23 (app v165): clastos sin redundancia (clastosDeLitologiaV165, renombrarClastoV165).   // v22 (app v163): v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -7809,14 +7772,22 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
     {
       const txM=r.transaction;
       const noAbortar=req=>{req.onerror=ev=>{ev.preventDefault();console.warn('Migración v21: registro omitido',req.error);};return req;};
+      // v23 (app v165): en la misma pasada, los clastos de la sedimentaria clástica -> fichas 'clasto'
       const q=noAbortar(txM.objectStore('litologia').getAll());
       q.onsuccess=ev=>{
         (ev.target.result||[]).forEach(li=>{
-          try{ const alt=alteracionDeLitologiaV160(li); if(!alt) return;
-            noAbortar(txM.objectStore('alteracion').put(alt)); noAbortar(txM.objectStore('litologia').put(li)); }
-          catch(e){ console.warn('Migración v21: no se pudo migrar la alteración',li&&li.id,e); }
+          try{ const alt=alteracionDeLitologiaV160(li), cls=clastosDeLitologiaV165(li); if(!alt&&!cls.length) return;
+            if(alt) noAbortar(txM.objectStore('alteracion').put(alt));
+            cls.forEach(c=>noAbortar(txM.objectStore('clasto').put(c)));
+            noAbortar(txM.objectStore('litologia').put(li)); }
+          catch(e){ console.warn('Migración v21/v23: no se pudo migrar la litología',li&&li.id,e); }
         });
       };
+      if(d.objectStoreNames.contains('clasto')){   // v23: campos de la ficha de clasto renombrados
+        const qc=noAbortar(txM.objectStore('clasto').getAll());
+        qc.onsuccess=ev=>(ev.target.result||[]).forEach(c=>{ try{ if(renombrarClastoV165(c)) noAbortar(txM.objectStore('clasto').put(c)); }
+          catch(e){ console.warn('Migración v23: no se pudo renombrar el clasto',c&&c.id,e); } });
+      }
     }
     // Migración v20 (app v159): coordenadas del punto -- ver migrarRegistroV159.
     {
@@ -8110,7 +8081,10 @@ async function importBackup(file, destinoColeccion = null) {
               migrarRegistroV159(destino, record);   // respaldo de antes de v159 (put() también lo hace)
               const alt = destino === 'litologia' ? alteracionDeLitologiaV160(record) : null;   // respaldo de antes de v160
               const jue = destino === 'estructural' ? migrarJuegoV163(record) : null;          // respaldo de antes de v163
+              const cls = destino === 'litologia' ? clastosDeLitologiaV165(record) : [];       // respaldo de antes de v165
+              if (destino === 'clasto') renombrarClastoV165(record);
               await put(destino, record);
+              for (const c of cls) await put('clasto', c);
               if (alt) await put('alteracion', alt);
               if (jue) await put('juego', jue);
               totalInsertadas++;
@@ -9291,7 +9265,7 @@ function esGravosa(v){
 
 // Qué tablas hijas de litología se llenan al EXPORTAR. v152: árbol por camino de elecciones -- la sedimentaria
 // llena LITO_SEDIMENTARIA y, según el subtipo, SED_CLASTICA (siliciclástica o volcanosedimentaria, roca o
-// depósito) o SED_NO_CLASTICA (carbonato, salino, fosfato, orgánico, silíceo); mixto e indeterminado solo la
+// depósito) o SED_CARBONATOS (ex SED_NO_CLASTICA, v165: carbonato, salino, fosfato, orgánico, silíceo); mixto e indeterminado solo la
 // madre. La volcánica llena LITO_VOLCANICA y VOL_LAVA o VOL_PIROCLASTICA. Sin SUBTIPO se deduce de NOMBRE_ROCA.
 // Declaraciones (no const) para que smoke.html las alcance desde el iframe.
 // Sin subtipo, un depósito (LITIFICACION = Depósito) cuenta como clástico salvo que su nombre sea de un
@@ -9313,7 +9287,7 @@ function familiaAplica(tabla, v){
   // v152: árbol por camino de elecciones (sedimentaria -> clástica / no clástica; volcánica -> lava / piroclástica)
   if(tabla==='LITO_SEDIMENTARIA') return sed;
   if(tabla==='SED_CLASTICA') return sed && sedimentariaClasticaExport(v);
-  if(tabla==='SED_NO_CLASTICA') return sed && !sedimentariaClasticaExport(v) && st!=='Mixto' && st!=='Composición indeterminada';
+  if(tabla==='SED_CARBONATOS') return sed && !sedimentariaClasticaExport(v) && st!=='Mixto' && st!=='Composición indeterminada';
   if(tabla==='LITO_VOLCANICA') return v['TIPO_ROCA']==='Volcánica';
   if(tabla==='VOL_LAVA') return v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava';
   if(tabla==='VOL_PIROCLASTICA') return esPiroclastica(v);
@@ -9331,6 +9305,7 @@ function componenteASuStore(r){
   const s=r.CLASE_COMPONENTE==='Fragmento piroclástico'?'fragmento':'clasto', pk=s==='fragmento'?'ID_FRAGMENTO':'ID_CLASTO';
   if(r.ID_COMPONENTE&&!r[pk]) r[pk]=r.ID_COMPONENTE;
   delete r.ID_COMPONENTE; delete r.CLASE_COMPONENTE;
+  if(s==='clasto') renombrarClastoV165(r);   // v165
   return s;
 }
 function familiasDe(store){ const f=FAMILIAS_DE[store]; return f && MODELO[f[0]] ? {lista:MODELO[f[0]], clave:f[1]} : null; }
@@ -9381,20 +9356,13 @@ const CONDICIONALES = {
   // toba también tienen un clasto mayor que vale la pena medir, aunque no se liste ninguna
   // litología de grava. Bajo 1 cm la prosa lo dice en mm, así que el campo sirve igual para
   // el grano más grueso de una arenisca.
-  CLASTOS_TAM_MAX_CM: {modo:'ocultar', regla: esClastico},
-  REDONDEAMIENTO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && sedimentariaClasticaExport(v)},
-  // Esfericidad (norma CDC Vol III "FORMA CLASTOS"): mismo criterio que REDONDEAMIENTO --
-  // depósitos y sedimentarias clásticas, el mismo trío grano/clasto (2026-08-25).
-  ESFERICIDAD: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && sedimentariaClasticaExport(v)},
+  // v165: en las sedimentarias clásticas el tamaño, la litología, el redondeamiento y la forma van
+  // en cada ficha de clasto (COMP_CLASTO); el clasto mayor de la roca queda solo en la piroclástica.
+  CLASTOS_TAM_MAX_CM: {modo:'ocultar', regla: esPiroclastica},
   // Composición de granos (norma CDC Vol III "COMPOSICIÓN CLÁSTICA-ALOQUÍMICA", sistema de
   // Folk): mismo alcance que REDONDEAMIENTO/ESFERICIDAD -- NO aplica a rocas piroclásticas
   // (esas usan LITICOS_PCT/POMEZ_PCT/CRISTALES_PCT, un eje distinto).
   COMPOSICION_CLASTICA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && sedimentariaClasticaExport(v)},
-  // Litología de clastos tamaño grava (norma CDC Vol III): solo depósitos y sedimentarias
-  // GRAVOSAS (Conglomerado/Brecha sedimentaria/Conglomerado megaclástico) -- una Arenisca no
-  // tiene clastos >2 mm por definición.
-  LITOLOGIA_CLASTOS: {modo:'ocultar', regla: esGravosa},
-  LITOLOGIA_CLASTOS_DETALLE: {modo:'ocultar', regla: esGravosa},
   // Fábrica matriz/clasto-soportada (2026-08-25, corrige bug de jerarquía reportado por el
   // usuario): antes vivía como 2 opciones sueltas DENTRO de TEXTURA, al mismo nivel que
   // "Clástica (detrítica)" -- es una subclasificación de esa textura, no una alternativa.
@@ -9406,7 +9374,6 @@ const CONDICIONALES = {
   // Granulometría de clastos y de matriz (v151, norma CDC Vol III, DDA Descripción de Depósitos
   // Sedimentarios): clastos con el mismo alcance que LITOLOGIA_CLASTOS; matriz en todo depósito
   // (la fábrica no se pide en depósitos) y en sedimentarias matriz-soportadas.
-  GRANULOMETRIA_CLASTOS: {modo:'ocultar', regla: esGravosa},
   GRANULOMETRIA_MATRIZ: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' &&
     ((v['LITIFICACION']==='Depósito' && sedimentariaClasticaExport(v)) || v['FABRICA_CLASTOS']==='Matriz-soportada')},
   CEMENTO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
@@ -9658,7 +9625,7 @@ function formulario(store, reg, ctx){
   if(fam){
     const lito=store==='litologia', padre=fam.lista[0].tabla;
     const TITULO=lito?{TBL_LITOLOGIA:'Datos generales', LITO_SEDIMENTARIA:'Roca o depósito sedimentario',
-      SED_CLASTICA:'Clastos y matriz (sedimentaria clástica y piroclástica)', SED_NO_CLASTICA:'Sedimentaria no clástica (carbonato, fosfato…)',
+      SED_CLASTICA:'Clastos y matriz (sedimentaria clástica y piroclástica)', SED_CARBONATOS:'Carbonatos y otras no clásticas (fosfato, salino…)',
       LITO_VOLCANICA:'Volcánica', VOL_LAVA:'Lava', VOL_PIROCLASTICA:'Roca o depósito piroclástico',
       LITO_INTRUSIVA:'Roca intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica',
       LITO_ANTROPICO:'Depósito antrópico'}
@@ -17716,7 +17683,7 @@ function actitudFrase(rumbo,manteo){
   return '';
 }
 function prosaPunto(pt,datos,toponimo,anterior,umbral){
-  const {litos,aflora,estr,cont,geomorf,mues,alter,juegos}=datos;
+  const {litos,aflora,estr,cont,geomorf,mues,alter,juegos,clastos:fichasClasto}=datos;
   // ¿La unidad geológica se declara en la oración-resumen o en cada litología? Se resuelve más
   // abajo (necesita la lista completa de fichas) y fraseLitologia lo lee por cierre: si TODAS
   // las rocas del punto llevan unidad, va una sola vez en el resumen; si solo algunas la
@@ -17842,7 +17809,8 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // clastos: selección, redondeamiento y esfericidad se funden en un solo adjetivo plural,
     // igual que el corpus ("clastos mal seleccionados y subredondeados"), no fragmentos sueltos.
     // lista() (no join(' y ')) porque ahora pueden ser 3 adjetivos ("X, Y y Z").
-    const clastos=[SELECCION_FRASE[l.SELECCION],REDONDEAMIENTO_FRASE[l.REDONDEAMIENTO],ESFERICIDAD_FRASE[l.ESFERICIDAD]].filter(Boolean);
+    // v165: redondeamiento y forma ya no son de la roca sino de cada ficha de clasto (abajo).
+    const clastos=[SELECCION_FRASE[l.SELECCION]].filter(Boolean);
     // El tamaño del clasto mayor se pega a esa misma enumeración ("de clastos mal
     // seleccionados y subredondeados, de hasta 15 cm de diámetro"), que es como lo encadena el
     // corpus. Sin adjetivos cargados abre su propia cláusula, para no perder la medición.
@@ -17850,22 +17818,22 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     if(clastos.length) frag.push('de clastos '+lista(clastos)+(tamClasto?', '+tamClasto:''));
     else if(tamClasto) frag.push('con clastos '+tamClasto);
     if(l.COMPOSICION_CLASTICA) frag.push('de composición '+minuscula(l.COMPOSICION_CLASTICA));
-    // Litología de los clastos, cada una con su % (norma CDC Vol III "PORCENTAJE DE LOS
-    // CLASTOS"): mismo patrón de chips con números que los fenocristales. El prefijo "Clastos
-    // de…" del término del dominio se saca DESPUÉS de separar los números, no antes.
-    const litoClastos=multi(l.LITOLOGIA_CLASTOS);
-    if(litoClastos.length){
-      const enumL=lista(litoClastos.map(c=>{
-        const p=parseValorNumerado(c);
-        const limpio=/^Clastos /i.test(p.valor)?p.valor.replace(/^Clastos de(l)? /i,'').replace(/^Clastos /i,'')
-                    :minuscula(p.valor);   // 'Pómez retrabajado' y demás piroclásticos retrabajados (v151)
-        return mineralNum(fmtValorNumerado(limpio,p.nums));
+    // Clastos (v165): una entrada por ficha de clasto de esta litología, con su %, tamaño y
+    // redondeamiento entre paréntesis ("andesita (55-65%, 2-15 cm, subredondeados)"). El prefijo
+    // "Clastos de…" del término del dominio se saca. Si la cláusula anterior ya nombró los clastos
+    // ("de clastos mal seleccionados…") se enlaza con "compuestos por", sin repetir la palabra.
+    const fcl=(fichasClasto||[]).filter(c=>c.ID_LITOLOGIA===l.id);
+    if(fcl.length){
+      const rango=(a,b,u)=>{ a=String(a??'').trim(); b=String(b??'').trim();
+        return a&&b&&a!==b?a+'-'+b+u:(a||b)?(a&&!b?'desde '+a:b&&!a?'hasta '+b:a)+u:''; };
+      const enumL=lista(fcl.map(c=>{
+        const v=c.LITOLOGIA_CLASTO||'';
+        const nom=/^Clastos /i.test(v)?v.replace(/^Clastos de(l)? /i,'').replace(/^Clastos /i,''):minuscula(v||'clastos sin litología');
+        const d=[rango(c.CLASTO_MIN_PCT,c.CLASTO_MAX_PCT,'%'), rango(c.TAMANO_MIN_CM,c.TAMANO_MAX_CM,' cm')||(c.TAMANO_CLASTO?minuscula(c.TAMANO_CLASTO):''),
+          c.REDONDEAMIENTO_CLASTO&&c.REDONDEAMIENTO_CLASTO!=='Indeterminado'?minuscula(c.REDONDEAMIENTO_CLASTO):''].filter(Boolean);
+        return nom+(d.length?' ('+d.join(d.some(x=>x.includes(','))?'; ':', ')+')':'');
       }));
-      // Si la cláusula anterior ya nombró los clastos ("de clastos mal seleccionados…"),
-      // repetir "con clastos de…" dice dos veces la palabra en la misma oración. El corpus
-      // enlaza con el verbo: "clastos… subredondeados… se componen de andesitas (55%)…".
-      frag.push((clastos.length?'compuestos por ':'con clastos de ')+enumL
-        +anexoDetalle(l.LITOLOGIA_CLASTOS_DETALLE,enumL));
+      frag.push((clastos.length?'compuestos por ':'con clastos de ')+enumL);
     }
     if(l.COMPOSICION_CLASTICA_MATRIZ) frag.push('con matriz de composición '+minuscula(l.COMPOSICION_CLASTICA_MATRIZ));
     if(l.CEMENTO) frag.push(CEMENTO_FRASE[l.CEMENTO]||('con cemento '+minuscula(l.CEMENTO)));
@@ -18100,7 +18068,6 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     const eTot=espesorTotalFrase(l.ESPESOR_TOTAL_MIN_M); if(eTot) frases.push(eTot+'.');
     const dFeno=detalleSuelto(l.FENOCRISTALES_ESPECIE,l.FENOCRISTALES_DETALLE); if(dFeno) frases.push(dFeno);
     const dCris=detalleSuelto(l.CRISTALES_ESPECIE,l.CRISTALES_DETALLE); if(dCris) frases.push(dCris);
-    const dClas=detalleSuelto(l.LITOLOGIA_CLASTOS,l.LITOLOGIA_CLASTOS_DETALLE); if(dClas) frases.push(dClas);
     const dLito=detalleSuelto(l.TIPO_LITICOS,l.TIPO_LITICOS_DETALLE); if(dLito) frases.push(dLito);
     const dVid=detalleSuelto(l.TIPO_FRAGMENTO_VITREO,l.TIPO_FRAGMENTO_VITREO_DETALLE); if(dVid) frases.push(dVid);
     // Contenido fósil (2026-08-31): oración propia, NO vía detalleSuelto() -- ese ayudante solo
@@ -18281,7 +18248,7 @@ async function generarProsaProyecto(){
         litos:await childrenOf('litologia',pt.id), aflora:await childrenOf('aflora',pt.id),
         estr:await childrenOf('estructural',pt.id),
         cont:await childrenOf('contacto',pt.id), geomorf:await childrenOf('geomorf',pt.id),
-        mues:await childrenOf('muestreo',pt.id), alter:await childrenOf('alteracion',pt.id), juegos:await childrenOf('juego',pt.id),
+        mues:await childrenOf('muestreo',pt.id), alter:await childrenOf('alteracion',pt.id), juegos:await childrenOf('juego',pt.id), clastos:await childrenOf('clasto',pt.id),
       };
       const lejosDelAnterior=!anterior||L.latLng(lat,lon).distanceTo(
         L.latLng(parseFloat(anterior.pt[inLat]),parseFloat(anterior.pt[inLon])))>umbral;

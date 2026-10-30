@@ -300,7 +300,7 @@ async function correr(){
                                 TIPO_VOLCANICA:'Rocas piroclásticas', NOMBRE_ROCA:'Toba', POMEZ_PCT:'30', SELECCION:'Mala'});
       await w.put('litologia', {id:ids[1], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-2', TIPO_ROCA:'Intrusiva',
                                 NOMBRE_ROCA:'Granito', COMPOSICION_MINERAL_INTRUSIVA:'Biotita'});
-      // sedimentarias (v150): la clástica va a SED_SILICICLASTICA (no a LITO_CLASTICA), la caliza a SED_NO_CLASTICA
+      // sedimentarias (v150): la clástica va a SED_SILICICLASTICA (no a LITO_CLASTICA), la caliza a SED_CARBONATOS (ex SED_NO_CLASTICA)
       await w.put('litologia', {id:ids[2], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-3', TIPO_ROCA:'Sedimentaria',
                                 NOMBRE_ROCA:'Arenisca', SELECCION:'Buena', CEMENTO:'Calcáreo', COMPONENTE_SUBORDINADO_1:'arcilloso'});
       await w.put('litologia', {id:ids[3], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-4', TIPO_ROCA:'Sedimentaria',
@@ -330,7 +330,7 @@ async function correr(){
           eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[2]+"'"), [{n:1}], 'arenisca: fila en SED_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM VOL_PIROCLASTICA WHERE ID_REG IN ('"+ids[2]+"','"+ids[3]+"','"+ids[4]+"')"), [{n:0}], 'las sedimentarias no deben llenar VOL_PIROCLASTICA');
           eq(q("SELECT CEMENTO, COMPONENTE_SUBORDINADO_1 FROM LITO_SEDIMENTARIA WHERE ID_REG='"+ids[2]+"'"), [{CEMENTO:'Calcáreo', COMPONENTE_SUBORDINADO_1:'arcilloso'}], 'arenisca: LITO_SEDIMENTARIA con cemento y subordinado');
-          eq(q("SELECT TEXTURA_DUNHAM, TIPO_ALOQUIMICO FROM SED_NO_CLASTICA WHERE ID_REG='"+ids[3]+"'"), [{TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'}], 'caliza: fila en SED_NO_CLASTICA');
+          eq(q("SELECT TEXTURA_DUNHAM, TIPO_ALOQUIMICO FROM SED_CARBONATOS WHERE ID_REG='"+ids[3]+"'"), [{TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'}], 'caliza: fila en SED_NO_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[3]+"'"), [{n:0}], 'la caliza no debe llenar SED_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[4]+"'"), [{n:0}], 'subtipo Mixto: sin nieta');
           eq(q("SELECT COUNT(*) n FROM gpkg_contents WHERE table_name IN ('" + hijas.join("','") + "')"), [{n:10}], 'hijas sin registrar en gpkg_contents');
@@ -774,14 +774,18 @@ async function correr(){
       eq(w.fmtValorNumerado(pv.valor, pv.nums), 'Piroxeno (clinopiroxeno) (3%, 2 mm)', 'el formato no es idempotente');
       eq(w.parseValorNumerado('Piroxeno (clinopiroxeno)').valor, 'Piroxeno (clinopiroxeno)',
          'un valor SIN números no debe perder su paréntesis propio');
-      // clastos (v94): tamaño del mayor + % por litología, en TODA roca o depósito clástico
+      // clastos (v94 -> v165): en una sedimentaria clástica salen de las fichas de clasto, con su %
       const dep = w.prosaPunto(pt, Object.assign({}, datos, {litos:[{id:'sd', TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito',
-        NOMBRE_ROCA:'Aluviales', SELECCION:'Mala', CLASTOS_TAM_MAX_CM:'45',
-        LITOLOGIA_CLASTOS:'Clastos de andesita (55%); Clastos de arenisca (40%)'}],
+        NOMBRE_ROCA:'Aluviales', SELECCION:'Mala'}],
+        clastos:[{ID_LITOLOGIA:'sd', LITOLOGIA_CLASTO:'Clastos de andesita', CLASTO_MIN_PCT:'55', CLASTO_MAX_PCT:'55'},
+                 {ID_LITOLOGIA:'sd', LITOLOGIA_CLASTO:'Clastos de arenisca', CLASTO_MIN_PCT:'40', CLASTO_MAX_PCT:'40', TAMANO_MIN_CM:'2', TAMANO_MAX_CM:'45', REDONDEAMIENTO_CLASTO:'Subredondeados'}],
         estr:[], mues:[]}), null, null, 500);
-      ok(/de hasta 45 cm de diámetro/.test(dep), 'el tamaño del clasto mayor no llegó a la prosa');
-      ok(/compuestos por andesita \(55%\) y arenisca \(40%\)/.test(dep),
-         'el % por litología de clasto no llegó, o repite la palabra clastos');
+      ok(/compuestos por andesita \(55%\) y arenisca \(40%, 2-45 cm, subredondeados\)/.test(dep),
+         'el % / tamaño / redondeamiento de las fichas de clasto no llegó, o repite la palabra clastos: ' + dep);
+      // el clasto mayor de la roca sigue en la piroclástica
+      const pir = w.prosaPunto(pt, Object.assign({}, datos, {litos:[{id:'pc', TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas',
+        NOMBRE_ROCA:'Toba de lapilli', SELECCION:'Mala', CLASTOS_TAM_MAX_CM:'45'}], estr:[], mues:[]}), null, null, 500);
+      ok(/de hasta 45 cm de diámetro/.test(pir), 'el tamaño del clasto mayor no llegó a la prosa de la piroclástica');
       // el mismo campo debe servir para una arenisca (mm) y no aparecer en una caliza
       eq(w.tamClastoFrase('0,4'), 'de hasta 4 mm de diámetro', 'bajo 1 cm debe pasar a mm');
       eq(w.tamClastoFrase('150'), 'de hasta 1,5 m de diámetro', 'sobre 1 m debe pasar a metros');
@@ -1973,15 +1977,14 @@ async function correr(){
       ok(/la arenisca se dispone en discordancia angular sobre la andesita/i.test(prosaC('Estratigráfico', 'Discordante angular')), 'prosa de discordancia angular');
       ok(/la arenisca intruye a la andesita/i.test(prosaC('Intrusivo', 'Gradacional')), 'prosa de contacto intrusivo');
       ok(/contacto metamórfico gradacional entre la arenisca y la andesita/i.test(prosaC('Metamórfico', 'Gradacional')), 'prosa de contacto metamórfico');
-      eq(w.eval('MODELO').dominios.REDONDEAMIENTO.valores[0], 'Muy anguloso', 'redondeamiento sin "Muy anguloso"');
+      eq(w.eval('MODELO').dominios.REDONDEAMIENTO_CDC.valores[0], 'Muy angulosos', 'redondeamiento CDC sin "Muy angulosos"');
       ok(w.eval('MODELO').dominios.LITOLOGIA_CLASTOS_GRAVA.valores.includes('Pómez retrabajado'), 'faltan los clastos piroclásticos retrabajados');
       // granulometría de clastos y de matriz: depósitos sí, arenisca no
       const vis = (reg, n) => w.formulario('litologia', reg).node.querySelector('[name="'+n+'"]').closest('.fld').style.display;
-      eq(['GRANULOMETRIA_CLASTOS','GRANULOMETRIA_MATRIZ'].map(n => vis({TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito', NOMBRE_ROCA:'Aluviales'}, n)), ['', ''], 'ocultas en un depósito');
-      eq(vis({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'}, 'GRANULOMETRIA_CLASTOS'), 'none', 'granulometría de clastos visible en una arenisca');
+      eq(['GRANULOMETRIA_MATRIZ'].map(n => vis({TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito', NOMBRE_ROCA:'Aluviales'}, n)), [''], 'oculta en un depósito');
       eq(vis({TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Conglomerado', TEXTURA:'Clástica (detrítica)', FABRICA_CLASTOS:'Matriz-soportada'}, 'GRANULOMETRIA_MATRIZ'), '', 'granulometría de matriz oculta en conglomerado matriz-soportado');
       const fam = M.familias_litologia.find(f => f.tabla === 'SED_CLASTICA').campos;
-      ok(fam.includes('GRANULOMETRIA_CLASTOS') && fam.includes('GRANULOMETRIA_MATRIZ'), 'SED_CLASTICA no exporta las granulometrías');
+      ok(!fam.includes('GRANULOMETRIA_CLASTOS') && fam.includes('GRANULOMETRIA_MATRIZ'), 'SED_CLASTICA: granulometría de clastos (v165: en la ficha de clasto) o de matriz');
       // la ficha de contacto ofrece las litologías del punto
       const litos = [{id:'L1', NOMBRE_ROCA:'Arenisca'}, {id:'L2', NOMBRE_ROCA:'Andesita'}];
       const fc = w.formulario('contacto', {}, {litologias:litos}).node;
@@ -2402,9 +2405,9 @@ async function correr(){
          ['none', '', '', 'none'], 'depósito piroclástico');
       eq(['CONTEXTO_DEPOSITO','LITIFICACION'].map(n => vis('litologia', {TIPO_ROCA:'Intrusiva'}, n)), ['none', 'none'], 'intrusiva sin depósito');
       eq(vis('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}, 'LITIFICACION'), 'none', 'la lava no pregunta roca o depósito');
-      eq(M.familias_litologia.map(f => f.tabla), ['TBL_LITOLOGIA','LITO_SEDIMENTARIA','SED_CLASTICA','SED_NO_CLASTICA','LITO_VOLCANICA',
+      eq(M.familias_litologia.map(f => f.tabla), ['TBL_LITOLOGIA','LITO_SEDIMENTARIA','SED_CLASTICA','SED_CARBONATOS','LITO_VOLCANICA',
          'VOL_LAVA','VOL_PIROCLASTICA','LITO_INTRUSIVA','LITO_METAMORFICA','LITO_TECTONICA','LITO_ANTROPICO'], 'árbol de litología');
-      eq(['SED_CLASTICA','SED_NO_CLASTICA','VOL_LAVA','VOL_PIROCLASTICA'].map(t => M.familias_litologia.find(f => f.tabla === t).hija_de),
+      eq(['SED_CLASTICA','SED_CARBONATOS','VOL_LAVA','VOL_PIROCLASTICA'].map(t => M.familias_litologia.find(f => f.tabla === t).hija_de),
          ['LITO_SEDIMENTARIA','LITO_SEDIMENTARIA','LITO_VOLCANICA','LITO_VOLCANICA'], 'nietas bajo su rama');
       eq(['TIPO_ANTROPICO','TIPO_ANTROPICO_OTRO','NOMBRE_ROCA'].map(n => vis('litologia', {TIPO_ROCA:'Antrópico', TIPO_ANTROPICO:'Otro'}, n)),
          ['', '', 'none'], 'antrópico');
@@ -2433,8 +2436,8 @@ async function correr(){
       await w.put('litologia', {id:ids[1], _parent:P+'pt', TIPO_ROCA:'Antrópico', TIPO_ANTROPICO:'Relave minero'});
       await w.put('estructural', {id:ids[2], _parent:P+'pt', TIPO_ESTRUCTURA:'Estructura falla', AZIMUT:'30', MANTEO_BUZAMIENTO:'60',
                                   CATEGORIA_FALLA:'Falla Normal', TIPO_FALLA:'Falla normal', CRITERIO_CINEMATICO:'Escarpe; Fracturas tipo T'});
-      await w.put('clasto', {id:ids[3], _parent:P+'pt', ID_LITOLOGIA:ids[0], COMPONENTE_MIN_PCT:'40',
-                                 LITOLOGIA_CLASTO:'Clastos de andesita', REDONDEAMIENTO_COMPONENTE:'Subredondeados'});
+      await w.put('clasto', {id:ids[3], _parent:P+'pt', ID_LITOLOGIA:ids[0], CLASTO_MIN_PCT:'40',
+                                 LITOLOGIA_CLASTO:'Clastos de andesita', REDONDEAMIENTO_CLASTO:'Subredondeados'});
       // clasto y fragmento en litologías sin ningún campo de su rama: la fila de la rama debe salir igual
       await w.put('litologia', {id:ids[4], _parent:P+'pt', TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'});
       await w.put('clasto', {id:ids[3] + 'b', _parent:P+'pt', ID_LITOLOGIA:ids[4], LITOLOGIA_CLASTO:'Clastos de cuarzo'});
@@ -2456,8 +2459,8 @@ async function correr(){
              [{ID_ESTRUCTURA:ids[2], TIPO_FALLA:'Falla normal', CRITERIO_CINEMATICO:'Escarpe; Fracturas tipo T'}], 'fila EST_FALLA');
           eq(q("SELECT COUNT(*) n FROM EST_PLIEGUE WHERE ID_REG='"+ids[2]+"'"), [{n:0}], 'la falla no debe tener fila de pliegue');
           ok(!q("SELECT name FROM pragma_table_info('TBL_DATOS_ESTRUCTURALES')").map(x => x.name).includes('TIPO_FALLA'), 'el padre aún trae TIPO_FALLA');
-          eq(q("SELECT ID_CLASTO, ID_LITOLOGIA, COMPONENTE_MIN_PCT, LITOLOGIA_CLASTO FROM COMP_CLASTO WHERE ID_REG='"+ids[3]+"'"),
-             [{ID_CLASTO:ids[3], ID_LITOLOGIA:ids[0], COMPONENTE_MIN_PCT:'40', LITOLOGIA_CLASTO:'Clastos de andesita'}], 'fila COMP_CLASTO');
+          eq(q("SELECT ID_CLASTO, ID_LITOLOGIA, CLASTO_MIN_PCT, LITOLOGIA_CLASTO FROM COMP_CLASTO WHERE ID_REG='"+ids[3]+"'"),
+             [{ID_CLASTO:ids[3], ID_LITOLOGIA:ids[0], CLASTO_MIN_PCT:'40', LITOLOGIA_CLASTO:'Clastos de andesita'}], 'fila COMP_CLASTO');
           eq(q("SELECT COUNT(*) n FROM sqlite_master WHERE name IN ('TBL_COMPONENTE','COMP_FRAGMENTO')"), [{n:1}], 'tablas de componentes en el GeoPackage');
           const filas = (t, id) => q("SELECT COUNT(*) n FROM " + t + " WHERE ID_LITOLOGIA='" + id + "'")[0].n;
           eq([filas('SED_CLASTICA', ids[4]), filas('LITO_SEDIMENTARIA', ids[4]), filas('VOL_PIROCLASTICA', ids[5]), filas('LITO_INTRUSIVA', ids[7])],
@@ -2722,6 +2725,41 @@ async function correr(){
         await w.del('proyecto', pr.id); w.eval('curProyecto = null');
       }
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
+    });
+
+    // ---- v165: clastos sin redundancia, campos CLASTO y SED_CARBONATOS ----
+    await prueba('v165 clastos: la sedimentaria no repite la ficha de clasto; CLASTO en los nombres; SED_CARBONATOS', async () => {
+      const M = w.eval('MODELO'), lit = M.tablas.TBL_LITOLOGIA.campos.map(c => c.nombre);
+      const SALEN = ['LITOLOGIA_CLASTOS','LITOLOGIA_CLASTOS_DETALLE','GRANULOMETRIA_CLASTOS','REDONDEAMIENTO','ESFERICIDAD'];
+      eq(SALEN.filter(n => lit.includes(n)), [], 'la litología aún tiene campos de la ficha de clasto');
+      const fam = t => M.familias_litologia.find(f => f.tabla === t);
+      ok(!fam('SED_CLASTICA').campos.includes('CLASTOS_TAM_MAX_CM') && fam('VOL_PIROCLASTICA').campos.includes('CLASTOS_TAM_MAX_CM'), 'el clasto mayor debe quedar solo en la piroclástica');
+      ok(fam('SED_CARBONATOS') && !fam('SED_NO_CLASTICA'), 'SED_NO_CLASTICA no pasó a SED_CARBONATOS');
+      eq(M.tablas.COMP_CLASTO.campos.map(c => c.nombre).filter(n => /COMPONENTE|GRANULOMETRIA/.test(n)), [], 'quedan nombres COMPONENTE/GRANULOMETRIA en la ficha de clasto');
+      ok(['CLASTO_MIN_PCT','CLASTO_MAX_PCT','REDONDEAMIENTO_CLASTO','FORMA_CLASTO','COLOR_CLASTO','NOTA_CLASTO','TAMANO_CLASTO'].every(n => M.tablas.COMP_CLASTO.campos.some(c => c.nombre === n)), 'faltan los campos renombrados');
+      ok(M.tablas.COMP_FRAGMENTO.campos.some(c => c.nombre === 'COMPONENTE_MIN_PCT'), 'la ficha de fragmento no debía cambiar');
+      eq(w.familiaAplica('SED_CARBONATOS', {TIPO_ROCA:'Sedimentaria', SUBTIPO_SEDIMENTARIO:'Carbonato', NOMBRE_ROCA:'Caliza'}), true, 'una caliza va a SED_CARBONATOS');
+      // la ficha de una arenisca ya no muestra los campos de clasto; la piroclástica sí el clasto mayor
+      const f = w.formulario('litologia', {TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Conglomerado'});
+      const vis = (ff, n) => { const i = ff.node.querySelector('[name="'+n+'"]'); return !!i && i.closest('.fld').style.display !== 'none'; };
+      eq(['CLASTOS_TAM_MAX_CM'].concat(SALEN).map(n => vis(f, n)), [false, false, false, false, false, false], 'campos de clasto en un conglomerado');
+      ok(vis(w.formulario('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas'}), 'CLASTOS_TAM_MAX_CM'), 'falta el clasto mayor en la piroclástica');
+      // migración: litología vieja -> fichas de clasto, una por litología de clasto
+      const li = {id:'L', _parent:'P', ID_PUNTO_CONTROL:'PC', TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Conglomerado',
+        LITOLOGIA_CLASTOS:'Clastos de andesita (55%); Clastos de basalto', GRANULOMETRIA_CLASTOS:'guijarro grueso (32–16 mm)',
+        REDONDEAMIENTO:'Subredondeado', ESFERICIDAD:'Elipsoidal', CLASTOS_TAM_MAX_CM:'40', LITOLOGIA_CLASTOS_DETALLE:'algunos de granito'};
+      const cs = w.clastosDeLitologiaV165(li);
+      eq(cs.map(c => [c.ID_LITOLOGIA, c._parent, c.LITOLOGIA_CLASTO, c.CLASTO_MIN_PCT || '', c.TAMANO_CLASTO, c.REDONDEAMIENTO_CLASTO, c.FORMA_CLASTO]),
+        [['L','P','Clastos de andesita','55','guijarro grueso (32–16 mm)','Subredondeados','Elipsoidal'], ['L','P','Clastos de basalto','','guijarro grueso (32–16 mm)','Subredondeados','Elipsoidal']], 'migración de clastos');
+      eq(cs[0].NOTA_CLASTO, 'Clasto mayor de la roca: 40 cm. algunos de granito', 'el clasto mayor y el detalle van en la nota');
+      ok(M.dominios.REDONDEAMIENTO_CDC.valores.includes(cs[0].REDONDEAMIENTO_CLASTO), 'el redondeamiento migrado no está en la lista CDC');
+      eq(w.clastosDeLitologiaV165(li), [], 'la migración debe correr una sola vez');
+      eq(w.clastosDeLitologiaV165({id:'X', TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', CLASTOS_TAM_MAX_CM:'40'}), [], 'una piroclástica conserva su clasto mayor');
+      const viejo = {COMPONENTE_MIN_PCT:'10', NOTA_COMPONENTE:'n', GRANULOMETRIA_CLASTO:'g'};
+      ok(w.renombrarClastoV165(viejo), 'renombrarClastoV165 no informó cambio');
+      eq(viejo, {CLASTO_MIN_PCT:'10', NOTA_CLASTO:'n', TAMANO_CLASTO:'g'}, 'renombre de la ficha de clasto');
+      ok(!w.renombrarClastoV165(viejo), 'el renombre debe ser idempotente');
+      return 'sin duplicados, clasto mayor solo en piroclástica, CLASTO_* y TAMANO_CLASTO, SED_CARBONATOS y migración';
     });
 
     // ---- v164: campos de terreno de la roca intrusiva ----
