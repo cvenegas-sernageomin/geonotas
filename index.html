@@ -630,12 +630,6 @@ const MODELO = {
           "nota": "Depósitos, rocas sedimentarias clásticas y piroclásticas."
         },
         {
-          "nombre": "CLASTOS_TAM_MAX_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Solo rocas y depósitos piroclásticos: tamaño del clasto mayor observado, en cm (eje mayor). En las sedimentarias clásticas el tamaño va en cada ficha de clasto (COMP_CLASTO, v165)."
-        },
-        {
           "nombre": "COMPOSICION_CLASTICA",
           "obligatorio": false,
           "dominio": "COMPOSICION_CLASTICA",
@@ -871,80 +865,11 @@ const MODELO = {
           "nota": "Solo sedimentaria con LITIFICACION = Depósito."
         },
         {
-          "nombre": "CRISTALES_ESPECIE",
-          "obligatorio": false,
-          "dominio": "MINERAL_CRISTALOCLASTO",
-          "multiple": true,
-          "nota": "Rocas piroclasticas y Tefra: fragmentos cristalinos (cristaloclastos), no fenocristales -- la roca es clastica, no una lava coherente. Seleccion multiple; cada mineral admite su PORCENTAJE y su TAMANO en mm junto a la especie, mismo formato y misma razon que FENOCRISTALES_ESPECIE. Ojo: este % es de cada especie DENTRO de los cristaloclastos; CRISTALES_PCT es el % del conjunto de cristaloclastos respecto al total de clastos.",
-          "numeros": [
-            {
-              "suf": "%",
-              "ph": "%",
-              "max": 100
-            },
-            {
-              "suf": "mm",
-              "ph": "mm",
-              "max": 500
-            }
-          ]
-        },
-        {
-          "nombre": "CRISTALES_DETALLE",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Texto libre: especies fuera de la lista, forma/habito, o matices que el % y el tamano por especie no capturen. Solo rocas piroclasticas y Tefra."
-        },
-        {
-          "nombre": "LITICOS_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% de fragmentos líticos respecto al total de CLASTOS del depósito piroclástico (no del total de la roca -- ver MATRIZ_PCT para eso). Junto con POMEZ_PCT/CRISTALES_PCT define la clasificación real de una toba/brecha piroclástica (vítrea/pumícea/cristalina/lítica, según el componente dominante -- tipo Fisher & Schmincke / Schmid 1981), verificada en el RAG de Cartas SGB 2026-08-25: 'esta compuesta de 1-3% de cristales... <1% de líticos andesíticos'. Reemplaza el campo cualitativo COMPONENTE_PIROCLASTICO (Vítrea/Lítica/Cristalina), retirado porque el usuario pidió porcentajes reales en vez de una etiqueta. Aplica a rocas piroclásticas y a Tefra (mismo alcance que tenía COMPONENTE_PIROCLASTICO)."
-        },
-        {
-          "nombre": "TIPO_LITICOS",
-          "obligatorio": false,
-          "dominio": "TIPO_LITICO",
-          "multiple": true,
-          "nota": "Nombre de roca de los fragmentos líticos del depósito piroclástico (Andesita, Basalto, Dacita, Riolita, Toba, Intrusivo, Sedimentario, Metamórfico). Complementa LITICOS_PCT: ese campo fija CUÁNTOS líticos hay; este dice DE QUÉ roca son. Lista curada del RAG de Cartas SGB; un término fuera de la lista va a TIPO_LITICOS_DETALLE. Aplica a rocas piroclásticas y a Tefra."
-        },
-        {
-          "nombre": "TIPO_LITICOS_DETALLE",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Texto libre: litología u origen de líticos fuera de la lista, o matices que la lista no capture. Rocas piroclásticas y Tefra."
-        },
-        {
-          "nombre": "POMEZ_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% de fragmentos de pómez respecto al total de CLASTOS. Ver nota de LITICOS_PCT."
-        },
-        {
-          "nombre": "CRISTALES_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% de cristaloclastos (fragmentos cristalinos sueltos) respecto al total de CLASTOS. Especie mineral y detalle van en CRISTALES_ESPECIE/CRISTALES_DETALLE, campo aparte. Ver nota de LITICOS_PCT."
-        },
-        {
           "nombre": "MATRIZ_COMPOSICION",
           "obligatorio": false,
           "dominio": "MATRIZ_COMPOSICION",
           "multiple": true,
           "nota": "Rocas piroclásticas y Tefra (para Lava, ver CRISTALINIDAD). Selección múltiple: la matriz suele combinar componentes (ej. vítrea y cristalina)."
-        },
-        {
-          "nombre": "TIPO_FRAGMENTO_VITREO",
-          "obligatorio": false,
-          "dominio": "FRAGMENTO_VITREO",
-          "multiple": true,
-          "nota": "Tipo de clasto de los fragmentos vítreos del depósito piroclástico (eje CDC VITROCLÁSTICO: vitroclastos, esquirlas/shards de vidrio, fiamme, pómez, vidrio fresco/desvitrificado). Complementa MATRIZ_COMPOSICION: la matriz es el intersticial; esto es el clasto vítreo. Lista construida del RAG de Cartas SGB. Aplica a rocas piroclásticas y a Tefra."
-        },
-        {
-          "nombre": "TIPO_FRAGMENTO_VITREO_DETALLE",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Texto libre: tipo de fragmento vítreo fuera de la lista, o matices (desvitrificación, aplastamiento, tamaño). Rocas piroclásticas y Tefra."
         },
         {
           "nombre": "MATRIZ_DETALLE",
@@ -2296,7 +2221,7 @@ const MODELO = {
       "geometria": null,
       "pk": "ID_COMPONENTE",
       "cardinalidad": "0..N",
-      "descripcion": "Componente de una litología, descrito uno a uno: clasto, fragmento piroclástico, fósil, componente tufítico, componente subordinado o composición mineralógica (CLASE_COMPONENTE). 0..N por litología. Reemplaza a COMP_CLASTO y COMP_FRAGMENTO (v167).",
+      "descripcion": "Componente de una litología sedimentaria o piroclástica, descrito uno a uno (CLASE_COMPONENTE): clasto (SED_CLASTICA); fragmento piroclástico, cristaloclasto o fragmento vítreo (VOL_PIROCLASTICA); fósil, componente tufítico, componente subordinado o composición mineralógica (LITO_SEDIMENTARIA). 0..N por litología.",
       "campos": [
         {
           "nombre": "ID_PUNTO_CONTROL",
@@ -2333,6 +2258,18 @@ const MODELO = {
           "obligatorio": false,
           "dominio": "LITOLOGIA_FRAGMENTO",
           "nota": "Solo Fragmento piroclástico. Litología del fragmento (Vol IV)."
+        },
+        {
+          "nombre": "MINERAL_CRISTALOCLASTO",
+          "obligatorio": false,
+          "dominio": "MINERAL_CRISTALOCLASTO",
+          "nota": "Solo Cristaloclasto. Mineral del cristaloclasto (antes CRISTALES_ESPECIE de VOL_PIROCLASTICA)."
+        },
+        {
+          "nombre": "TIPO_FRAGMENTO_VITREO",
+          "obligatorio": false,
+          "dominio": "FRAGMENTO_VITREO",
+          "nota": "Solo Fragmento vítreo. Tipo de clasto vítreo (antes en VOL_PIROCLASTICA)."
         },
         {
           "nombre": "TIPO_FOSIL",
@@ -2610,7 +2547,17 @@ const MODELO = {
       "campo": "ID_PUNTO_CONTROL"
     },
     {
-      "padre": "TBL_LITOLOGIA",
+      "padre": "SED_CLASTICA",
+      "hijo": "LITO_COMPONENTES",
+      "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "VOL_PIROCLASTICA",
+      "hijo": "LITO_COMPONENTES",
+      "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "LITO_SEDIMENTARIA",
       "hijo": "LITO_COMPONENTES",
       "campo": "ID_LITOLOGIA"
     }
@@ -6963,6 +6910,8 @@ const MODELO = {
       "valores": [
         "Clasto",
         "Fragmento piroclástico",
+        "Cristaloclasto",
+        "Fragmento vítreo",
         "Fósil",
         "Componente tufítico",
         "Componente subordinado",
@@ -7106,19 +7055,10 @@ const MODELO = {
     {
       "tabla": "VOL_PIROCLASTICA",
       "padre": false,
-      "descripcion": "Nieta 1:1 (de LITO_VOLCANICA). Roca o deposito piroclastico: roca o deposito (LITIFICACION, copia), componentes (liticos, pomez, cristaloclastos, vidrio, matriz), soldadura, seleccion y, si es deposito (tefra), su descripcion e interpretacion (CDC TBL_AF_DEP_VOLCANICO).",
+      "descripcion": "Nieta 1:1 (de LITO_VOLCANICA). Roca o depósito piroclástico: soldadura, matriz, granulometría, selección y campos de depósito. Sus componentes (líticos, pómez, cristaloclastos, vítreos) van en LITO_COMPONENTES (v171).",
       "aplica_a": "Volcanica, TIPO_VOLCANICA = Rocas piroclasticas (roca o deposito)",
       "campos": [
         "SOLDADURA",
-        "LITICOS_PCT",
-        "TIPO_LITICOS",
-        "TIPO_LITICOS_DETALLE",
-        "POMEZ_PCT",
-        "CRISTALES_PCT",
-        "CRISTALES_ESPECIE",
-        "CRISTALES_DETALLE",
-        "TIPO_FRAGMENTO_VITREO",
-        "TIPO_FRAGMENTO_VITREO_DETALLE",
         "MATRIZ_COMPOSICION",
         "MATRIZ_PCT",
         "MATRIZ_DETALLE",
@@ -7132,8 +7072,7 @@ const MODELO = {
         "TIPO_DEPOSITO_VOLCANICO",
         "POSICION_CENTRO_ERUPTIVO",
         "TIPO_ERUPCION",
-        "TIPO_CENTRO_EMISION",
-        "CLASTOS_TAM_MAX_CM"
+        "TIPO_CENTRO_EMISION"
       ],
       "hija_de": "LITO_VOLCANICA",
       "campos_extra": [
@@ -7301,7 +7240,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v170';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v171';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7351,7 +7290,8 @@ const HIJAS = [
   // ofrece esas litologías (ver renderPunto/bloqueHijo).
   // v167: LITO_COMPONENTES reemplaza a clastos y fragmentos (estructura del 28-10): clasto, fragmento,
   // fósil, componente tufítico, subordinado o composición mineralógica, 0..N por litología.
-  {store:'litocomp', titulo:'Componentes', clase:'', rama:'TBL_LITOLOGIA', siempre:true},   // v169: siempre a la vista
+  // v171: rama COMPONENTES = litología sedimentaria o piroclástica (las que tienen componentes)
+  {store:'litocomp', titulo:'Componentes', clase:'', rama:'COMPONENTES', siempre:true},   // v169: siempre a la vista
   // v160: alteración de una litología (CDC TBL_AF_ALTERACION), 0..N por litología. rama
   // TBL_LITOLOGIA = cualquier litología: el panel aparece cuando el punto tiene alguna.
   {store:'alteracion', titulo:'Alteración', clase:'', rama:'TBL_LITOLOGIA', siempre:true},
@@ -7621,7 +7561,56 @@ function componentesDeLitologiaV167(li){
   if(out.length) li._componentesMigrados=true;
   return out;
 }
-const DB='captura-terreno', VER=25;   // v25 (app v167): LITO_COMPONENTES (aComponenteV167, componentesDeLitologiaV167).   // v24 (app v166): v24 (app v166): afloramiento en el punto (migrarAfloraV166).   // v23 (app v165): v23 (app v165): clastos sin redundancia (clastosDeLitologiaV165, renombrarClastoV165).   // v22 (app v163): v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+// v171 (pedido del usuario, 2026-10-30): los componentes de la piroclástica pasan a LITO_COMPONENTES.
+// Líticos -> Fragmento piroclástico (su roca a LITOLOGIA_FRAGMENTO; el nombre original en la nota),
+// pómez -> Fragmento piroclástico 'Pómez', cristales -> Cristaloclasto (con su % y mm por especie),
+// vítreos -> Fragmento vítreo; los % totales y el detalle sin especie a la nota; el clasto mayor de la
+// roca, a la nota (o a una ficha propia si no hay otra). La litología conserva sus campos (la light).
+const LITICO_A_FRAGMENTO_V171={'Andesita':'Roca volcánica o hipabisal intermedia','Basalto':'Roca volcánica o hipabisal máfica',
+  'Dacita':'Roca volcánica o hipabisal félsica','Riolita':'Roca volcánica o hipabisal félsica','Toba':'Roca volcánica o hipabisal',
+  'Intrusivo':'Roca plutónica','Sedimentario':'Roca sedimentaria','Metamórfico':'Roca metamórfica'};
+function componentesPiroclasticosV171(li){
+  const vacio=v=>v==null||v==='', items=v=>String(v||'').split(';').map(x=>x.trim()).filter(Boolean);
+  if(!li||li._piroMigrados) return [];
+  const campos=['LITICOS_PCT','TIPO_LITICOS','TIPO_LITICOS_DETALLE','POMEZ_PCT','CRISTALES_PCT','CRISTALES_ESPECIE','CRISTALES_DETALLE',
+    'TIPO_FRAGMENTO_VITREO','TIPO_FRAGMENTO_VITREO_DETALLE','CLASTOS_TAM_MAX_CM'];
+  if(campos.every(k=>vacio(li[k]))) return [];
+  li._piroMigrados=true;
+  const base=(clase,extra)=>Object.assign({id:uid(), _parent:li._parent, ID_PUNTO_CONTROL:li.ID_PUNTO_CONTROL, ID_LITOLOGIA:li.id, CLASE_COMPONENTE:clase},extra||{});
+  const pct=v=>vacio(v)?{}:{COMPONENTE_MIN_PCT:v,COMPONENTE_MAX_PCT:v};
+  const nota=(r,t)=>{ if(t) r.NOTA_COMPONENTE=[r.NOTA_COMPONENTE,t].filter(Boolean).join(' '); };
+  const out=[];
+  // líticos
+  const lit=items(li.TIPO_LITICOS).map(t=>base('Fragmento piroclástico',{LITOLOGIA_FRAGMENTO:LITICO_A_FRAGMENTO_V171[t]||'Roca de litología indeterminada',NOTA_COMPONENTE:'Lítico: '+t+'.'}));
+  if(!lit.length&&!vacio(li.LITICOS_PCT)) lit.push(base('Fragmento piroclástico',{LITOLOGIA_FRAGMENTO:'Roca de litología indeterminada',NOTA_COMPONENTE:'Líticos.'}));
+  if(!vacio(li.LITICOS_PCT)){ if(lit.length===1) Object.assign(lit[0],pct(li.LITICOS_PCT)); else nota(lit[0],'Líticos en total: '+li.LITICOS_PCT+'%.'); }
+  if(lit.length) nota(lit[0],li.TIPO_LITICOS_DETALLE);
+  out.push(...lit);
+  // pómez
+  if(!vacio(li.POMEZ_PCT)) out.push(base('Fragmento piroclástico',Object.assign({LITOLOGIA_FRAGMENTO:'Pómez'},pct(li.POMEZ_PCT))));
+  // cristaloclastos (cada especie puede traer sus números: "Plagioclasa (15%, 2 mm)")
+  const cri=items(li.CRISTALES_ESPECIE).map(t=>{ const q=parseValorNumerado(t), r=base('Cristaloclasto',{MINERAL_CRISTALOCLASTO:q.valor});
+    if(q.nums['%']) Object.assign(r,pct(q.nums['%']));
+    if(q.nums.mm){ const mm=parseFloat(String(q.nums.mm).replace(',','.')); if(!isNaN(mm)) r.TAMANO_MAX_CM=String(mm/10); }
+    return r; });
+  if(!cri.length&&(!vacio(li.CRISTALES_PCT)||!vacio(li.CRISTALES_DETALLE))) cri.push(base('Cristaloclasto'));
+  if(!vacio(li.CRISTALES_PCT)){ if(cri.length===1&&vacio(cri[0].COMPONENTE_MIN_PCT)) Object.assign(cri[0],pct(li.CRISTALES_PCT)); else nota(cri[0],'Cristaloclastos en total: '+li.CRISTALES_PCT+'%.'); }
+  if(cri.length) nota(cri[0],li.CRISTALES_DETALLE);
+  out.push(...cri);
+  // fragmentos vítreos
+  const vit=items(li.TIPO_FRAGMENTO_VITREO).map(t=>base('Fragmento vítreo',{TIPO_FRAGMENTO_VITREO:t}));
+  if(!vit.length&&!vacio(li.TIPO_FRAGMENTO_VITREO_DETALLE)) vit.push(base('Fragmento vítreo'));
+  if(vit.length) nota(vit[0],li.TIPO_FRAGMENTO_VITREO_DETALLE);
+  out.push(...vit);
+  // clasto mayor de la roca
+  if(!vacio(li.CLASTOS_TAM_MAX_CM)){
+    const fr=out.find(c=>c.CLASE_COMPONENTE==='Fragmento piroclástico');
+    if(fr) nota(fr,'Clasto mayor de la roca: '+li.CLASTOS_TAM_MAX_CM+' cm.');
+    else out.push(base('Fragmento piroclástico',{TAMANO_MAX_CM:li.CLASTOS_TAM_MAX_CM,NOTA_COMPONENTE:'Clasto mayor de la roca.'}));
+  }
+  return out;
+}
+const DB='captura-terreno', VER=26;   // v26 (app v171): componentes piroclásticos (componentesPiroclasticosV171).   // v25 (app v167): v25 (app v167): LITO_COMPONENTES (aComponenteV167, componentesDeLitologiaV167).   // v24 (app v166): v24 (app v166): afloramiento en el punto (migrarAfloraV166).   // v23 (app v165): v23 (app v165): clastos sin redundancia (clastosDeLitologiaV165, renombrarClastoV165).   // v22 (app v163): v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -7854,7 +7843,7 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
           // v25 (app v167): en la misma pasada, los componentes de la sedimentaria -> LITO_COMPONENTES; los
           // clastos de v165 ya nacen como componentes
           try{ const alt=alteracionDeLitologiaV160(li), cls=clastosDeLitologiaV165(li).map(c=>aComponenteV167('clasto',c)),
-                 comps=componentesDeLitologiaV167(li);
+                 comps=componentesDeLitologiaV167(li).concat(componentesPiroclasticosV171(li));   // v26 (app v171)
             if(!alt&&!cls.length&&!comps.length) return;
             if(alt) noAbortar(txM.objectStore('alteracion').put(alt));
             cls.concat(comps).forEach(c=>noAbortar(txM.objectStore('litocomp').put(c)));
@@ -8171,7 +8160,7 @@ async function importBackup(file, destinoColeccion = null) {
               const alt = destino === 'litologia' ? alteracionDeLitologiaV160(record) : null;   // respaldo de antes de v160
               const jue = destino === 'estructural' ? migrarJuegoV163(record) : null;          // respaldo de antes de v163
               const cls = destino === 'litologia' ? clastosDeLitologiaV165(record).map(c => aComponenteV167('clasto', c)) : [];   // antes de v165
-              const comps = destino === 'litologia' ? componentesDeLitologiaV167(record) : [];   // respaldo de antes de v167
+              const comps = destino === 'litologia' ? componentesDeLitologiaV167(record).concat(componentesPiroclasticosV171(record)) : [];   // antes de v167 / v171
               let reg = record;
               if (destino === 'clasto' || destino === 'fragmento') { reg = aComponenteV167(destino, record); destino = 'litocomp'; }   // antes de v167
               await put(destino, reg);
@@ -9410,6 +9399,7 @@ function familiaAplica(tabla, v){
   if(tabla==='VOL_LAVA') return v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava';
   if(tabla==='VOL_PIROCLASTICA') return esPiroclastica(v);
   if(tabla==='LITO_ANTROPICO') return v['TIPO_ROCA']==='Antrópico';
+  if(tabla==='COMPONENTES') return v['TIPO_ROCA']==='Sedimentaria' || esPiroclastica(v);   // v171: litologías con LITO_COMPONENTES
   if(tabla==='EST_FALLA') return esFalla(v);
   if(tabla==='EST_PLIEGUE') return esPliegue(v);
   if(tabla==='EST_FRACTURA') return v['TIPO_ESTRUCTURA']==='Estructura fractura';
@@ -9460,14 +9450,16 @@ const CONDICIONALES = {
   ACHATAMIENTO_FRAGMENTO:      {modo:'ocultar', regla: claseComp('Fragmento piroclástico')},
   GENESIS_FRAGMENTO:           {modo:'ocultar', regla: claseComp('Fragmento piroclástico')},
   TIPO_FOSIL:                  {modo:'ocultar', regla: claseComp('Fósil')},
+  MINERAL_CRISTALOCLASTO:      {modo:'ocultar', regla: claseComp('Cristaloclasto')},
+  TIPO_FRAGMENTO_VITREO:       {modo:'ocultar', regla: claseComp('Fragmento vítreo')},
   TIPO_COMPONENTE_TUFITICO:    {modo:'ocultar', regla: claseComp('Componente tufítico')},
   TIPO_COMPONENTE_SUBORDINADO: {modo:'ocultar', regla: claseComp('Componente subordinado')},
   COMPOSICION_MINERALOGICA:    {modo:'ocultar', regla: claseComp('Composición mineralógica')},
   REDONDEAMIENTO_COMPONENTE:   {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico')},
   FORMA_COMPONENTE:            {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico')},
-  TAMANO_MIN_CM:               {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Fósil')},
-  TAMANO_MAX_CM:               {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Fósil')},
-  COLOR_COMPONENTE:            {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Fósil')},
+  TAMANO_MIN_CM:               {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Cristaloclasto','Fragmento vítreo','Fósil')},
+  TAMANO_MAX_CM:               {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Cristaloclasto','Fragmento vítreo','Fósil')},
+  COLOR_COMPONENTE:            {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Cristaloclasto','Fragmento vítreo','Fósil')},
   // Descriptores de un JUEGO de fracturas (v118): desde v163 viven en su propia ficha ('juego',
   // EST_FRAC_JUEGO), que solo existe para una fractura, así que ya no necesitan regla. El
   // ESPACIAMIENTO de un juego sigue siendo, en una colada, el diámetro de las columnas.
@@ -9493,7 +9485,7 @@ const CONDICIONALES = {
   // el grano más grueso de una arenisca.
   // v165: en las sedimentarias clásticas el tamaño, la litología, el redondeamiento y la forma van
   // en cada ficha de clasto (COMP_CLASTO); el clasto mayor de la roca queda solo en la piroclástica.
-  CLASTOS_TAM_MAX_CM: {modo:'ocultar', regla: esPiroclastica},
+  // v171: líticos, pómez, cristaloclastos, vítreos y el clasto mayor de la piroclástica son componentes
   // Composición de granos (norma CDC Vol III "COMPOSICIÓN CLÁSTICA-ALOQUÍMICA", sistema de
   // Folk): mismo alcance que REDONDEAMIENTO/ESFERICIDAD -- NO aplica a rocas piroclásticas
   // (esas usan LITICOS_PCT/POMEZ_PCT/CRISTALES_PCT, un eje distinto).
@@ -9563,10 +9555,6 @@ const CONDICIONALES = {
   // que sí nacieron con el alcance dual). Resultado: CRISTALES_ESPECIE/DETALLE quedaban
   // invisibles para Tefra pese a que la nota del campo dice "rocas piroclásticas: fragmentos
   // cristalinos" y Tefra es justo el equivalente no litificado. Mismo alcance dual que el resto.
-  CRISTALES_ESPECIE: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
-  CRISTALES_DETALLE: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // Componentes cuantificados (%): reemplaza COMPONENTE_PIROCLASTICO (2026-08-25, a pedido del
   // usuario -- "no me gusta cristalina/litica/vitrea, deberia ser liticos/pomez/cristales con
   // %, la clasificacion de una toba se basa en esos porcentajes"). Verificado en el RAG (ver
@@ -9574,26 +9562,12 @@ const CONDICIONALES = {
   // clasifica por proporcion relativa ("compuesta de 1-3% de cristales... <1% de liticos...",
   // "tobas riolíticas, pumíceas y de cristales"). Mismo alcance dual que tenía
   // COMPONENTE_PIROCLASTICO: Rocas piroclásticas Y Tefra.
-  LITICOS_PCT: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // TIPO_LITICOS/DETALLE (2026-08-26, lista construida del RAG): el tipo de fragmento lítico
   // complementa a LITICOS_PCT (cuántos hay vs. de qué roca/origen son). Mismo alcance dual que
   // LITICOS_PCT: Rocas piroclásticas Y Tefra.
-  TIPO_LITICOS: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
-  TIPO_LITICOS_DETALLE: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // TIPO_FRAGMENTO_VITREO/DETALLE (2026-08-26, lista construida del RAG): tipo de clasto
   // vítreo (eje CDC vitroclástico). Complementa a MATRIZ_COMPOSICION (el intersticial vs. el
   // clasto). Mismo alcance dual: Rocas piroclásticas Y Tefra.
-  TIPO_FRAGMENTO_VITREO: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
-  TIPO_FRAGMENTO_VITREO_DETALLE: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
-  POMEZ_PCT: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
-  CRISTALES_PCT: {modo:'ocultar', regla: v =>
-    esPiroclastica(v)},   // v152: la tefra es Volcánica + LITIFICACION Depósito
   // Matriz: solo rocas piroclásticas (Lava usa el campo propio CRISTALINIDAD, verbatim CDC —
   // ver más abajo. MATRIZ_COMPOSICION nunca fue un campo verbatim de la norma, es aproximación
   // del corpus SGB, así que no se extendió a Lava tras la corrección del 2026-08-21).
@@ -14609,7 +14583,7 @@ const SVG_IC={
   __ajustes:'<path d="M5 9h22M5 16h22M5 23h22"/><circle cx="11" cy="9" r="2.6" fill="var(--surface)"/><circle cx="21" cy="16" r="2.6" fill="var(--surface)"/><circle cx="14" cy="23" r="2.6" fill="var(--surface)"/>'
 };
 const ETIQUETA_CORTA={punto:'Punto',aflora:'Afloram.',estructural:'Estructura',contacto:'Contactos',geomorf:'Geomorf.',
-  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',litocomp:'Componentes',alteracion:'Alteración',juego:'Juegos',fotomapa:'Foto-mapa','lito:':'Sin tipo',__ajustes:'Iconos'};
+  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',litocomp:'Componentes',alteracion:'Alteración',juego:'Juegos',fotomapa:'Foto-mapa','lito:':'Sin tipo','lito:*':'Litología',__ajustes:'Iconos'};
 const COLOR_IC={sedimentaria:'sed',volcanica:'vol',intrusiva:'int',metamorfica:'met',tectonica:'tec',antropico:'ant'};
 const normIc=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function colorIc(clave){ return clave.startsWith('lito:')?(COLOR_IC[normIc(clave.slice(5))]||''):''; }
@@ -14624,7 +14598,7 @@ function tiposRoca(){ const d=dominio('TIPO_ROCA'); return (d&&d.valores)||[]; }
 function catalogoIconos(){
   const out=[];
   for(const h of HIJAS){
-    if(h.store==='litologia') tiposRoca().forEach(t=>out.push({clave:'lito:'+t,titulo:t}));
+    if(h.store==='litologia'){ out.push({clave:'lito:*',titulo:'Litología'}); tiposRoca().forEach(t=>out.push({clave:'lito:'+t,titulo:t})); }
     else out.push({clave:h.store,titulo:h.titulo});
   }
   out.push({clave:'fotomapa',titulo:'Foto-mapa'});
@@ -14638,6 +14612,8 @@ function itemsDock(ctx){
   const agregar=it=>{ it.oculto=ocultos.has(it.clave); if(it.oculto&&!it.n) return; out.push(it); };
   for(const h of ctx.hijas){
     if(h.store==='litologia'){
+      // v171: «Litología» abre todas las del punto y su + crea una sin tipo (se elige en la ficha)
+      agregar({clave:'lito:*',titulo:'Litología',n:litos.length,falta:!!h.oblig&&!litos.length});
       for(const t of tipos) agregar({clave:'lito:'+t,titulo:t,n:litos.filter(L=>L.TIPO_ROCA===t).length,falta:!!h.oblig&&!litos.length});
       // litologías sin tipo (o con uno que ya no está en el dominio): siempre a la vista
       const sinTipo=litos.filter(L=>!tipos.includes(L.TIPO_ROCA)).length;
@@ -14886,20 +14862,20 @@ async function hojaFicha(h,it,idx){
   const tipo=it.clave.startsWith('lito:')?it.clave.slice(5):null, tipos=tiposRoca();
   const litos=await childrenOf('litologia',curPunto.id), conts=await childrenOf('contacto',curPunto.id);
   let regs=await childrenOf(h.store,curPunto.id);
-  if(tipo!=null) regs=regs.filter(L=>tipo?L.TIPO_ROCA===tipo:!tipos.includes(L.TIPO_ROCA));
+  if(tipo!=null&&tipo!=='*') regs=regs.filter(L=>tipo?L.TIPO_ROCA===tipo:!tipos.includes(L.TIPO_ROCA));   // '*': todas (v171)
   const litosRama=h.rama?litos.filter(L=>familiaAplica(h.rama,L)):litos;
   const fracs=h.deFractura?await fracturasDelPunto(curPunto.id):[];
   idx=Math.max(0,Math.min(idx||0,regs.length-1));
   // al redibujar el mismo registro (p.ej. tras crear la medida de un contacto) no saltar arriba
   const prev=document.querySelector('.hoja .hoja-cuerpo');
   const scroll=prev&&pv.hoja&&pv.hoja.clave===it.clave&&pv.hoja.idx===idx?prev.scrollTop:0;
-  const H=crearHoja(tipo==null?h.titulo:(tipo||'Litología sin tipo'), it.clave);
+  const H=crearHoja(tipo==null?h.titulo:tipo==='*'?'Litología':(tipo||'Litología sin tipo'), it.clave);
   pv.hoja={clave:it.clave,idx};
-  const nombre=tipo?'litología '+tipo.toLowerCase():tipo===''?'litología':h.titulo.toLowerCase();
+  const nombre=tipo==='*'||tipo===''?'litología':tipo?'litología '+tipo.toLowerCase():h.titulo.toLowerCase();
   const agregar=async()=>{
     if(bloqueoGabineteActivo())return;
     await guardarPuntoForm(pv.f);
-    await crearHijo(h,litosRama,Object.assign({},tipo?{TIPO_ROCA:tipo}:{},h.deFractura&&fracs.length===1?{ID_ESTRUCTURA:fracs[0].id}:{}));
+    await crearHijo(h,litosRama,Object.assign({},tipo&&tipo!=='*'?{TIPO_ROCA:tipo}:{},h.deFractura&&fracs.length===1?{ID_ESTRUCTURA:fracs[0].id}:{}));
     pv.hoja={clave:it.clave,idx:regs.length};
     await renderPuntoIconos($('#app'));
     toast('Ficha agregada — completa los campos');
@@ -14911,7 +14887,7 @@ async function hojaFicha(h,it,idx){
   if(!regs.length){
     const sinRama=(h.rama&&!litosRama.length)||(h.deFractura&&!fracs.length);
     H.cuerpo.append(el('div',{class:'hoja-vacia'},
-      el('p',{},sinRama?(h.deFractura?'Primero registra una medida de fractura en Datos estructurales.':h.rama==='TBL_LITOLOGIA'?'Primero describe una litología en este punto.':'Primero describe una litología de esta rama.'):'Sin fichas de '+nombre+' en este punto.'),
+      el('p',{},sinRama?(h.deFractura?'Primero registra una medida de fractura en Datos estructurales.':h.rama==='TBL_LITOLOGIA'?'Primero describe una litología en este punto.':h.rama==='COMPONENTES'?'Primero describe una litología sedimentaria o piroclástica en este punto.':'Primero describe una litología de esta rama.'):'Sin fichas de '+nombre+' en este punto.'),
       sinRama?null:el('button',{class:'btn',onclick:agregar},'+ Agregar '+nombre)));
   } else {
     bloquesContacto.clear();
@@ -17370,7 +17346,14 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
       }
       if(s==='litologia'){
         const porId=Object.fromEntries(regsS.map(r=>[r.id,r]));
-        for(const h of HIJAS.filter(h=>h.rama)) for(const c of await all(h.store)){
+        // v171: cada componente cuelga de la hija que describe según su clase
+        const RAMA_CLASE={'Clasto':'SED_CLASTICA','Fragmento piroclástico':'VOL_PIROCLASTICA','Cristaloclasto':'VOL_PIROCLASTICA',
+          'Fragmento vítreo':'VOL_PIROCLASTICA'};
+        for(const c of await all('litocomp')){
+          const L=porId[c.ID_LITOLOGIA], rama=RAMA_CLASE[c.CLASE_COMPONENTE]||'LITO_SEDIMENTARIA';
+          if(L&&familiaAplica(rama,L)) marcar(rama,L.id);
+        }
+        for(const h of HIJAS.filter(h=>h.rama&&h.store!=='litocomp')) for(const c of await all(h.store)){
           const L=porId[c.ID_LITOLOGIA]; if(L&&familiaAplica(h.rama,L)) marcar(h.rama,L.id);
         }
       }
@@ -17952,41 +17935,35 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       // corpus también usa (180 casos).
       frag.push('con masa fundamental '+masa);
     }
-    // cristaloclastos (piroclásticas/tefra): distinto de fenocristales, ver CONDICIONALES.
-    const cristales=multi(l.CRISTALES_ESPECIE);
-    if(cristales.length){
-      const enumC=lista(cristales.map(mineralNum));
-      frag.push('con cristales de '+enumC+anexoDetalle(l.CRISTALES_DETALLE,enumC));
-    }
+    // v171: cristaloclastos, fragmentos (líticos, pómez) y vítreos son componentes (LITO_COMPONENTES)
+    const cpi=(componentes||[]).filter(c=>c.ID_LITOLOGIA===l.id);
+    const pctC=c=>{ const a=String(c.COMPONENTE_MIN_PCT??'').trim(), b=String(c.COMPONENTE_MAX_PCT??'').trim();
+      return a&&b&&a!==b?a+'-'+b+'%':(a||b)?(a||b)+'%':''; };
+    const conPct=(nom,c,mm)=>{ const d=[pctC(c)];
+      if(mm){ const t=parseFloat(String(c.TAMANO_MAX_CM??'').replace(',','.')); if(t>0) d.push(String(Math.round(t*100)/10).replace('.',',')+' mm'); }
+      const dd=d.filter(Boolean); return dd.length?nom+' ('+dd.join(', ')+')':nom; };
+    const cris=cpi.filter(c=>c.CLASE_COMPONENTE==='Cristaloclasto');
+    // mismo formato calibrado de siempre ("cuarzo (12%, de hasta 1,5 mm de largo)"): se arma el valor
+    // numerado "Cuarzo (12%, 1,5 mm)" y pasa por mineralNum
+    const numCris=c=>{ const n={}, p=String(c.COMPONENTE_MAX_PCT||c.COMPONENTE_MIN_PCT||'').trim(), t=parseFloat(String(c.TAMANO_MAX_CM??'').replace(',','.'));
+      if(p) n['%']=p; if(t>0) n.mm=String(Math.round(t*100)/10).replace('.',',');
+      return mineralNum(fmtValorNumerado(c.MINERAL_CRISTALOCLASTO||'especie no determinada',n)); };
+    if(cris.length) frag.push('con cristales de '+lista(cris.map(numCris)));
     // Componentes cuantificados (líticos/pómez/cristales, % de los CLASTOS) -- reemplaza el
     // COMPONENTE_PIROCLASTICO cualitativo (2026-08-25, a pedido del usuario: la clasificación
     // real de una toba se basa en la proporción de estos 3, no en una sola etiqueta). Solo se
     // listan los que el geólogo cargó; MATRIZ_PCT (% de matriz respecto al TOTAL de la roca) va
     // en cláusula aparte porque es un eje distinto (clasto- vs. matriz-soportada).
-    const comp=[['LITICOS_PCT','líticos'],['POMEZ_PCT','pómez'],['CRISTALES_PCT','cristales']]
-      // "5% de líticos", no "5% líticos": es la forma del corpus ("compuesta de 1-3% de
-      // cristales…", "incluyen de 2-5% de clastos redondeados…") y la del español corriente.
-      .filter(([c])=>l[c]).map(([c,n])=>l[c]+'% de '+n);
-    let fraseComp=comp.length?COMPUESTO[generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA))]+' de '+lista(comp):'';
-    if(l.MATRIZ_PCT){
-      const m='una matriz que constituye el '+l.MATRIZ_PCT+'% de la roca';
-      fraseComp=fraseComp?fraseComp+', con '+m:'con '+m;
-    }
-    if(fraseComp) frag.push(fraseComp);
+    const frs=cpi.filter(c=>c.CLASE_COMPONENTE==='Fragmento piroclástico');
+    if(frs.length) frag.push('con fragmentos de '+lista(frs.map(c=>conPct(minuscula(c.LITOLOGIA_FRAGMENTO||'litología indeterminada'),c))));
+    const vits=cpi.filter(c=>c.CLASE_COMPONENTE==='Fragmento vítreo');
+    if(vits.length) frag.push('con fragmentos vítreos de '+lista(vits.map(c=>conPct(FRAGMENTO_VITREO_FRASE[c.TIPO_FRAGMENTO_VITREO]||minuscula(c.TIPO_FRAGMENTO_VITREO||'vidrio'),c))));
+    if(l.MATRIZ_PCT) frag.push('con una matriz que constituye el '+l.MATRIZ_PCT+'% de la roca');
     // Tipo de líticos y de fragmentos vítreos (2026-08-26, listas del RAG): complementan a
     // LITICOS_PCT (cuántos líticos) y a MATRIZ_COMPOSICION (el intersticial). Son el "de qué"
     // ("…líticos andesíticos y accidentales", "esquirlas de vidrio y fiamme"), como lo encadena
     // el corpus ("fragmentos accidentales de esquistos...", "esquirlas y fiamme milimétricas").
-    const liticos=multi(l.TIPO_LITICOS);
-    if(liticos.length){
-      const enumLi=lista(liticos.map(c=>TIPO_LITICO_FRASE[c]||minuscula(c)));
-      frag.push('con líticos '+enumLi+anexoDetalle(l.TIPO_LITICOS_DETALLE,enumLi));
-    }
-    const vitreos=multi(l.TIPO_FRAGMENTO_VITREO);
-    if(vitreos.length){
-      const enumVi=lista(vitreos.map(c=>FRAGMENTO_VITREO_FRASE[c]||minuscula(c)));
-      frag.push('con fragmentos vítreos de '+enumVi+anexoDetalle(l.TIPO_FRAGMENTO_VITREO_DETALLE,enumVi));
-    }
+
     // clastos: selección, redondeamiento y esfericidad se funden en un solo adjetivo plural,
     // igual que el corpus ("clastos mal seleccionados y subredondeados"), no fragmentos sueltos.
     // lista() (no join(' y ')) porque ahora pueden ser 3 adjetivos ("X, Y y Z").
@@ -17995,7 +17972,9 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // El tamaño del clasto mayor se pega a esa misma enumeración ("de clastos mal
     // seleccionados y subredondeados, de hasta 15 cm de diámetro"), que es como lo encadena el
     // corpus. Sin adjetivos cargados abre su propia cláusula, para no perder la medición.
-    const tamClasto=tamClastoFrase(l.CLASTOS_TAM_MAX_CM);
+    // v171: el clasto mayor de una piroclástica es el mayor de sus fragmentos (LITO_COMPONENTES)
+    const tMax=Math.max(-1,...frs.concat(vits).map(c=>parseFloat(String(c.TAMANO_MAX_CM??'').replace(',','.'))).filter(x=>!isNaN(x)));
+    const tamClasto=tMax>0?tamClastoFrase(String(tMax)):'';
     if(clastos.length) frag.push('de clastos '+lista(clastos)+(tamClasto?', '+tamClasto:''));
     else if(tamClasto) frag.push('con clastos '+tamClasto);
     if(l.COMPOSICION_CLASTICA) frag.push('de composición '+minuscula(l.COMPOSICION_CLASTICA));
@@ -18248,9 +18227,6 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     if(eEst) frases.push('Se dispone '+eEst+'.');
     const eTot=espesorTotalFrase(l.ESPESOR_TOTAL_MIN_M); if(eTot) frases.push(eTot+'.');
     const dFeno=detalleSuelto(l.FENOCRISTALES_ESPECIE,l.FENOCRISTALES_DETALLE); if(dFeno) frases.push(dFeno);
-    const dCris=detalleSuelto(l.CRISTALES_ESPECIE,l.CRISTALES_DETALLE); if(dCris) frases.push(dCris);
-    const dLito=detalleSuelto(l.TIPO_LITICOS,l.TIPO_LITICOS_DETALLE); if(dLito) frases.push(dLito);
-    const dVid=detalleSuelto(l.TIPO_FRAGMENTO_VITREO,l.TIPO_FRAGMENTO_VITREO_DETALLE); if(dVid) frases.push(dVid);
     // Contenido fósil (2026-08-31): oración propia, NO vía detalleSuelto() -- ese ayudante solo
     // muestra el detalle cuando la enumeración de valores trae paréntesis numéricos (%, mm), que
     // este campo no usa; con detalleSuelto() el detalle habría quedado silenciado siempre.
