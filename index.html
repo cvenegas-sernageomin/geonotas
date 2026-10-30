@@ -107,6 +107,26 @@
   .multichips .chipnum .cn{width:58px;height:auto;padding:5px 7px;border:1px solid var(--inp-bd);
     border-radius:9px;background:var(--inp);color:var(--txt);font-size:12px;display:none}
   .multichips .chipnum.on .cn{display:inline-block}
+  /* v168: la selección múltiple es una lista desplegable. El botón resume lo elegido; la lista
+     (el mismo .multichips de siempre, con sus checkboxes) se abre debajo, en el flujo de la ficha,
+     para no quedar recortada dentro de la hoja inferior. */
+  .ms-dd{width:100%}
+  .ms-btn{width:100%;display:flex;align-items:center;gap:8px;text-align:left;font:inherit;font-size:16px;min-height:42px;
+    padding:8px 12px;border:1px solid var(--inp-bd);border-radius:10px;background:var(--inp);color:var(--txt);cursor:pointer}
+  .ms-btn .ms-res{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ms-btn .ms-res.ms-vacio{color:var(--muted)}
+  .ms-btn::after{content:'▾';opacity:.7}
+  .ms-dd.abierto .ms-btn::after{content:'▴'}
+  .ms-dd .multichips{display:none;flex-direction:column;flex-wrap:nowrap;gap:0;margin-top:4px;max-height:300px;overflow:auto;
+    border:1px solid var(--inp-bd);border-radius:10px;background:var(--inp);padding:4px 0}
+  .ms-dd.abierto .multichips{display:flex}
+  .ms-dd .multichips .chip{display:flex;width:100%;border:0;border-radius:0;background:transparent;color:var(--txt);padding:9px 12px;font-size:15px;gap:10px}
+  .ms-dd .multichips .chip.on{background:transparent;color:var(--txt);font-weight:600}
+  .ms-dd .multichips .chip.huerfano{font-style:italic}
+  .ms-dd .multichips .chip.huerfano.on{background:transparent;color:#7a6a1f}
+  .ms-dd .multichips .chip input{width:18px;height:18px;accent-color:var(--verde)}
+  .ms-dd .multichips .chipnum{display:flex;align-items:center;padding-right:10px}
+  .ms-dd .multichips .chipnum .chip{flex:1;width:auto}
   .row{display:flex;flex-wrap:wrap;gap:10px}
   /* Ficha de litología agrupada por familia (v149): mismo reparto que la GDB (padre + LITO_*) */
   .grupo-lito{margin:4px 0 6px}
@@ -7281,7 +7301,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v167';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v168';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -9035,6 +9055,28 @@ function fmtValorNumerado(valor,nums){
 // Serializa un widget de chips, con o sin números. Único lugar donde se arma la cadena: hay
 // DOS llamadores (el guardado de la ficha y el de la sub-ficha) y tenerlo duplicado era la
 // forma segura de que uno de los dos se quedara sin los números.
+// Lista desplegable para un campo de selección múltiple (v168, pedido del usuario). Envuelve el
+// mismo <div class="multichips"> (sus checkboxes, números por valor, tope, excluyentes, huérfanos y
+// reglas siguen intactos: inputs[n] sigue siendo ese div) con un botón que resume lo elegido y la abre.
+// El resumen se rehace al marcar y cuando poblarChips() redibuja la lista (repoblar una cascada).
+function desplegableMulti(inp){
+  const dd=el('div',{class:'ms-dd'}), res=el('span',{class:'ms-res'});
+  const btn=el('button',{type:'button',class:'ms-btn','aria-expanded':'false'},res);
+  const resumen=()=>{
+    const v=[...inp.querySelectorAll('input[type=checkbox]:checked')].map(cb=>{ const ch=cb.closest('.chip'); return (ch?ch.textContent:cb.value).trim(); });
+    res.textContent=!v.length?'— seleccionar —':v.length<=2?v.join(', '):v.slice(0,2).join(', ')+' +'+(v.length-2);
+    res.classList.toggle('ms-vacio',!v.length);
+    btn.title=v.join(', ');
+  };
+  btn.addEventListener('click',()=>{ const a=!dd.classList.contains('abierto'); dd.classList.toggle('abierto',a); btn.setAttribute('aria-expanded',String(a)); });
+  inp.addEventListener('change',resumen);
+  new MutationObserver(resumen).observe(inp,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+  dd.append(btn,inp); resumen();
+  return dd;
+}
+// Una lista abierta se cierra al tocar fuera de ella o con Escape.
+document.addEventListener('click',e=>{ document.querySelectorAll('.ms-dd.abierto').forEach(d=>{ if(!d.contains(e.target)){ d.classList.remove('abierto'); const b=d.querySelector('.ms-btn'); if(b) b.setAttribute('aria-expanded','false'); } }); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.ms-dd.abierto').forEach(d=>d.classList.remove('abierto')); });
 function valorMultichips(inp){
   const cajas=[...inp.querySelectorAll('.chipnum')];
   if(!cajas.length) return [...inp.querySelectorAll('input:checked')].map(c=>c.value).join('; ');
@@ -9864,7 +9906,7 @@ function formulario(store, reg, ctx){
     const sensor = tipoSensor(n);
     // en tablas con plano (estructural/contacto) se usa la barra de medición combinada, no botones sueltos
     if(sensor && w==='number' && !PLANO_CAMPOS[store]) fld.append(sensorInput(inp,sensor));
-    else fld.append(inp);
+    else fld.append(inp._multi ? desplegableMulti(inp) : inp);   // v168: selección múltiple como lista desplegable
     // campo.nota (texto de modelo_canonico.json) ya NO se muestra bajo el campo: alargaba el
     // formulario con explicaciones que un geólogo no necesita en terreno (ej. "la lista depende
     // de CLASE_AFLORAMIENTO"). Sigue disponible como documentación en el modelo/diccionario de

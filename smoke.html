@@ -2726,6 +2726,50 @@ async function correr(){
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
     });
 
+    // ---- v168: selección múltiple como lista desplegable ----
+    await prueba('v168 selección múltiple: lista desplegable en todas las fichas, mismo valor guardado', async () => {
+      const M = w.eval('MODELO'), STORE = w.eval('STORE2TBL');
+      // todos los campos múltiples con dominio de todas las fichas van dentro de una lista desplegable
+      const sinLista = [];
+      for (const [st, tbl] of Object.entries(STORE)) {
+        if (!M.tablas[tbl]) continue;
+        const multis = M.tablas[tbl].campos.filter(c => c.multiple && c.dominio).map(c => c.nombre);
+        if (!multis.length) continue;
+        const f = w.formulario(st, {});
+        for (const n of multis) {
+          const caja = [...f.node.querySelectorAll('.multichips')].find(m => m.name === n);
+          if (caja && !caja.closest('.ms-dd')) sinLista.push(st + '.' + n);
+        }
+      }
+      eq(sinLista, [], 'campos múltiples que no son lista desplegable');
+      // comportamiento: cerrada, se abre, resume, se cierra al tocar fuera, guarda "A; B"
+      const f = w.formulario('alteracion', {MINERAL_ALTERACION:'Clorita; Epidota'}, {litologias:[{id:'L1', NOMBRE_ROCA:'Andesita'}]});
+      w.document.getElementById('app').append(f.node);
+      try {
+        const dd = [...f.node.querySelectorAll('.ms-dd')].find(d => d.querySelector('.multichips').name === 'MINERAL_ALTERACION');
+        const btn = dd.querySelector('.ms-btn'), lista = dd.querySelector('.multichips');
+        eq(w.getComputedStyle(lista).display, 'none', 'la lista debe partir cerrada');
+        eq(btn.querySelector('.ms-res').textContent, 'Clorita, Epidota', 'el botón no resume lo guardado');
+        btn.click();
+        eq(w.getComputedStyle(lista).display, 'flex', 'el botón no abre la lista');
+        const cb = [...lista.querySelectorAll('input[type=checkbox]')].find(c => c.value === 'Calcita');
+        cb.checked = true; cb.dispatchEvent(new w.Event('change', {bubbles:true}));
+        await new Promise(r => setTimeout(r, 50));
+        eq(btn.querySelector('.ms-res').textContent, 'Calcita, Clorita +1', 'el resumen no se actualizó (va en el orden de la lista)');
+        eq(f.getData().MINERAL_ALTERACION, 'Calcita; Clorita; Epidota', 'el valor guardado cambió de formato');
+        w.document.body.dispatchEvent(new w.MouseEvent('click', {bubbles:true}));
+        eq(w.getComputedStyle(lista).display, 'none', 'la lista no se cierra al tocar fuera');
+        const vacio = w.formulario('alteracion', {}).node.querySelector('.ms-res');
+        ok(vacio.classList.contains('ms-vacio') && /seleccionar/.test(vacio.textContent), 'una lista sin valores debe decir «seleccionar»');
+      } finally { f.node.remove(); }
+      // los números por mineral (fenocristales) siguen funcionando dentro de la lista
+      const fl = w.formulario('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava', FENOCRISTALES_ESPECIE:'Plagioclasa (15%, 6 mm)'});
+      const cj = [...fl.node.querySelectorAll('.multichips')].find(m => m.name === 'FENOCRISTALES_ESPECIE');
+      ok(cj && cj.closest('.ms-dd'), 'fenocristales no es lista desplegable');
+      eq(fl.getData().FENOCRISTALES_ESPECIE, 'Plagioclasa (15%, 6 mm)', 'los números por mineral se perdieron');
+      return 'todas las fichas · abre/resume/cierra · formato «A; B» y números por valor intactos';
+    });
+
     // ---- v167: LITO_COMPONENTES y adjuntos vinculables a cualquier registro ----
     await prueba('v167 LITO_COMPONENTES: clases, campos por clase, migración, prosa y fotos/esquemas vinculados', async () => {
       const M = w.eval('MODELO');
