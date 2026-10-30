@@ -2612,6 +2612,15 @@ async function correr(){
           ok(w2.getComputedStyle(dock).pointerEvents !== 'none', 'el carrusel no recibe toques: no se puede deslizar con el dedo');
           const k = b => parseFloat(b.style.getPropertyValue('--k')) || 0;
           const dis = [...dock.querySelectorAll('.di')];
+          // v170: sin apretar el carrusel la lupa no actúa (todos en tamaño normal)
+          dock._lupa = false; w2.lupaDock(dock);
+          eq(dis.filter(b => k(b) > 0).length, 0, 'la lupa actúa sin apretar el carrusel');
+          dock.dispatchEvent(new w2.TouchEvent('touchstart', {bubbles:true}));
+          ok(dock._lupa, 'apretar el carrusel no enciende la lupa');
+          dock.dispatchEvent(new w2.TouchEvent('touchend', {bubbles:true}));
+          await new Promise(r => setTimeout(r, 400));
+          ok(!dock._lupa, 'la lupa no se apaga al soltar');
+          dock._lupa = true;   // apretado, para probar el agrandado
           for (const clave of ['punto', 'geomorf', '__ajustes']) {   // el primero, uno del medio y el último
             const b = dis.find(x => x.dataset.clave === clave);
             dock.scrollLeft = b.offsetLeft + b.offsetWidth / 2 - dock.clientWidth / 2;
@@ -2626,6 +2635,7 @@ async function correr(){
             const wc = medir(b.querySelector('svg')), wb = medir(dis.find(x => k(x) === 0).querySelector('svg'));
             ok(wc > wb * 1.6, 'el icono central no se ve más grande: ' + wc + ' vs ' + wb);
           }
+          dock._lupa = false; w2.lupaDock(dock);
           doc.querySelector('.dock .di[data-clave="contacto"]').click();   // v166: ya no hay ficha de afloramiento
           await esperar(() => doc.querySelector('.hoja'), 3000, 'la hoja');
           await new Promise(res => setTimeout(res, 300));   // fin de la animación de entrada
@@ -2739,6 +2749,7 @@ async function correr(){
       doc.body.append(dock);
       try {
         const r = dock.getBoundingClientRect(), b = dock.querySelector('[data-clave="foto"]').getBoundingClientRect();
+        dock._lupa = true;   // v170: la lupa actúa con el carrusel apretado
         w.lupaDock(dock, b.left + b.width / 2);
         const sv = c => dock.querySelector('[data-clave="' + c + '"] svg').style;
         ok(sv('foto').background && /4px/.test(sv('foto').boxShadow), 'el icono bajo la lupa no lleva baldosa');

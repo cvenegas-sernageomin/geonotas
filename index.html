@@ -7301,7 +7301,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v169';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v170';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -14759,10 +14759,12 @@ function pintarCalidadPunto(){
 // (o al mouse, en el computador). Curva suave (smoothstep) en LUPA_RADIO. Escribe el transform y
 // la opacidad de cada icono directamente (--k queda como dato, lo lee el smoke).
 const LUPA_RADIO=100;
+// v170 (pedido del usuario): la lupa solo actúa mientras se aprieta el carrusel (dock._lupa, lo
+// maneja armarLupa); el resto del tiempo todos los iconos quedan en su tamaño normal (k=0).
 function lupaDock(dock, x){
-  const r=dock.getBoundingClientRect(), cx=x==null?r.left+r.width/2:x;
+  const r=dock.getBoundingClientRect(), cx=x==null?r.left+r.width/2:x, activa=!!dock._lupa;
   for(const b of dock.children){
-    const q=b.getBoundingClientRect(), t=Math.max(0,1-Math.abs(q.left+q.width/2-cx)/LUPA_RADIO), k=t*t*(3-2*t);
+    const q=b.getBoundingClientRect(), t=activa?Math.max(0,1-Math.abs(q.left+q.width/2-cx)/LUPA_RADIO):0, k=t*t*(3-2*t);
     b.style.setProperty('--k',k.toFixed(3));
     const svg=b.querySelector('svg'), nom=b.querySelector('span'), n=b.querySelector('b');
     if(svg){
@@ -14779,15 +14781,27 @@ function lupaDock(dock, x){
   }
 }
 function armarLupa(dock){
-  let raf=0, x=null;
+  let raf=0, x=null, apretado=false, tApagar=0;
   const pedir=()=>{ if(!raf) raf=requestAnimationFrame(()=>{ raf=0; lupaDock(dock,x); }); };
+  const encender=()=>{ apretado=true; clearTimeout(tApagar); dock._lupa=true; pedir(); };
+  // al soltar no se apaga de golpe: el carrusel sigue por inercia; se apaga 250 ms después del
+  // último scroll (cada scroll mientras está suelto reinicia la espera)
+  const apagarLuego=()=>{ clearTimeout(tApagar); tApagar=setTimeout(()=>{ if(!apretado){ dock._lupa=false; x=null; pedir(); } },250); };
+  const soltar=()=>{ if(!apretado) return; apretado=false; apagarLuego(); };
+  // Dedo: touchstart/touchend. NO pointerdown/pointerup: con touch-action:pan-x el navegador manda
+  // pointercancel apenas empieza a deslizar y la lupa se apagaría con el dedo todavía encima.
+  dock.addEventListener('touchstart',encender,{passive:true});
+  dock.addEventListener('touchend',soltar,{passive:true});
+  dock.addEventListener('touchcancel',soltar,{passive:true});
+  // Mouse: con el botón apretado sigue al puntero; se suelta donde sea (window)
+  dock.addEventListener('pointerdown',e=>{ if(e.pointerType==='mouse'&&e.button===0){ x=e.clientX; encender(); } });
+  dock.addEventListener('pointermove',e=>{ if(e.pointerType==='mouse'&&apretado){ x=e.clientX; pedir(); } });
+  window.addEventListener('pointerup',e=>{ if(e.pointerType==='mouse') soltar(); });
   // scroll, y además touchmove/scrollend: si un navegador no avisa el scroll en cada cuadro del
   // deslizamiento, la lupa igual sigue al dedo y queda bien al soltar
-  dock.addEventListener('scroll',pedir,{passive:true});
+  dock.addEventListener('scroll',()=>{ pedir(); if(!apretado&&dock._lupa) apagarLuego(); },{passive:true});
   dock.addEventListener('touchmove',pedir,{passive:true});
-  dock.addEventListener('scrollend',pedir);
-  dock.addEventListener('pointermove',e=>{ if(e.pointerType==='mouse'){ x=e.clientX; pedir(); } });
-  dock.addEventListener('pointerleave',()=>{ x=null; pedir(); });
+  dock.addEventListener('scrollend',()=>{ pedir(); if(!apretado&&dock._lupa) apagarLuego(); });
 }
 function botonIcono(it,accion){
   const n=it.n||0;
