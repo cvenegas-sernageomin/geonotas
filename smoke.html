@@ -598,19 +598,17 @@ async function correr(){
       } finally { f.node.remove(); }
     });
 
-    await prueba('Los descriptores de fractura solo salen en fracturas, y la prosa no se enreda', async () => {
+    await prueba('Los descriptores de fractura van en el juego, y la prosa no se enreda', async () => {
+      // v163: los descriptores salieron de la medida estructural a la ficha de juego (EST_FRAC_JUEGO)
       const NUEVOS = ['ESPACIAMIENTO_FRACTURA','PERSISTENCIA_FRACTURA','ABERTURA_FRACTURA','TEXTURA_SUPERFICIE_FRACTURA'];
-      const f = w.formulario('estructural', {});
+      const fe = w.formulario('estructural', {TIPO_ESTRUCTURA:'Estructura fractura'});
+      eq(NUEVOS.filter(n => fe.node.querySelector('[name="'+n+'"]')), [], 'un descriptor de juego sigue en la medida estructural');
+      const f = w.formulario('juego', {}, {fracturas:[]});
       w.document.getElementById('app').append(f.node);
       try {
         const oculto = n => { const i = f.node.querySelector('[name="'+n+'"]');
           ok(i, 'no existe el campo ' + n); return i.closest('.fld').style.display === 'none'; };
-        ok(NUEVOS.every(oculto), 'un descriptor de fractura se ve sin haber elegido TIPO_ESTRUCTURA');
-        const te = f.node.querySelector('[name="TIPO_ESTRUCTURA"]');
-        te.value = 'Estructura falla'; te.dispatchEvent(new w.Event('change', {bubbles:true}));
-        ok(NUEVOS.every(oculto), 'los descriptores de fractura se ven en una ficha de falla');
-        te.value = 'Estructura fractura'; te.dispatchEvent(new w.Event('change', {bubbles:true}));
-        ok(NUEVOS.every(n => !oculto(n)), 'los descriptores no aparecen con TIPO_ESTRUCTURA=Estructura fractura');
+        ok(NUEVOS.every(n => !oculto(n)), 'un descriptor no aparece en la ficha de juego');
       } finally { f.node.remove(); }
       // La prosa: varios terminos de PERSISTENCIA llevan coma adentro ("Media a escala de
       // afloramiento, 3-10 m"), asi que el parentesis tiene que separar con punto y coma o
@@ -618,14 +616,13 @@ async function correr(){
       const pt = {id:'smoke-fr', ID_PUNTO_CONTROL:'smoke-fr'};
       pt[w.inLat] = -35.6; pt[w.inLon] = -71.0;
       const p = w.prosaPunto(pt, {litos:[], aflora:[], geomorf:[], cont:[], mues:[],
-        estr:[{TIPO_ESTRUCTURA:'Estructura fractura', TIPO_MEDIDA_ESTRUCTURAL:'Set de diaclasas',
-               AZIMUT:'30', MANTEO_BUZAMIENTO:'85', ESPACIAMIENTO_FRACTURA:'Separado 0,6-2 m',
-               PERSISTENCIA_FRACTURA:'Media a escala de afloramiento, 3-10 m',
-               TEXTURA_SUPERFICIE_FRACTURA:'Plumosa'}]}, null, null, 500);
+        estr:[{id:'smoke-fr-e', TIPO_ESTRUCTURA:'Estructura fractura', TIPO_MEDIDA_ESTRUCTURAL:'Set de diaclasas', AZIMUT:'30', MANTEO_BUZAMIENTO:'85'}],
+        juegos:[{ID_ESTRUCTURA:'smoke-fr-e', ESPACIAMIENTO_FRACTURA:'Separado 0,6-2 m',
+               PERSISTENCIA_FRACTURA:'Media a escala de afloramiento, 3-10 m', TEXTURA_SUPERFICIE_FRACTURA:'Plumosa'}]}, null, null, 500);
       ok(/espaciamiento separado/.test(p), 'el espaciamiento del juego no llegó a la prosa');
       ok(/;\s*persistencia/.test(p), 'los descriptores se unieron con coma: el paréntesis queda ambiguo');
       ok(!/superficie no determinada/i.test(p), '"No determinada" no debería narrarse');
-      return 'ocultos sin fractura y en falla · visibles en fractura · prosa separada con ";"';
+      return 'fuera de la medida · visibles en el juego · prosa separada con ";"';
     });
 
     await prueba('Sin NOMBRE_ROCA la prosa no usa el adjetivo de tipo como sujeto', async () => {
@@ -2415,7 +2412,7 @@ async function correr(){
          ['', '', 'none', 'none'], 'ficha de falla');
       eq(['CATEGORIA_FALLA','CATEGORIA_PLIEGUE','DIRECCION_VERGENCIA'].map(n => vis('estructural', {TIPO_ESTRUCTURA:'Estructura pliegue menor', SIMETRIA_PLIEGUE:'Asimétrico'}, n)),
          ['none', '', ''], 'ficha de pliegue');
-      eq(['TIPO_FRACTURA','ESPACIAMIENTO_FRACTURA','POTENCIA_FALLA'].map(n => vis('estructural', {TIPO_ESTRUCTURA:'Estructura fractura'}, n)),
+      eq(['TIPO_FRACTURA','NUMERO_JUEGOS','POTENCIA_FALLA'].map(n => vis('estructural', {TIPO_ESTRUCTURA:'Estructura fractura'}, n)),
          ['', '', 'none'], 'ficha de fractura');
       eq(['LITOLOGIA_CLASTO','LITOLOGIA_FRAGMENTO'].map(n => vis('clasto', {}, n)), ['', 'falta'], 'ficha de clasto');
       eq(['GENESIS_FRAGMENTO','TIPO_CLASTO'].map(n => vis('fragmento', {}, n)), ['', 'falta'], 'ficha de fragmento');
@@ -2511,7 +2508,7 @@ async function correr(){
       let it = w.itemsDock(base), cl = it.map(i => i.clave);
       eq(cl[0], 'punto', 'el primer icono debe ser el punto');
       tipos.forEach(t => ok(cl.includes('lito:' + t), 'falta el icono de la roca ' + t));
-      H.filter(h => h.store !== 'litologia' && !h.rama).forEach(h => ok(cl.includes(h.store), 'falta el icono de ' + h.store));
+      H.filter(h => h.store !== 'litologia' && !h.rama && !h.deFractura).forEach(h => ok(cl.includes(h.store), 'falta el icono de ' + h.store));
       ok(cl.includes('fotomapa'), 'falta el icono del foto-mapa');
       H.filter(h => h.rama).forEach(h => ok(!cl.includes(h.store), h.store + ' sin litología de su rama no debe aparecer'));
       ok(it.filter(i => i.clave.startsWith('lito:')).every(i => i.falta), 'sin litologías, los iconos de roca deben marcar que falta (oblig)');
@@ -2725,6 +2722,57 @@ async function correr(){
         await w.del('proyecto', pr.id); w.eval('curProyecto = null');
       }
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
+    });
+
+    // ---- v163: juegos de fracturas ----
+    await prueba('v163 juegos de fracturas: EST_FRAC_JUEGO por ID_ESTRUCTURA, panel, migración, export y prosa', async () => {
+      const M = w.eval('MODELO');
+      eq(M.tablas.EST_FRAC_JUEGO.campos.map(c => c.nombre), ['ID_PUNTO_CONTROL','ID_FRAC_JUEGO','ID_ESTRUCTURA','ESPACIAMIENTO_FRACTURA','PERSISTENCIA_FRACTURA',
+        'ABERTURA_FRACTURA','TEXTURA_SUPERFICIE_FRACTURA','RELACION_ESTRATIFICACION','ESPESOR_ESTRATIFICACION','GENESIS_MECANICA','RELLENO_FRACTURA','NOTA_FRAC_JUEGO'], 'campos del juego');
+      ok(M.relaciones.some(r => r.padre === 'EST_FRACTURA' && r.hijo === 'EST_FRAC_JUEGO' && r.campo === 'ID_ESTRUCTURA'), 'falta la relación fractura → juego');
+      eq(M.familias_estructura.find(f => f.tabla === 'EST_FRACTURA').campos, ['TIPO_FRACTURA','NUMERO_JUEGOS','DOMINIO_ESTRUCTURAL_FRACTURA','ASOCIACION_ESTRUCTURAL','GENESIS_PROCESO'], 'EST_FRACTURA queda como el sistema');
+      // panel: solo con una medida de fractura en el punto
+      const dock = n => w.itemsDock({hijas:w.eval('HIJAS'), tiposRoca:[], litos:[], conteo:{}, nFracturas:n, ocultos:[]}).some(i => i.clave === 'juego');
+      eq([dock(0), dock(1)], [false, true], 'el icono de juegos solo con una fractura');
+      // ficha: selector de las fracturas del punto, NOTA en textarea, espesor según la relación
+      const fr = [{id:'E1', TIPO_ESTRUCTURA:'Estructura fractura', TIPO_MEDIDA_ESTRUCTURAL:'Set de diaclasas', AZIMUT:'30', MANTEO_BUZAMIENTO:'85'}];
+      const f = w.formulario('juego', {}, {fracturas:fr});
+      w.document.getElementById('app').append(f.node);
+      try {
+        eq([...f.node.querySelectorAll('[name="ID_ESTRUCTURA"] option')].map(o => o.value), ['', 'E1'], 'selector de fracturas');
+        ok(f.node.querySelector('textarea[name="NOTA_FRAC_JUEGO"]') || f.node.querySelector('[name="NOTA_FRAC_JUEGO"]'), 'falta la nota del juego');
+        const vis = n => f.node.querySelector('[name="'+n+'"]').closest('.fld').style.display !== 'none';
+        ok(!vis('ESPESOR_ESTRATIFICACION'), 'el espesor se ve sin relación con la estratificación');
+        const re = f.node.querySelector('[name="RELACION_ESTRATIFICACION"]');
+        re.value = 'Fractura estratoconfinada'; re.dispatchEvent(new w.Event('change', {bubbles:true}));
+        ok(vis('ESPESOR_ESTRATIFICACION'), 'el espesor no aparece con una fractura estratoconfinada');
+      } finally { f.node.remove(); }
+      // migración: lo capturado en la medida pasa a un primer juego, una sola vez
+      const e = {id:'E9', _parent:'P9', ID_PUNTO_CONTROL:'PC-9', TIPO_ESTRUCTURA:'Estructura fractura', ESPACIAMIENTO_FRACTURA:'Separado 0,6-2 m', GENESIS_MECANICA:'Extensional'};
+      const j = w.migrarJuegoV163(e);
+      eq([j.ID_ESTRUCTURA, j._parent, j.ESPACIAMIENTO_FRACTURA, j.GENESIS_MECANICA, e._juegoMigrado], ['E9', 'P9', 'Separado 0,6-2 m', 'Extensional', true], 'migración v163');
+      eq(w.migrarJuegoV163(e), null, 'la migración debe correr una sola vez');
+      eq(w.migrarJuegoV163({id:'E8', TIPO_ESTRUCTURA:'Estructura falla'}), null, 'sin descriptores no hay juego');
+      // export GPKG: la fractura de un juego tiene fila en EST_FRACTURA aunque no llenó campos propios
+      const pr = {id:P+'jg-pr', ID_PROYECTO:P+'jg', NOMBRE_PROYECTO:'Juegos'};
+      const pt = {id:P+'jg-pt', _parent:pr.id, ID_PUNTO_CONTROL:'JG-1', [LAT]:'-33.45', [LON]:'-70.65'};
+      const es = {id:P+'jg-e', _parent:pt.id, TIPO_ESTRUCTURA:'Estructura fractura', AZIMUT:'30', MANTEO_BUZAMIENTO:'85'};
+      const jg = [{id:P+'jg-j1', _parent:pt.id, ID_ESTRUCTURA:es.id, ESPACIAMIENTO_FRACTURA:'Separado 0,6-2 m'},
+                  {id:P+'jg-j2', _parent:pt.id, ID_ESTRUCTURA:es.id, ABERTURA_FRACTURA:'Cerrada'}];
+      await w.put('proyecto', pr); await w.put('punto', pt); await w.put('estructural', es); for (const x of jg) await w.put('juego', x);
+      try {
+        const r = await w.construirGPKG(pr.id);
+        const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
+        const db = new SQL.Database(r.bytes);
+        const q = sql => { const r = db.exec(sql); return r.length ? r[0].values : []; };
+        eq(q("SELECT COUNT(*) FROM EST_FRAC_JUEGO j JOIN EST_FRACTURA f ON f.ID_ESTRUCTURA = j.ID_ESTRUCTURA WHERE f.ID_ESTRUCTURA = '" + es.id + "'"), [[2]], 'join fractura → juegos en el GPKG');
+        db.close();
+      } finally { for (const x of jg) await w.del('juego', x.id); await w.del('estructural', es.id); await w.del('punto', pt.id); await w.del('proyecto', pr.id); }
+      // prosa con dos juegos
+      const p = w.prosaPunto({id:'pt'}, {litos:[], aflora:[], geomorf:[], cont:[], mues:[], estr:fr,
+        juegos:[{ID_ESTRUCTURA:'E1', ESPACIAMIENTO_FRACTURA:'Separado 0,6-2 m'}, {ID_ESTRUCTURA:'E1', ABERTURA_FRACTURA:'Cerrada'}]}, null, null, 500);
+      ok(/con 2 juegos \(juego 1: espaciamiento separado 0,6-2 m; juego 2: abertura cerrada\)/.test(p), 'prosa: ' + p);
+      return '12 campos, panel solo con fractura, selector, espesor condicional, migración, join en GPKG y prosa';
     });
 
     // ---- v162: techo y base del contacto vinculados a las litologías del punto ----

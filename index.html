@@ -1747,58 +1747,9 @@ const MODELO = {
           "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). Orientación aproximada del juego descrito."
         },
         {
-          "nombre": "ESPACIAMIENTO_FRACTURA",
-          "obligatorio": false,
-          "dominio": "ESPACIAMIENTO_FRACTURA",
-          "nota": "Espaciamiento promedio entre las fracturas del juego (escala ISRM). En una disyunción columnar equivale al diámetro de las columnas. Solo para TIPO_ESTRUCTURA='Estructura fractura'."
-        },
-        {
-          "nombre": "PERSISTENCIA_FRACTURA",
-          "obligatorio": false,
-          "dominio": "PERSISTENCIA_FRACTURA",
-          "nota": "Continuidad del juego de fracturas en su rumbo. Los 5 primeros términos son de escala regional y los 5 últimos de escala de afloramiento; se puede quedar en 'Afloramiento, <100 m' sin bajar al detalle. Solo para TIPO_ESTRUCTURA='Estructura fractura'."
-        },
-        {
-          "nombre": "ABERTURA_FRACTURA",
-          "obligatorio": false,
-          "dominio": "ABERTURA_FRACTURA",
-          "nota": "Grado de abertura característico del juego (escala ISRM). Solo para TIPO_ESTRUCTURA='Estructura fractura'."
-        },
-        {
-          "nombre": "TEXTURA_SUPERFICIE_FRACTURA",
-          "obligatorio": false,
-          "dominio": "TEXTURA_SUPERFICIE_FRACTURA",
-          "nota": "Textura de la superficie de las fracturas del juego. Una superficie estriada indica cizalle: si el desplazamiento es apreciable, se describe como falla y no como fractura. Solo para TIPO_ESTRUCTURA='Estructura fractura'."
-        },
-        {
-          "nombre": "RELLENO_FRACTURA",
-          "obligatorio": false,
-          "dominio": "RELLENO_FRACTURA",
-          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). ",
-          "multiple": true
-        },
-        {
-          "nombre": "RELACION_ESTRATIFICACION",
-          "obligatorio": false,
-          "dominio": "RELACION_ESTRATIFICACION",
-          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
-        },
-        {
-          "nombre": "ESPESOR_ESTRATIFICACION",
-          "obligatorio": false,
-          "dominio": "ESPESOR_ESTRATIFICACION",
-          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). Solo si las fracturas tienen relación con la estratificación."
-        },
-        {
           "nombre": "ASOCIACION_ESTRUCTURAL",
           "obligatorio": false,
           "dominio": "ASOCIACION_ESTRUCTURAL",
-          "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
-        },
-        {
-          "nombre": "GENESIS_MECANICA",
-          "obligatorio": false,
-          "dominio": "GENESIS_MECANICA",
           "nota": "Solo TIPO_ESTRUCTURA = Estructura fractura (EST_FRACTURA, TBL_AF_FRACTURA y juego). "
         },
         {
@@ -2433,6 +2384,87 @@ const MODELO = {
           "nota": "Texto libre: distribución, relación con estructuras, etc."
         }
       ]
+    },
+    "EST_FRAC_JUEGO": {
+      "geometria": null,
+      "pk": "ID_FRAC_JUEGO",
+      "cardinalidad": "0..N",
+      "descripcion": "Juego (set) de un sistema de fracturas (CDC TBL_AF_FRAC_JUEGO). 0..N por medida de fractura.",
+      "campos": [
+        {
+          "nombre": "ID_PUNTO_CONTROL",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_FRAC_JUEGO",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_ESTRUCTURA",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": "Medida estructural de la fractura (EST_FRACTURA) a la que pertenece el juego."
+        },
+        {
+          "nombre": "ESPACIAMIENTO_FRACTURA",
+          "obligatorio": false,
+          "dominio": "ESPACIAMIENTO_FRACTURA",
+          "nota": "Descriptor del juego (CDC TBL_AF_FRAC_JUEGO)."
+        },
+        {
+          "nombre": "PERSISTENCIA_FRACTURA",
+          "obligatorio": false,
+          "dominio": "PERSISTENCIA_FRACTURA",
+          "nota": "Descriptor del juego (CDC TBL_AF_FRAC_JUEGO)."
+        },
+        {
+          "nombre": "ABERTURA_FRACTURA",
+          "obligatorio": false,
+          "dominio": "ABERTURA_FRACTURA",
+          "nota": "Descriptor del juego (CDC TBL_AF_FRAC_JUEGO)."
+        },
+        {
+          "nombre": "TEXTURA_SUPERFICIE_FRACTURA",
+          "obligatorio": false,
+          "dominio": "TEXTURA_SUPERFICIE_FRACTURA",
+          "nota": "Descriptor del juego (CDC TBL_AF_FRAC_JUEGO)."
+        },
+        {
+          "nombre": "RELACION_ESTRATIFICACION",
+          "obligatorio": false,
+          "dominio": "RELACION_ESTRATIFICACION",
+          "nota": "Descriptor del juego (CDC TBL_AF_FRAC_JUEGO)."
+        },
+        {
+          "nombre": "ESPESOR_ESTRATIFICACION",
+          "obligatorio": false,
+          "dominio": "ESPESOR_ESTRATIFICACION",
+          "nota": "Solo si el juego tiene relación con la estratificación."
+        },
+        {
+          "nombre": "GENESIS_MECANICA",
+          "obligatorio": false,
+          "dominio": "GENESIS_MECANICA",
+          "nota": "Descriptor del juego (CDC TBL_AF_FRAC_JUEGO)."
+        },
+        {
+          "nombre": "RELLENO_FRACTURA",
+          "obligatorio": false,
+          "dominio": "RELLENO_FRACTURA",
+          "nota": "Relleno del juego (CDC TBL_AF_FRAC_RELLENO, aquí selección múltiple).",
+          "multiple": true
+        },
+        {
+          "nombre": "NOTA_FRAC_JUEGO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Observaciones del juego (texto libre; CDC NOTA_FRAC_JUEGO)."
+        }
+      ]
     }
   },
   "relaciones": [
@@ -2560,6 +2592,16 @@ const MODELO = {
       "padre": "TBL_LITOLOGIA",
       "hijo": "TBL_CONTACTO",
       "campo": "ID_LITOLOGIA_BASE"
+    },
+    {
+      "padre": "PUNTO_CONTROL",
+      "hijo": "EST_FRAC_JUEGO",
+      "campo": "ID_PUNTO_CONTROL"
+    },
+    {
+      "padre": "EST_FRACTURA",
+      "hijo": "EST_FRAC_JUEGO",
+      "campo": "ID_ESTRUCTURA"
     }
   ],
   "dominios": {
@@ -7180,21 +7222,13 @@ const MODELO = {
       "tabla": "EST_FRACTURA",
       "padre": false,
       "titulo": "Fractura (CDC TBL_AF_FRACTURA)",
-      "descripcion": "Hija 1:1 (ID_ESTRUCTURA). Sistema y juego de fracturas según la norma CDC 2016 Vol V (TBL_AF_FRACTURA y TBL_AF_FRAC_JUEGO).",
+      "descripcion": "Hija 1:1 (ID_ESTRUCTURA). Sistema de fracturas según la norma CDC 2016 Vol V (TBL_AF_FRACTURA); sus juegos van en EST_FRAC_JUEGO.",
       "aplica_a": "TIPO_ESTRUCTURA = Estructura fractura",
       "campos": [
         "TIPO_FRACTURA",
         "NUMERO_JUEGOS",
         "DOMINIO_ESTRUCTURAL_FRACTURA",
-        "ESPACIAMIENTO_FRACTURA",
-        "PERSISTENCIA_FRACTURA",
-        "ABERTURA_FRACTURA",
-        "TEXTURA_SUPERFICIE_FRACTURA",
-        "RELLENO_FRACTURA",
-        "RELACION_ESTRATIFICACION",
-        "ESPESOR_ESTRATIFICACION",
         "ASOCIACION_ESTRUCTURAL",
-        "GENESIS_MECANICA",
         "GENESIS_PROCESO"
       ]
     }
@@ -7204,7 +7238,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v162';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v163';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7234,7 +7268,7 @@ function restaurarAbiertos(){const a=abiertosGet();
 const STORE2TBL = {proyecto:'TBL_PROYECTO',punto:'PUNTO_CONTROL',litologia:'TBL_LITOLOGIA',
   estructural:'TBL_DATOS_ESTRUCTURALES',contacto:'TBL_CONTACTO',muestreo:'TBL_MUESTREO',
   foto:'TBL_FOTOGRAFIAS',esquema:'TBL_ESQUEMA_DIBUJO',geomorf:'TBL_GEOMORFOLOGIA',
-  aflora:'TBL_AFLORAMIENTO',clasto:'COMP_CLASTO',fragmento:'COMP_FRAGMENTO',alteracion:'TBL_ALTERACION',
+  aflora:'TBL_AFLORAMIENTO',clasto:'COMP_CLASTO',fragmento:'COMP_FRAGMENTO',alteracion:'TBL_ALTERACION',juego:'EST_FRAC_JUEGO',
   punto_gabinete:'PUNTO_CONTROL_GABINETE',linea_gabinete:'LINEA_CONTROL_GABINETE'};
 const STORES = Object.keys(STORE2TBL);
 // 'linea' no cuelga de un punto (es una capa aparte, hermana de PUNTO_CONTROL) -> no entra
@@ -7258,6 +7292,10 @@ const HIJAS = [
   // TBL_LITOLOGIA = cualquier litología: el panel aparece cuando el punto tiene alguna.
   {store:'alteracion', titulo:'Alteración', clase:'', rama:'TBL_LITOLOGIA'},
   {store:'estructural', titulo:'Datos estructurales', clase:''},
+  // v163: juegos (sets) de un sistema de fracturas (CDC TBL_AF_FRAC_JUEGO), 0..N por medida de
+  // fractura (ID_ESTRUCTURA). deFractura: el panel aparece cuando el punto tiene una medida con
+  // TIPO_ESTRUCTURA 'Estructura fractura' y el selector ofrece solo esas medidas.
+  {store:'juego', titulo:'Juegos de fracturas', clase:'', deFractura:true},
   {store:'contacto', titulo:'Contactos', clase:''},
   {store:'geomorf', titulo:'Geomorfología', clase:''},
   {store:'muestreo', titulo:'Muestreo', clase:''},
@@ -7427,7 +7465,19 @@ function alteracionDeLitologiaV160(li){
     TEXTURA_ALTERACION:'', MINERAL_ALTERACION:'',
     OBSERVACIONES_ALTERACION:li.DISTRIBUCION_ALTERACION?'Distribución: '+li.DISTRIBUCION_ALTERACION:''};
 }
-const DB='captura-terreno', VER=21;   // v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+// v163 (pedido del usuario, 2026-10-30): los descriptores del juego de fracturas salen de la medida
+// estructural a su propia ficha ('juego', EST_FRAC_JUEGO). Lo ya capturado en una medida pasa a un
+// primer juego; la medida no se borra (la light los sigue leyendo) y queda con _juegoMigrado.
+const CAMPOS_JUEGO_V163=['ESPACIAMIENTO_FRACTURA','PERSISTENCIA_FRACTURA','ABERTURA_FRACTURA','TEXTURA_SUPERFICIE_FRACTURA',
+  'RELACION_ESTRATIFICACION','ESPESOR_ESTRATIFICACION','GENESIS_MECANICA','RELLENO_FRACTURA'];
+function migrarJuegoV163(e){
+  if(!e||e._juegoMigrado||!CAMPOS_JUEGO_V163.some(k=>e[k]!=null&&e[k]!=='')) return null;
+  e._juegoMigrado=true;
+  const j={id:uid(), _parent:e._parent, ID_PUNTO_CONTROL:e.ID_PUNTO_CONTROL, ID_ESTRUCTURA:e.id};
+  CAMPOS_JUEGO_V163.forEach(k=>{ if(e[k]!=null&&e[k]!=='') j[k]=e[k]; });
+  return j;
+}
+const DB='captura-terreno', VER=22;   // v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -7634,6 +7684,19 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
           });
         };
       });
+    }
+    // Migración v22 (app v163): descriptores de fractura de la medida -> ficha 'juego'. Ver migrarJuegoV163.
+    {
+      const txM=r.transaction;
+      const noAbortar=req=>{req.onerror=ev=>{ev.preventDefault();console.warn('Migración v22: registro omitido',req.error);};return req;};
+      const q=noAbortar(txM.objectStore('estructural').getAll());
+      q.onsuccess=ev=>{
+        (ev.target.result||[]).forEach(e=>{
+          try{ const j=migrarJuegoV163(e); if(!j) return;
+            noAbortar(txM.objectStore('juego').put(j)); noAbortar(txM.objectStore('estructural').put(e)); }
+          catch(err){ console.warn('Migración v22: no se pudo migrar el juego',e&&e.id,err); }
+        });
+      };
     }
     // Migración v21 (app v160): alteración de la litología -> ficha 'alteracion' (el store ya lo
     // creó el barrido de STORES de arriba). Ver alteracionDeLitologiaV160.
@@ -7900,6 +7963,7 @@ async function importBackup(file, destinoColeccion = null) {
           clasto: 'clasto',
           fragmento: 'fragmento',
           alteracion: 'alteracion',
+          juego: 'juego',
           componente: 'componente',   // respaldo de pruebas de v152: cada registro va a 'clasto' o 'fragmento' (componenteASuStore)
           // el arbol se reconstituye solo: los ids viajan intactos, asi que _parent y
           // _punto siguen apuntando a donde deben. Funciona incluso al importar un
@@ -7939,8 +8003,10 @@ async function importBackup(file, destinoColeccion = null) {
               migrarRegistroV152(destino, record);   // respaldo de antes de v152
               migrarRegistroV159(destino, record);   // respaldo de antes de v159 (put() también lo hace)
               const alt = destino === 'litologia' ? alteracionDeLitologiaV160(record) : null;   // respaldo de antes de v160
+              const jue = destino === 'estructural' ? migrarJuegoV163(record) : null;          // respaldo de antes de v163
               await put(destino, record);
               if (alt) await put('alteracion', alt);
+              if (jue) await put('juego', jue);
               totalInsertadas++;
             } catch (err) {
               errores.push(storeDestino + '/' + (record && record.id) + ': ' + (err && err.message || err));
@@ -8952,7 +9018,7 @@ function etiquetaCampo(n){
     .replace(/_/g,' ');
 }
 const esPK = (store,n)=> n===pkDe(store);
-const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_LITOLOGIA','ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
+const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_ESTRUCTURA','ID_LITOLOGIA','ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
 // Claves de negocio que el usuario SÍ nombra (visibles/editables); el resto de ids son técnicos y se ocultan.
 const NOMBRABLES = new Set(['ID_PROYECTO','ID_PUNTO_CONTROL','ID_MUESTRA']);
 function hideField(store,n){
@@ -8963,7 +9029,8 @@ function hideField(store,n){
   if(n==='ID_AFLORAMIENTO') return true;                                                                   // PK en afloramiento; FK en litología que llena el export (v147)
   if(n==='ID_LITOLOGIA_TECHO'||n==='ID_LITOLOGIA_BASE') return true;                                     // v162: las dibuja el selector de LITOLOGIA_TECHO/BASE
   if(n==='ID_CONTACTO') return store==='contacto';                                                       // FK selector en estructural (v146); PK oculto en contacto
-  if(['ID_ESTRUCTURA','ID_FOTOGRAFIA','ID_ESQUEMA'].includes(n)) return true;               // ids técnicos
+  if(n==='ID_ESTRUCTURA') return store!=='juego';                                                         // v163: FK selector en el juego de fracturas
+  if(['ID_FOTOGRAFIA','ID_ESQUEMA'].includes(n)) return true;               // ids técnicos
   return false;
 }
 
@@ -9185,15 +9252,9 @@ const esFractura = v => v['TIPO_ESTRUCTURA']==='Estructura fractura';
 const esTectonica = v => v['TIPO_ROCA']==='Tectónica';
 const TECT_FRAGIL = new Set(['Roca de cizalle frágil','Roca de deformación regional']);
 const CONDICIONALES = {
-  // Descriptores de un JUEGO de fracturas (v118, norma CDC 2016 Vol V / TBL_AF_FRACTURA):
-  // solo tienen sentido si lo que se está describiendo es una fractura. Se ocultan, no se
-  // bloquean, porque en una ficha de falla o de pliegue no aportan nada y solo estorban.
-  // Son la vía para describir una disyunción columnar: el ESPACIAMIENTO de ese juego es, en
-  // una colada, el diámetro de las columnas.
-  ESPACIAMIENTO_FRACTURA:      {modo:'ocultar', regla: esFractura},
-  PERSISTENCIA_FRACTURA:       {modo:'ocultar', regla: esFractura},
-  ABERTURA_FRACTURA:           {modo:'ocultar', regla: esFractura},
-  TEXTURA_SUPERFICIE_FRACTURA: {modo:'ocultar', regla: esFractura},
+  // Descriptores de un JUEGO de fracturas (v118): desde v163 viven en su propia ficha ('juego',
+  // EST_FRAC_JUEGO), que solo existe para una fractura, así que ya no necesitan regla. El
+  // ESPACIAMIENTO de un juego sigue siendo, en una colada, el diámetro de las columnas.
   // v152: roca o depósito, solo en sedimentarias y volcánicas (los pares sedimento/roca de la CDC).
   LITIFICACION: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' || esPiroclastica(v)},
   // Lava/Rocas piroclásticas solo aplica a rocas volcánicas (acota NOMBRE_ROCA, ver filtrarNombreRocaVolcanica).
@@ -9428,11 +9489,8 @@ const CONDICIONALES = {
   TIPO_FRACTURA:             {modo:'ocultar', regla: esFractura},
   NUMERO_JUEGOS:             {modo:'ocultar', regla: esFractura},
   DOMINIO_ESTRUCTURAL_FRACTURA: {modo:'ocultar', regla: esFractura},
-  RELLENO_FRACTURA:          {modo:'ocultar', regla: esFractura},
-  RELACION_ESTRATIFICACION:  {modo:'ocultar', regla: esFractura},
-  ESPESOR_ESTRATIFICACION:   {modo:'ocultar', regla: v => esFractura(v) && ['Fractura estratoconfinada','Fractura estrato-transversal','Fractura estratoparalela'].includes(v['RELACION_ESTRATIFICACION'])},
+  ESPESOR_ESTRATIFICACION:   {modo:'ocultar', regla: v => ['Fractura estratoconfinada','Fractura estrato-transversal','Fractura estratoparalela'].includes(v['RELACION_ESTRATIFICACION'])},   // v163: en el juego
   ASOCIACION_ESTRUCTURAL:    {modo:'ocultar', regla: esFractura},
-  GENESIS_MECANICA:          {modo:'ocultar', regla: esFractura},
   GENESIS_PROCESO:           {modo:'ocultar', regla: esFractura},
   // Contacto medido (v146): la medida apunta al contacto del punto; dejar de ser 'Estructura
   // contacto' limpia el vínculo y el guardado suelta los números copiados en el contacto.
@@ -9580,6 +9638,14 @@ function formulario(store, reg, ctx){
       inp.append(el('option',{value:''},ctx.contactos.length?'— (opcional) contacto que se midió —':'— crea primero el contacto en este punto —'));
       ctx.contactos.forEach((C,i)=>inp.append(el('option',{value:C.id},
         'Contacto '+(i+1)+': '+(C.TIPO_CONTACTO||'sin tipo')+(C.SUBTIPO_CONTACTO?' '+C.SUBTIPO_CONTACTO.toLowerCase():'')+((C.LITOLOGIA_TECHO||C.LITOLOGIA_BASE)?' — '+(C.LITOLOGIA_TECHO||'?')+' / '+(C.LITOLOGIA_BASE||'?'):''))));
+      if(reg[n])inp.value=reg[n];
+    }
+    // FK ID_ESTRUCTURA -> selector de las medidas de fractura del punto (juego de fracturas, v163)
+    if(n==='ID_ESTRUCTURA' && store==='juego' && ctx && ctx.fracturas){
+      inp=el('select');inp.name=n; if(campo.obligatorio) inp.required=true;
+      inp.append(el('option',{value:''},ctx.fracturas.length?'— medida de fractura —':'— registra primero la fractura en Datos estructurales —'));
+      ctx.fracturas.forEach((E,i)=>inp.append(el('option',{value:E.id},
+        'Fractura '+(i+1)+': '+(E.TIPO_MEDIDA_ESTRUCTURAL||E.TIPO_FRACTURA||'sin tipo')+((E.AZIMUT||E.MANTEO_BUZAMIENTO)?' N'+(E.AZIMUT||'?')+'/'+(E.MANTEO_BUZAMIENTO||'?'):''))));
       if(reg[n])inp.value=reg[n];
     }
     // LITOLOGIA_TECHO/BASE (v151): texto libre, con las litologías del punto como sugerencia
@@ -14323,6 +14389,7 @@ const SVG_IC={
   clasto:'<circle cx="10" cy="11" r="5.5"/><circle cx="21.5" cy="19.5" r="6"/><circle cx="9" cy="24" r="3"/><circle cx="23" cy="7" r="2.5"/>',
   alteracion:'<path d="M3 27l5-13 7 4 6-9 8 18z"/><g fill="currentColor" stroke="none"><circle cx="11" cy="22" r="1.5"/><circle cx="17" cy="19" r="1.5"/><circle cx="22" cy="23" r="1.5"/></g><path d="M6 8l2 2M12 4v3M18 6l-1 2"/>',
   fragmento:'<path d="M4 9l8-4 3 7-7 3z"/><path d="M17 11l10-2-2 10-7-1z"/><path d="M6 20l7 1-1 7-7-3z"/><path d="M19 23l5 1-2 4z"/>',
+  juego:'<path d="M3 11l26-5M3 18l26-5M3 25l26-5"/><path d="M9 4l5 25M19 3l5 25" opacity=".55"/>',
   estructural:'<path d="M4 12h24"/><path d="M16 12v11"/><path d="M22 5l3 3"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/>',
   contacto:'<rect x="4" y="5" width="24" height="22" rx="2"/><path d="M4 19c6-5 11 3 24-5"/><path d="M4 19c6-5 11 3 24-5V27H4z" fill="currentColor" opacity=".3" stroke="none"/>',
   geomorf:'<path d="M2 26h28"/><path d="M2 26l8-11 5 5 6-12 9 18"/>',
@@ -14334,7 +14401,7 @@ const SVG_IC={
   __ajustes:'<path d="M5 9h22M5 16h22M5 23h22"/><circle cx="11" cy="9" r="2.6" fill="var(--surface)"/><circle cx="21" cy="16" r="2.6" fill="var(--surface)"/><circle cx="14" cy="23" r="2.6" fill="var(--surface)"/>'
 };
 const ETIQUETA_CORTA={punto:'Punto',aflora:'Afloram.',estructural:'Estructura',contacto:'Contactos',geomorf:'Geomorf.',
-  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',alteracion:'Alteración',fotomapa:'Foto-mapa','lito:':'Sin tipo',__ajustes:'Iconos'};
+  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',alteracion:'Alteración',juego:'Juegos',fotomapa:'Foto-mapa','lito:':'Sin tipo',__ajustes:'Iconos'};
 const COLOR_IC={sedimentaria:'sed',volcanica:'vol',intrusiva:'int',metamorfica:'met',tectonica:'tec',antropico:'ant'};
 const normIc=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function colorIc(clave){ return clave.startsWith('lito:')?(COLOR_IC[normIc(clave.slice(5))]||''):''; }
@@ -14372,6 +14439,7 @@ function itemsDock(ctx){
     const n=conteo[h.store]||0;
     // clastos / fragmentos: solo con una litología de su rama en el punto (o fichas ya hechas)
     if(h.rama && !n && !litos.some(L=>familiaAplica(h.rama,L))) continue;
+    if(h.deFractura && !n && !ctx.nFracturas) continue;   // juegos: solo con una medida de fractura
     agregar({clave:h.store,titulo:h.titulo,n});
   }
   agregar({clave:'fotomapa',titulo:'Foto-mapa',n:conteo.fotomapa||0});
@@ -14448,7 +14516,9 @@ async function refrescarDock(){
   conteo.fotomapa=(await fotomapasRaiz(curPunto.id)).length;
   if(tok!==pv.tokDock) return;
   curPunto._nlito=litos.length;
-  pv.items=itemsDock({hijas:HIJAS,tiposRoca:tiposRoca(),litos,conteo,ocultos:iconosOcultos()});
+  const nFracturas=(await fracturasDelPunto(curPunto.id)).length;
+  if(tok!==pv.tokDock) return;
+  pv.items=itemsDock({hijas:HIJAS,tiposRoca:tiposRoca(),litos,conteo,nFracturas,ocultos:iconosOcultos()});
   const sl=dock.scrollLeft;
   dock.innerHTML='';
   for(const it of pv.items) dock.append(botonIcono(it,()=>abrirHoja(it.clave)));
@@ -14585,6 +14655,7 @@ async function hojaFicha(h,it,idx){
   let regs=await childrenOf(h.store,curPunto.id);
   if(tipo!=null) regs=regs.filter(L=>tipo?L.TIPO_ROCA===tipo:!tipos.includes(L.TIPO_ROCA));
   const litosRama=h.rama?litos.filter(L=>familiaAplica(h.rama,L)):litos;
+  const fracs=h.deFractura?await fracturasDelPunto(curPunto.id):[];
   idx=Math.max(0,Math.min(idx||0,regs.length-1));
   // al redibujar el mismo registro (p.ej. tras crear la medida de un contacto) no saltar arriba
   const prev=document.querySelector('.hoja .hoja-cuerpo');
@@ -14595,7 +14666,7 @@ async function hojaFicha(h,it,idx){
   const agregar=async()=>{
     if(bloqueoGabineteActivo())return;
     await guardarPuntoForm(pv.f);
-    await crearHijo(h,litosRama,tipo?{TIPO_ROCA:tipo}:null);
+    await crearHijo(h,litosRama,Object.assign({},tipo?{TIPO_ROCA:tipo}:{},h.deFractura&&fracs.length===1?{ID_ESTRUCTURA:fracs[0].id}:{}));
     pv.hoja={clave:it.clave,idx:regs.length};
     await renderPuntoIconos($('#app'));
     toast('Ficha agregada — completa los campos');
@@ -14605,13 +14676,13 @@ async function hojaFicha(h,it,idx){
   if(regs.length && !(h.unico&&regs.length>0))
     H.tabs.append(el('button',{type:'button',title:'Agregar otra','aria-label':'Agregar '+nombre,onclick:agregar},'+'));
   if(!regs.length){
-    const sinRama=h.rama&&!litosRama.length;
+    const sinRama=(h.rama&&!litosRama.length)||(h.deFractura&&!fracs.length);
     H.cuerpo.append(el('div',{class:'hoja-vacia'},
-      el('p',{},sinRama?'Primero describe una litología de esta rama.':'Sin fichas de '+nombre+' en este punto.'),
+      el('p',{},sinRama?(h.deFractura?'Primero registra una medida de fractura en Datos estructurales.':'Primero describe una litología de esta rama.'):'Sin fichas de '+nombre+' en este punto.'),
       sinRama?null:el('button',{class:'btn',onclick:agregar},'+ Agregar '+nombre)));
   } else {
     bloquesContacto.clear();
-    H.cuerpo.append(bloqueHijo(h,regs[idx],idx,litos,conts));
+    H.cuerpo.append(bloqueHijo(h,regs[idx],idx,litos,conts,fracs));
     // cambiar TIPO_ROCA (o cualquier campo que mueva la ficha de icono) se refleja en la barra
     H.cuerpo.addEventListener('change',()=>setTimeout(refrescarDock,250));
   }
@@ -14743,14 +14814,16 @@ async function renderPunto(app){
     // clastos / fragmentos (v152): solo con una litología de su rama en el punto (o fichas ya hechas)
     const litosRama=h.rama?litos.filter(L=>familiaAplica(h.rama,L)):litos;
     if(h.rama && !litosRama.length && !items.length) continue;
+    const fracs=h.deFractura?await fracturasDelPunto(curPunto.id):[];
+    if(h.deFractura && !fracs.length && !items.length) continue;   // v163: juegos solo con una fractura
     const hc=tarjetaColapsable(h.titulo+(h.oblig?' *':''),{clave:h.store,lleno:items.length>0,badge:items.length});
     const box=el('div');hc.body.append(box);
-    items.forEach((it,i)=>box.append(bloqueHijo(h,it,i,litos,conts)));
+    items.forEach((it,i)=>box.append(bloqueHijo(h,it,i,litos,conts,fracs)));
     if(!(h.unico && items.length>0)) hc.body.append(el('div',{class:'btnbar'},
       el('button',{class:'btn '+(h.clase==='lito'?'':'orange')+' mini',onclick:async()=>{
         if(bloqueoGabineteActivo())return;
         await guardarPunto();
-        await crearHijo(h,litosRama);
+        await crearHijo(h,litosRama,h.deFractura&&fracs.length===1?{ID_ESTRUCTURA:fracs[0].id}:null);
         secAbiertas.add(h.store);   // mantener esta sección abierta tras re-render
         await renderPunto(app);
         requestAnimationFrame(()=>{const bs=document.querySelectorAll('.child-block[data-store="'+h.store+'"]');
@@ -14842,12 +14915,16 @@ async function sincronizarMedidaDeContacto(c){
   return true;
 }
 
-function bloqueHijo(h,reg,i,litos,conts){
+// Medidas de fractura del punto (de ellas cuelgan los juegos, v163)
+async function fracturasDelPunto(pid){ return (await childrenOf('estructural',pid)).filter(esFractura); }
+function bloqueHijo(h,reg,i,litos,conts,fracs){
   const b=el('div',{class:'child-block'+(h.clase==='lito'?' lito':''),'data-store':h.store});
   const hd=el('div',{class:'hd'});
   hd.append(el('span',{class:'n'},h.unico?h.titulo:h.titulo+' '+(i+1)));
   hd.append(el('button',{class:'btn del mini',onclick:async()=>{if(bloqueoGabineteActivo())return;
     if(h.store==='estructural'&&reg.ID_CONTACTO) await soltarContactoDeMedida(reg.ID_CONTACTO, reg.id);
+    if(h.store==='estructural')   // v163: sus juegos de fracturas no tienen sentido sin ella
+      for(const j of (await childrenOf('juego',reg._parent)).filter(j=>j.ID_ESTRUCTURA===reg.id)) await del('juego',j.id);
     if(h.store==='contacto')   // sus medidas quedan (son datos medidos), solo pierden el vínculo
       for(const e of (await childrenOf('estructural',reg._parent)).filter(e=>e.ID_CONTACTO===reg.id)){ delete e.ID_CONTACTO; await put('estructural',e); }
     await del(h.store,reg.id);renderPunto($('#app'));}},'Eliminar'));
@@ -14857,7 +14934,8 @@ function bloqueHijo(h,reg,i,litos,conts){
   else {
     // clastos / fragmentos: el selector ofrece solo las litologías de su rama (y la ya elegida), con su número en el punto
     const litosH=h.rama?litos.map((L,i)=>Object.assign({},L,{_nLito:i+1})).filter(L=>familiaAplica(h.rama,L)||L.id===reg.ID_LITOLOGIA):litos;
-    const f=formulario(h.store,reg,{litologias:litosH,contactos:conts||[]});
+    const fracsH=h.deFractura?(fracs||[]):null;   // juegos: las medidas de fractura del punto
+    const f=formulario(h.store,reg,{litologias:litosH,contactos:conts||[],fracturas:fracsH});
     b.append(f.node);
     const barra=barraMedicion(h.store,f);
     if(h.store==='contacto'){
@@ -16406,12 +16484,13 @@ async function duplicarPunto(srcId){
   // dos pasadas: primero los ids nuevos de todas las fichas, después los vínculos entre ellas
   // (estructural.ID_CONTACTO -> contacto y contacto._medidaDe -> estructural, v146)
   const copias=[], mapId={};
-  for(const store of ['aflora','clasto','fragmento','alteracion','estructural','contacto','muestreo','geomorf'])   // clasto/fragmento: v152; alteracion: v160
+  for(const store of ['aflora','clasto','fragmento','alteracion','estructural','juego','contacto','muestreo','geomorf'])   // clasto/fragmento: v152; alteracion: v160; juego: v163
     for(const it of await childrenOf(store,srcId)){const n=Object.assign({},it,{id:uid(),_parent:np.id});mapId[it.id]=n.id;copias.push([store,n]);}
   for(const [store,n] of copias){
     if(n.ID_LITOLOGIA&&mapLito[n.ID_LITOLOGIA])n.ID_LITOLOGIA=mapLito[n.ID_LITOLOGIA];
     for(const k of ['ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE']) if(n[k]&&mapLito[n[k]])n[k]=mapLito[n[k]];   // v162
     if(n.ID_CONTACTO&&mapId[n.ID_CONTACTO])n.ID_CONTACTO=mapId[n.ID_CONTACTO];
+    if(store==='juego'&&n.ID_ESTRUCTURA&&mapId[n.ID_ESTRUCTURA])n.ID_ESTRUCTURA=mapId[n.ID_ESTRUCTURA];   // v163
     if(n._medidaDe&&mapId[n._medidaDe])n._medidaDe=mapId[n._medidaDe];
     await put(store,n);
   }
@@ -17024,6 +17103,10 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
       const marcar=(t,id)=>{ while(t){ conFila.add(t+'|'+id); t=hijaDe[t]; } };
       for(const r of regsS) for(const d of defs)
         if(!d.padre&&familiaAplica(d.tbl,r)&&d.cs.some(c=>lleno(r[c]))) marcar(d.tbl,r.id);
+      if(s==='estructural'){   // v163: la fractura de la que cuelga cada juego, aunque no llenó campos propios
+        const conJuego=new Set((await all('juego')).map(j=>j.ID_ESTRUCTURA));
+        for(const r of regsS) if(conJuego.has(r.id)&&familiaAplica('EST_FRACTURA',r)) marcar('EST_FRACTURA',r.id);
+      }
       if(s==='litologia'){
         const porId=Object.fromEntries(regsS.map(r=>[r.id,r]));
         for(const h of HIJAS.filter(h=>h.rama)) for(const c of await all(h.store)){
@@ -17519,7 +17602,7 @@ function actitudFrase(rumbo,manteo){
   return '';
 }
 function prosaPunto(pt,datos,toponimo,anterior,umbral){
-  const {litos,aflora,estr,cont,geomorf,mues,alter}=datos;
+  const {litos,aflora,estr,cont,geomorf,mues,alter,juegos}=datos;
   // ¿La unidad geológica se declara en la oración-resumen o en cada litología? Se resuelve más
   // abajo (necesita la lista completa de fichas) y fraseLitologia lo lee por cierre: si TODAS
   // las rocas del punto llevan unidad, va una sola vez en el resumen; si solo algunas la
@@ -17981,12 +18064,19 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       // de arriba, y antes de la confianza, que se lee mejor al final. Casi siempre están
       // vacíos: solo aplican a TIPO_ESTRUCTURA='Estructura fractura'. El espaciamiento es lo
       // que de verdad describe una disyunción columnar (es el diámetro de las columnas).
-      if(e.ESPACIAMIENTO_FRACTURA) paren.push('espaciamiento '+minuscula(e.ESPACIAMIENTO_FRACTURA));
-      if(e.ABERTURA_FRACTURA) paren.push('abertura '+minuscula(e.ABERTURA_FRACTURA));
-      if(e.PERSISTENCIA_FRACTURA) paren.push('persistencia '+minuscula(e.PERSISTENCIA_FRACTURA));
-      // 'No determinada' es la respuesta "no sé": no aporta nada al informe.
-      if(e.TEXTURA_SUPERFICIE_FRACTURA && e.TEXTURA_SUPERFICIE_FRACTURA!=='No determinada')
-        paren.push('superficie '+minuscula(e.TEXTURA_SUPERFICIE_FRACTURA));
+      // v163: los descriptores vienen de las fichas de juego de esta medida. Con un juego van en
+      // el paréntesis como antes; con varios, cada juego en su cláusula ("juego 1: …; juego 2: …").
+      const descJuego=j=>{ const d=[];
+        if(j.ESPACIAMIENTO_FRACTURA) d.push('espaciamiento '+minuscula(j.ESPACIAMIENTO_FRACTURA));
+        if(j.ABERTURA_FRACTURA) d.push('abertura '+minuscula(j.ABERTURA_FRACTURA));
+        if(j.PERSISTENCIA_FRACTURA) d.push('persistencia '+minuscula(j.PERSISTENCIA_FRACTURA));
+        // 'No determinada' es la respuesta "no sé": no aporta nada al informe.
+        if(j.TEXTURA_SUPERFICIE_FRACTURA && j.TEXTURA_SUPERFICIE_FRACTURA!=='No determinada')
+          d.push('superficie '+minuscula(j.TEXTURA_SUPERFICIE_FRACTURA));
+        return d; };
+      const jus=(juegos||[]).filter(j=>j.ID_ESTRUCTURA===e.id);
+      if(jus.length===1) paren.push(...descJuego(jus[0]));
+      else if(jus.length>1) s+=', con '+jus.length+' juegos ('+jus.map((j,k)=>{const d=descJuego(j); return 'juego '+(k+1)+(d.length?': '+d.join(', '):'');}).join('; ')+')';
       const cf=CONFIANZA_ESTR_FRASE[e.GRADO_CONFIANZA_ESTRUCTURA]; if(cf) paren.push(cf);
       // Varios términos de PERSISTENCIA_FRACTURA llevan una coma adentro ("Media a escala de
       // afloramiento, 3-10 m"), así que unir con comas deja el paréntesis ambiguo: no se ve
@@ -18064,7 +18154,7 @@ async function generarProsaProyecto(){
         litos:await childrenOf('litologia',pt.id), aflora:await childrenOf('aflora',pt.id),
         estr:await childrenOf('estructural',pt.id),
         cont:await childrenOf('contacto',pt.id), geomorf:await childrenOf('geomorf',pt.id),
-        mues:await childrenOf('muestreo',pt.id), alter:await childrenOf('alteracion',pt.id),
+        mues:await childrenOf('muestreo',pt.id), alter:await childrenOf('alteracion',pt.id), juegos:await childrenOf('juego',pt.id),
       };
       const lejosDelAnterior=!anterior||L.latLng(lat,lon).distanceTo(
         L.latLng(parseFloat(anterior.pt[inLat]),parseFloat(anterior.pt[inLon])))>umbral;
