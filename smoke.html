@@ -2724,6 +2724,32 @@ async function correr(){
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
     });
 
+    // ---- v164: campos de terreno de la roca intrusiva ----
+    await prueba('v164 intrusiva: cuerpo, cristalinidad, grano, índice de color, % fenocristales y opacos, observaciones', async () => {
+      const M = w.eval('MODELO'), NUEVOS = ['TIPO_CUERPO_INTRUSIVO','CRISTALINIDAD_INTRUSIVA','GRANULOMETRIA_INTRUSIVA','INDICE_COLOR','FENOCRISTALES_INTRUSIVA_PCT','OPACOS_PCT','OBSERVACION_INTRUSIVA'];
+      const fam = M.familias_litologia.find(f => f.tabla === 'LITO_INTRUSIVA').campos;
+      eq(NUEVOS.filter(n => !fam.includes(n)), [], 'LITO_INTRUSIVA no exporta los campos nuevos');
+      eq([M.dominios.TIPO_CUERPO_INTRUSIVO.valores.length, M.dominios.GRANULOMETRIA_INTRUSIVA.valores.length, M.dominios.INDICE_COLOR.valores.length], [27, 7, 5], 'listas CDC');
+      eq(M.dominios.INDICE_COLOR.valores[0], 'Hololeucocrático, IC=0-10%', 'índice de color en orden ordinal');
+      const vis = (reg, n) => { const f = w.formulario('litologia', reg); w.document.getElementById('app').append(f.node);
+        try { const b = [...f.node.querySelectorAll('button')].find(x => /Mostrar todos/.test(x.textContent)); if (b) b.click();
+              const i = f.node.querySelector('[name="'+n+'"]'); return i ? i.closest('.fld').style.display !== 'none' && i.closest('.grupo-lito').style.display !== 'none' : null; }
+        finally { f.node.remove(); } };
+      eq(NUEVOS.map(n => vis({TIPO_ROCA:'Intrusiva'}, n)), NUEVOS.map(() => true), 'visibles en una intrusiva');
+      eq(NUEVOS.map(n => vis({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}, n)), NUEVOS.map(() => false), 'ocultos en una volcánica');
+      const f = w.formulario('litologia', {TIPO_ROCA:'Intrusiva'});
+      eq([f.node.querySelector('[name="OPACOS_PCT"]').type, f.node.querySelector('[name="OBSERVACION_INTRUSIVA"]').tagName], ['number', 'TEXTAREA'], 'widgets');
+      // prosa
+      const prosa = l => w.prosaPunto({id:'pt'}, {litos:[Object.assign({id:'L', TIPO_ROCA:'Intrusiva', NOMBRE_ROCA:'Granodiorita'}, l)], aflora:[], estr:[], cont:[], geomorf:[], mues:[]}, null, null, 500);
+      const p = prosa({CRISTALINIDAD_INTRUSIVA:'Holocristalina', GRANULOMETRIA_INTRUSIVA:'5-1 mm, grano medio', INDICE_COLOR:'Leucocrático, IC=10-35%',
+        FENOCRISTALES_INTRUSIVA_PCT:'10', OPACOS_PCT:'2,5', TIPO_CUERPO_INTRUSIVO:'Stock'});
+      ['de textura holocristalina', 'de grano medio (5-1 mm)', 'de índice de color leucocrático (IC 10-35%)', 'con 10% de fenocristales y 2,5% de minerales opacos', 'en un cuerpo intrusivo de tipo stock']
+        .forEach(t => ok(p.includes(t), 'falta "' + t + '": ' + p));
+      ok(prosa({GRANULOMETRIA_INTRUSIVA:'0,25-0,005 mm, microcristalina'}).includes('microcristalina (0,25-0,005 mm)'), 'la coma decimal partió el rango');
+      ok(!/indeterminado/i.test(prosa({TIPO_CUERPO_INTRUSIVO:'Indeterminado'})), '"Indeterminado" no debe narrarse');
+      return '7 campos en LITO_INTRUSIVA, listas CDC, solo en intrusivas y prosa';
+    });
+
     // ---- v163: juegos de fracturas ----
     await prueba('v163 juegos de fracturas: EST_FRAC_JUEGO por ID_ESTRUCTURA, panel, migración, export y prosa', async () => {
       const M = w.eval('MODELO');

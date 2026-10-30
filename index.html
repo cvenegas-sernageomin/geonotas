@@ -858,6 +858,42 @@ const MODELO = {
           "nota": "Norma CDC 2016 Vol V, DDA Descripción de Rocas Tectónicas (TBL_AF_ROCA_TECTONICA), campo 'AMBIENTE TECTONICO ESTRUCTURAL'. Es interpretación."
         },
         {
+          "nombre": "TIPO_CUERPO_INTRUSIVO",
+          "obligatorio": false,
+          "dominio": "TIPO_CUERPO_INTRUSIVO",
+          "nota": "Solo rocas intrusivas. Tipo de cuerpo intrusivo (CDC TP_CUERPO_INTRU)."
+        },
+        {
+          "nombre": "CRISTALINIDAD_INTRUSIVA",
+          "obligatorio": false,
+          "dominio": "CRISTALINIDAD",
+          "nota": "Solo rocas intrusivas. Cristalinidad de la roca (CDC CRISTALINIDAD)."
+        },
+        {
+          "nombre": "GRANULOMETRIA_INTRUSIVA",
+          "obligatorio": false,
+          "dominio": "GRANULOMETRIA_INTRUSIVA",
+          "nota": "Solo rocas intrusivas. Tamaño de grano (CDC AFL_GRANULOMETRIA, B_GRANO_RXIGNEA_MET)."
+        },
+        {
+          "nombre": "INDICE_COLOR",
+          "obligatorio": false,
+          "dominio": "INDICE_COLOR",
+          "nota": "Solo rocas intrusivas. Índice de color según terminología (CDC LEUCO_MELANO)."
+        },
+        {
+          "nombre": "FENOCRISTALES_INTRUSIVA_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo rocas intrusivas. Numérico, % de fenocristales (CDC PORCEN_MIN/MAX_FENOXX)."
+        },
+        {
+          "nombre": "OPACOS_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo rocas intrusivas. Numérico, % de minerales opacos (CDC PORCEN_MIN/MAX_OPACO)."
+        },
+        {
           "nombre": "COMPOSICION_MINERAL_INTRUSIVA",
           "obligatorio": false,
           "dominio": "MINERAL_INTRUSIVA",
@@ -869,6 +905,12 @@ const MODELO = {
           "obligatorio": false,
           "dominio": null,
           "nota": "Texto libre: % y hábito de los minerales de COMPOSICION_MINERAL_INTRUSIVA."
+        },
+        {
+          "nombre": "OBSERVACION_INTRUSIVA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Solo rocas intrusivas. Observaciones de la roca intrusiva, texto libre (CDC NOTA)."
         },
         {
           "nombre": "FENOCRISTALES_ESPECIE",
@@ -6914,6 +6956,63 @@ const MODELO = {
         "Yeso"
       ],
       "fuente": "Norma CDC 2016, 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_ALTERACION_MIN_2014"
+    },
+    "TIPO_CUERPO_INTRUSIVO": {
+      "tipo": "simple",
+      "valores": [
+        "Dique",
+        "Dique anular",
+        "Diques radiales o de abanico",
+        "Enjambre de diques",
+        "Enjambre de filones mantos",
+        "Filón manto",
+        "Cuello volcánico",
+        "Diatrema",
+        "Domo intrusivo",
+        "Enclave de roca intrusiva",
+        "Facolito",
+        "Fragmento de roca intrusiva dentro de un depósito",
+        "Irregular",
+        "Lacolito",
+        "Leucosoma en roca migmatítica",
+        "Lopolito",
+        "Mega-enclave de roca intrusiva",
+        "Pipa de brecha",
+        "Plug",
+        "Plutón",
+        "Plutón elongado",
+        "Plutón tabular",
+        "Roof pendant o septa de roca intrusiva",
+        "Stock",
+        "Stock elongado",
+        "Stock tabular",
+        "Indeterminado"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV, TBL_AF_ROCA_INTRUSIVA; 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_TP_CUERPO_INTRU"
+    },
+    "GRANULOMETRIA_INTRUSIVA": {
+      "tipo": "simple",
+      "valores": [
+        ">30 mm, grano muy grueso",
+        "30-5 mm, grano grueso",
+        "5-1 mm, grano medio",
+        "1-0,5 mm, grano fino",
+        "0,5-0,25 mm, grano muy fino",
+        "0,25-0,005 mm, microcristalina",
+        "<0,005 mm, criptocristalina"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV, TBL_AF_ROCA_INTRUSIVA; 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista B_GRANO_RXIGNEA_MET (orden ordinal)"
+    },
+    "INDICE_COLOR": {
+      "tipo": "simple",
+      "valores": [
+        "Hololeucocrático, IC=0-10%",
+        "Leucocrático, IC=10-35%",
+        "Mesocrático, IC=35-65%",
+        "Melanocrático, IC=65-90%",
+        "Holomelanocrático, IC=90-100%"
+      ],
+      "fuente": "Norma CDC 2016 Vol IV, TBL_AF_ROCA_INTRUSIVA; 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_IGNEA_LUECO_MELANO (orden ordinal)"
     }
   },
   "avisos": [
@@ -7089,11 +7188,18 @@ const MODELO = {
     {
       "tabla": "LITO_INTRUSIVA",
       "padre": false,
-      "descripcion": "Hija 1:1. Mineralogia de rocas intrusivas.",
+      "descripcion": "Hija 1:1. Roca intrusiva: tipo de cuerpo, cristalinidad, grano, índice de color, % de fenocristales y opacos, mineralogía y observaciones (CDC TBL_AF_ROCA_INTRUSIVA).",
       "aplica_a": "Intrusiva",
       "campos": [
+        "TIPO_CUERPO_INTRUSIVO",
+        "CRISTALINIDAD_INTRUSIVA",
+        "GRANULOMETRIA_INTRUSIVA",
+        "INDICE_COLOR",
+        "FENOCRISTALES_INTRUSIVA_PCT",
+        "OPACOS_PCT",
         "COMPOSICION_MINERAL_INTRUSIVA",
-        "COMPOSICION_MINERAL_INTRUSIVA_DETALLE"
+        "COMPOSICION_MINERAL_INTRUSIVA_DETALLE",
+        "OBSERVACION_INTRUSIVA"
       ]
     },
     {
@@ -7238,7 +7344,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v163';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v164';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -9348,6 +9454,14 @@ const CONDICIONALES = {
   AMBIENTE_TECTONICO:        {modo:'ocultar', regla: esTectonica},
   ESTRUCTURA_TIPO_ROCA:      {modo:'ocultar', regla: v => !esTectonica(v) && v['TIPO_ROCA']!=='Antrópico'},
   COMPOSICION_MINERAL_INTRUSIVA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
+  // v164: campos de terreno de la roca intrusiva (CDC TBL_AF_ROCA_INTRUSIVA), solo en Intrusiva
+  TIPO_CUERPO_INTRUSIVO:       {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
+  CRISTALINIDAD_INTRUSIVA:     {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
+  GRANULOMETRIA_INTRUSIVA:     {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
+  INDICE_COLOR:                {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
+  FENOCRISTALES_INTRUSIVA_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
+  OPACOS_PCT:                  {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
+  OBSERVACION_INTRUSIVA:       {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
   COMPOSICION_MINERAL_INTRUSIVA_DETALLE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Intrusiva'},
   FENOCRISTALES_ESPECIE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava'},
   FENOCRISTALES_DETALLE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava'},
@@ -9546,7 +9660,7 @@ function formulario(store, reg, ctx){
     const TITULO=lito?{TBL_LITOLOGIA:'Datos generales', LITO_SEDIMENTARIA:'Roca o depósito sedimentario',
       SED_CLASTICA:'Clastos y matriz (sedimentaria clástica y piroclástica)', SED_NO_CLASTICA:'Sedimentaria no clástica (carbonato, fosfato…)',
       LITO_VOLCANICA:'Volcánica', VOL_LAVA:'Lava', VOL_PIROCLASTICA:'Roca o depósito piroclástico',
-      LITO_INTRUSIVA:'Mineralogía intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica',
+      LITO_INTRUSIVA:'Roca intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica',
       LITO_ANTROPICO:'Depósito antrópico'}
       :Object.fromEntries(fam.lista.filter(f=>!f.padre).map(f=>[f.tabla,f.titulo||f.tabla]));
     const famDe={}; fam.lista.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
@@ -17770,6 +17884,19 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     const compMinDetalle=l.COMPOSICION_MINERAL_PRINCIPAL?l.COMPOSICION_MINERAL_DETALLE:l.COMPOSICION_MINERAL_INTRUSIVA_DETALLE;
     if(compMin.length) frag.push(CONFORMAR[generoRoca(nombreLitologia(l.NOMBRE_ROCA,l.TIPO_ROCA))]+' por '+lista(compMin.map(minuscula))
       +parentesis(compMinDetalle));
+    // Roca intrusiva (v164, CDC TBL_AF_ROCA_INTRUSIVA). Los términos CDC traen el rango pegado
+    // ("5-1 mm, grano medio", "Leucocrático, IC=10-35%"): se nombra el término y el rango va entre
+    // paréntesis. Sin concordancia de género: "de grano medio", "de índice de color leucocrático".
+    if(l.TIPO_ROCA==='Intrusiva'){
+      const g=l.GRANULOMETRIA_INTRUSIVA, ic=l.INDICE_COLOR;
+      if(l.CRISTALINIDAD_INTRUSIVA && !/^No determinad/.test(l.CRISTALINIDAD_INTRUSIVA)) frag.push('de textura '+minuscula(l.CRISTALINIDAD_INTRUSIVA));
+      if(g){ const [rango,term]=g.split(/,\s+/); frag.push(term?(/^grano/.test(term)?'de ':'')+term+' ('+rango+')':minuscula(g)); }
+      if(ic){ const [term,rango]=ic.split(/,\s+/); frag.push('de índice de color '+minuscula(term)+(rango?' ('+rango.replace('=',' ')+')':'')); }
+      const pct=n=>{const x=parseFloat(String(l[n]??'').replace(',','.')); return isNaN(x)?null:x.toLocaleString('es-CL',{maximumFractionDigits:1})+'%';};
+      const fen=pct('FENOCRISTALES_INTRUSIVA_PCT'), opa=pct('OPACOS_PCT');
+      if(fen||opa) frag.push('con '+[fen&&fen+' de fenocristales', opa&&opa+' de minerales opacos'].filter(Boolean).join(' y '));
+      if(l.TIPO_CUERPO_INTRUSIVO && l.TIPO_CUERPO_INTRUSIVO!=='Indeterminado') frag.push('en un cuerpo intrusivo de tipo '+minuscula(l.TIPO_CUERPO_INTRUSIVO));
+    }
     // Roca tectónica (v151): foliación, porfiroclastos, fragmentos, matriz y potencia de la zona
     // de deformación, en el orden en que se describe una roca de falla en el afloramiento.
     if(l.TIPO_ROCA==='Tectónica'){
