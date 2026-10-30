@@ -400,37 +400,37 @@ async function correr(){
       return 'lista por subtipo; sin subtipo, completa; valor histórico preservado';
     });
 
-    await prueba('Afloramiento v147: campos que salieron, espesores en litología e ID_AFLORAMIENTO en el export', async () => {
+    await prueba('Afloramiento v147/v166: campos que salieron, espesores en litología y afloramiento dentro del punto', async () => {
       const M = w.eval('MODELO');
       const nom = t => M.tablas[t].campos.map(c => c.nombre);
       const salen = ['CLASE_AFLORAMIENTO','CARACTER_MESOSCOPICO','GEOMETRIA_CUERPO','ARREGLO_ESTRATOS','GRADACION_INTERNA',
                      'EXTENSION_LATERAL','TIPO_LIMITE_INFERIOR','FABRICA_GRAVOSA','ESPESOR_MIN_CM','ESPESOR_MAX_CM',
                      'ESPESOR_DEPOSITO_MIN_M','ESPESOR_DEPOSITO_MAX_M'];
-      eq(salen.filter(n => nom('TBL_AFLORAMIENTO').includes(n)), [], 'quedaron campos que salieron del afloramiento');
-      ok(nom('TBL_AFLORAMIENTO').includes('ESPESOR_MIN_AFLORAMIENTO_M'), 'falta ESPESOR_MIN_AFLORAMIENTO_M');
-      eq(['ID_AFLORAMIENTO','ESPESOR_ESTRATO_MIN_CM','ESPESOR_ESTRATO_MAX_CM','ESPESOR_TOTAL_MIN_M'].filter(n => !nom('TBL_LITOLOGIA').includes(n)), [], 'faltan campos en litología');
+      eq(salen.filter(n => nom('PUNTO_CONTROL').includes(n)), [], 'quedaron campos que salieron del afloramiento');
+      ok(nom('PUNTO_CONTROL').includes('ESPESOR_MIN_AFLORAMIENTO_M'), 'falta ESPESOR_MIN_AFLORAMIENTO_M en el punto (v166)');
+      eq(['ESPESOR_ESTRATO_MIN_CM','ESPESOR_ESTRATO_MAX_CM','ESPESOR_TOTAL_MIN_M'].filter(n => !nom('TBL_LITOLOGIA').includes(n)), [], 'faltan campos en litología');
+      ok(!nom('TBL_LITOLOGIA').includes('ID_AFLORAMIENTO') && !M.tablas.TBL_AFLORAMIENTO, 'TBL_AFLORAMIENTO / ID_AFLORAMIENTO siguen en el modelo (v166)');
       eq(['ESPESOR_MIN_CM','ESPESOR_MAX_CM','ESPESOR_DEPOSITO_MIN_M','ESPESOR_DEPOSITO_MAX_M'].filter(n => nom('TBL_LITOLOGIA').includes(n)), [], 'quedaron los nombres viejos de espesor (v148)');
       // v148: espesor de estratos oculto solo en intrusivas; el total, en todas
       const vis = (reg, n) => w.formulario('litologia', reg).node.querySelector('[name="'+n+'"]').closest('.fld').style.display;
       eq(['Intrusiva','Metamórfica','Volcánica','Sedimentaria','Antrópico'].map(t => vis({TIPO_ROCA:t}, 'ESPESOR_ESTRATO_MAX_CM')),
          ['none','','','',''], 'visibilidad del espesor de estratos por tipo de roca');
       eq(vis({TIPO_ROCA:'Intrusiva'}, 'ESPESOR_TOTAL_MIN_M'), '', 'el espesor total debe verse también en intrusivas');
-      ok(!w.formulario('aflora', {}).node.querySelector('[name="CLASE_AFLORAMIENTO"]'), 'el formulario de afloramiento aún muestra la clase');
+      ok(!w.formulario('punto', {}).node.querySelector('[name="CLASE_AFLORAMIENTO"]'), 'el formulario del punto muestra la clase de afloramiento');
       ok(!w.formulario('litologia', {}).node.querySelector('[name="ID_AFLORAMIENTO"]'), 'ID_AFLORAMIENTO no debe verse en la ficha');
       ok(w.formulario('litologia', {}).node.querySelector('[name="ESPESOR_ESTRATO_MAX_CM"]'), 'la ficha de litología no muestra los espesores');
-      const af = P+'af-1';
-      await w.put('aflora', {id:af, _parent:P+'pt-T', ESPESOR_MIN_AFLORAMIENTO_M:'8'});
-      try {
+      {
         const r = await w.construirGPKG();
         const SQL = await w.initSqlJs({locateFile: f => 'vendor/' + f});
         const db = new SQL.Database(r.bytes);
         const q = s => { const st = db.prepare(s); const o = []; while(st.step()) o.push(st.getAsObject()); st.free(); return o; };
         try {
-          eq(q("SELECT a.ESPESOR_MIN_AFLORAMIENTO_M e FROM TBL_LITOLOGIA l JOIN TBL_AFLORAMIENTO a ON a.ID_AFLORAMIENTO = l.ID_AFLORAMIENTO WHERE l.ID_REG='"+P+"li-T'"), [{e:'8'}], 'join litología→afloramiento');
-          eq(q("SELECT ID_AFLORAMIENTO FROM TBL_LITOLOGIA WHERE ID_REG='"+P+"li-G'"), [{ID_AFLORAMIENTO:null}], 'una litología de un punto sin afloramiento no debe heredar uno');
+          eq(q("SELECT name FROM sqlite_master WHERE name='TBL_AFLORAMIENTO'"), [], 'el GPKG aún trae TBL_AFLORAMIENTO');
+          ok(q("SELECT name FROM pragma_table_info('PUNTO_CONTROL')").some(x => x.name === 'GRADO_EXPOSICION_AFLORAMIENTO'), 'el punto del GPKG no trae el afloramiento');
+          ok(!q("SELECT name FROM pragma_table_info('TBL_LITOLOGIA')").some(x => x.name === 'ID_AFLORAMIENTO'), 'la litología del GPKG aún trae ID_AFLORAMIENTO');
         } finally { db.close(); }
-      } finally { await w.del('aflora', af); }
-      return '12 campos fuera, espesor mínimo nuevo, 4 espesores + ID_AFLORAMIENTO en litología, join en GPKG';
+      }
+      return '12 campos fuera, espesores en litología, afloramiento en el punto (GPKG sin TBL_AFLORAMIENTO)';
     });
 
     await prueba('El KMZ separa las colecciones en carpetas', async () => {
@@ -2627,7 +2627,7 @@ async function correr(){
             const wc = medir(b.querySelector('svg')), wb = medir(dis.find(x => k(x) === 0).querySelector('svg'));
             ok(wc > wb * 1.6, 'el icono central no se ve más grande: ' + wc + ' vs ' + wb);
           }
-          doc.querySelector('.dock .di[data-clave="aflora"]').click();
+          doc.querySelector('.dock .di[data-clave="contacto"]').click();   // v166: ya no hay ficha de afloramiento
           await esperar(() => doc.querySelector('.hoja'), 3000, 'la hoja');
           await new Promise(res => setTimeout(res, 300));   // fin de la animación de entrada
           const hb = doc.querySelector('header').getBoundingClientRect().bottom, ht = doc.querySelector('.hoja').getBoundingClientRect().top;
@@ -2725,6 +2725,45 @@ async function correr(){
         await w.del('proyecto', pr.id); w.eval('curProyecto = null');
       }
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
+    });
+
+    // ---- v166: el afloramiento vive en el punto ----
+    await prueba('v166 afloramiento en el punto: modelo, ficha, migración, prosa y barra', async () => {
+      const M = w.eval('MODELO'), pc = M.tablas.PUNTO_CONTROL.campos.map(c => c.nombre);
+      const AF = ['GRADO_EXPOSICION_AFLORAMIENTO','ESPESOR_MIN_AFLORAMIENTO_M','GRADO_METEORIZACION','GRADO_FRACTURAMIENTO','NOTA_AFLORAMIENTO'];
+      eq(AF.filter(n => !pc.includes(n)), [], 'faltan campos del afloramiento en el punto');
+      ok(!M.tablas.TBL_AFLORAMIENTO && !M.relaciones.some(r => /AFLORAMIENTO/.test(r.padre + r.hijo + r.campo)), 'quedó TBL_AFLORAMIENTO o una relación suya');
+      ok(!w.eval("HIJAS").some(h => h.store === 'aflora'), 'el afloramiento sigue como ficha hija');
+      ok(!w.itemsDock({hijas:w.eval('HIJAS'), tiposRoca:[], litos:[], conteo:{}, ocultos:[]}).some(i => i.clave === 'aflora'), 'el afloramiento sigue en la barra');
+      // ficha del punto: subtítulo y campos, exposición obligatoria
+      const f = w.formulario('punto', {});
+      const h = f.node.querySelector('h4.sub-afloramiento');
+      ok(h && h.textContent === 'Afloramiento', 'falta el subtítulo Afloramiento en la ficha del punto');
+      ok(AF.every(n => f.node.querySelector('[name="'+n+'"]')), 'faltan campos del afloramiento en la ficha del punto');
+      ok(f.node.querySelector('[name="GRADO_EXPOSICION_AFLORAMIENTO"]').required, 'la exposición debe seguir siendo obligatoria');
+      // migración: la ficha vieja pasa al punto sin pisar lo ya escrito; respaldo anterior a v60
+      const p = {id:'p', GRADO_METEORIZACION:'ya'};
+      ok(w.migrarAfloraV166(p, {GRADO_EXPOSICION_AFLORAMIENTO:'Parcial (2)', GRADO_METEORIZACION:'otro', NOTA_AFLORAMIENTO:'n'}), 'migrarAfloraV166 no informó cambio');
+      eq([p.GRADO_EXPOSICION_AFLORAMIENTO, p.GRADO_METEORIZACION, p.NOTA_AFLORAMIENTO, p._afloraMigrada], ['Parcial (2)', 'ya', 'n', true], 'migración del afloramiento');
+      ok(!w.migrarAfloraV166(p, {NOTA_AFLORAMIENTO:'otra'}), 'la migración debe correr una sola vez');
+      const viejo = {id:'q', EXPOSICION_AFLORAMIENTO:'Tapado (1)'};
+      w.migrarAfloraV166(viejo, null);
+      eq(viejo.GRADO_EXPOSICION_AFLORAMIENTO, 'Tapado (1)', 'un punto anterior a v60 no recuperó su exposición');
+      ok(!w.migrarAfloraV166({id:'r'}, null), 'un punto sin afloramiento no debe marcarse');
+      // ciclo real en la base: punto + ficha vieja -> import -> el punto la lleva
+      const pr = {id:P+'af6-pr', ID_PROYECTO:P+'af6', NOMBRE_PROYECTO:'Afloramiento v166'};
+      const pt = {id:P+'af6-pt', _parent:pr.id, ID_PUNTO_CONTROL:'AF-1', [LAT]:'-33.45', [LON]:'-70.65'};
+      const blob = new w.Blob([JSON.stringify({app:'captura-terreno', formato:1, coleccion:'terreno', proyecto:[pr], punto:[pt],
+        aflora:[{id:P+'af6-a', _parent:pt.id, ESPESOR_MIN_AFLORAMIENTO_M:'7', GRADO_FRACTURAMIENTO:'Moderadamente fracturado'}]})], {type:'application/json'});
+      try {
+        await w.importBackup(new w.File([blob], 'v166.json', {type:'application/json'}), 'terreno');
+        const g = await w.get('punto', pt.id);
+        eq([g.ESPESOR_MIN_AFLORAMIENTO_M, g.GRADO_FRACTURAMIENTO], ['7', 'Moderadamente fracturado'], 'el import no pasó el afloramiento al punto');
+      } finally { await w.del('aflora', P+'af6-a'); await w.del('punto', pt.id); await w.del('proyecto', pr.id); }
+      // prosa: lee el afloramiento del punto
+      const t = w.prosaPunto({id:'pt', ESPESOR_MIN_AFLORAMIENTO_M:'12,5'}, {litos:[], aflora:[], estr:[], cont:[], geomorf:[], mues:[]}, null, null, 500);
+      ok(/El afloramiento expone un espesor mínimo de 12,5 m/.test(t), 'la prosa no leyó el afloramiento del punto: ' + t);
+      return '5 campos en el punto, sin tabla ni ficha, migración e import, prosa';
     });
 
     // ---- v165: clastos sin redundancia, campos CLASTO y SED_CARBONATOS ----
@@ -2961,10 +3000,10 @@ async function correr(){
       eq(nom.filter(n => /Decimales|PRECISION_GPS/.test(n)), [], 'quedaron los nombres viejos o PRECISION_GPS en el modelo');
       eq(pc.find(c => c.nombre === 'ERROR_GPS_M').obligatorio, true, 'ERROR_GPS_M debe ser obligatorio');
       eq(M.dominios.HUSO_UTM.valores, ['17S','18S','19S'], 'dominio de husos');
-      const af = M.tablas.TBL_AFLORAMIENTO.campos.map(c => c.nombre);
+      const af = M.tablas.PUNTO_CONTROL.campos.map(c => c.nombre);   // v166: el afloramiento está en el punto
       eq(af.filter(n => /TIPO_AFLORAMIENTO/.test(n)), [], 'el afloramiento aún tiene tipo/subtipo');
       ok(!M.dominios.TIPO_AFLORAMIENTO && !M.dominios.SUBTIPO_AFLORAMIENTO, 'quedaron los dominios de tipo/subtipo de afloramiento');
-      ok(!w.formulario('aflora', {}).node.querySelector('[name="TIPO_AFLORAMIENTO"],[name="SUBTIPO_AFLORAMIENTO"]'), 'la ficha de afloramiento aún muestra tipo/subtipo');
+      ok(!w.formulario('punto', {}).node.querySelector('[name="TIPO_AFLORAMIENTO"],[name="SUBTIPO_AFLORAMIENTO"]'), 'el punto muestra tipo/subtipo de afloramiento');
       // formulario: etiquetas, widgets y conversión
       const f = w.formulario('punto', {});
       const q = n => f.node.querySelector('[name="' + n + '"]');
