@@ -302,7 +302,7 @@ async function correr(){
                                 NOMBRE_ROCA:'Granito', COMPOSICION_MINERAL_INTRUSIVA:'Biotita'});
       // sedimentarias (v150): la clástica va a SED_SILICICLASTICA (no a LITO_CLASTICA), la caliza a SED_CARBONATOS (ex SED_NO_CLASTICA)
       await w.put('litologia', {id:ids[2], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-3', TIPO_ROCA:'Sedimentaria',
-                                NOMBRE_ROCA:'Arenisca', SELECCION:'Buena', CEMENTO:'Calcáreo', COMPONENTE_SUBORDINADO_1:'arcilloso'});
+                                NOMBRE_ROCA:'Arenisca', SELECCION:'Buena', CEMENTO:'Calcáreo'});
       await w.put('litologia', {id:ids[3], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-4', TIPO_ROCA:'Sedimentaria',
                                 SUBTIPO_SEDIMENTARIO:'Carbonato', NOMBRE_ROCA:'Caliza', TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'});
       await w.put('litologia', {id:ids[4], _parent:P+'pt-T', ID_LITOLOGIA:'LIT-SMK-5', TIPO_ROCA:'Sedimentaria',
@@ -329,7 +329,7 @@ async function correr(){
           eq(q("SELECT COUNT(*) n FROM TBL_LITOLOGIA WHERE ID_REG IN ('"+ids.join("','")+"')"), [{n:5}], 'padre: una fila por litología');
           eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[2]+"'"), [{n:1}], 'arenisca: fila en SED_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM VOL_PIROCLASTICA WHERE ID_REG IN ('"+ids[2]+"','"+ids[3]+"','"+ids[4]+"')"), [{n:0}], 'las sedimentarias no deben llenar VOL_PIROCLASTICA');
-          eq(q("SELECT CEMENTO, COMPONENTE_SUBORDINADO_1 FROM LITO_SEDIMENTARIA WHERE ID_REG='"+ids[2]+"'"), [{CEMENTO:'Calcáreo', COMPONENTE_SUBORDINADO_1:'arcilloso'}], 'arenisca: LITO_SEDIMENTARIA con cemento y subordinado');
+          eq(q("SELECT CEMENTO FROM LITO_SEDIMENTARIA WHERE ID_REG='"+ids[2]+"'"), [{CEMENTO:'Calcáreo'}], 'arenisca: LITO_SEDIMENTARIA con cemento y subordinado');
           eq(q("SELECT TEXTURA_DUNHAM, TIPO_ALOQUIMICO FROM SED_CARBONATOS WHERE ID_REG='"+ids[3]+"'"), [{TEXTURA_DUNHAM:'Grainstone', TIPO_ALOQUIMICO:'oolítica'}], 'caliza: fila en SED_NO_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[3]+"'"), [{n:0}], 'la caliza no debe llenar SED_CLASTICA');
           eq(q("SELECT COUNT(*) n FROM SED_CLASTICA WHERE ID_REG='"+ids[4]+"'"), [{n:0}], 'subtipo Mixto: sin nieta');
@@ -777,8 +777,9 @@ async function correr(){
       // clastos (v94 -> v165): en una sedimentaria clástica salen de las fichas de clasto, con su %
       const dep = w.prosaPunto(pt, Object.assign({}, datos, {litos:[{id:'sd', TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito',
         NOMBRE_ROCA:'Aluviales', SELECCION:'Mala'}],
-        clastos:[{ID_LITOLOGIA:'sd', LITOLOGIA_CLASTO:'Clastos de andesita', CLASTO_MIN_PCT:'55', CLASTO_MAX_PCT:'55'},
-                 {ID_LITOLOGIA:'sd', LITOLOGIA_CLASTO:'Clastos de arenisca', CLASTO_MIN_PCT:'40', CLASTO_MAX_PCT:'40', TAMANO_MIN_CM:'2', TAMANO_MAX_CM:'45', REDONDEAMIENTO_CLASTO:'Subredondeados'}],
+        componentes:[{ID_LITOLOGIA:'sd', CLASE_COMPONENTE:'Clasto', LITOLOGIA_CLASTO:'Clastos de andesita', COMPONENTE_MIN_PCT:'55', COMPONENTE_MAX_PCT:'55'},
+                 {ID_LITOLOGIA:'sd', CLASE_COMPONENTE:'Clasto', LITOLOGIA_CLASTO:'Clastos de arenisca', COMPONENTE_MIN_PCT:'40', COMPONENTE_MAX_PCT:'40', TAMANO_MIN_CM:'2', TAMANO_MAX_CM:'45', REDONDEAMIENTO_COMPONENTE:'Subredondeados'},
+                 {ID_LITOLOGIA:'sd', CLASE_COMPONENTE:'Fósil', TIPO_FOSIL:'Bivalvos'}],
         estr:[], mues:[]}), null, null, 500);
       ok(/compuestos por andesita \(55%\) y arenisca \(40%, 2-45 cm, subredondeados\)/.test(dep),
          'el % / tamaño / redondeamiento de las fichas de clasto no llegó, o repite la palabra clastos: ' + dep);
@@ -921,7 +922,7 @@ async function correr(){
 
     await prueba('Los campos internos del lienzo NO entran a los exports', async () => {
       const cs = w.campos('esquema').map(c => c.nombre);
-      eq(cs, ['ID_PUNTO_CONTROL','ID_ESQUEMA','ID_FOTOGRAFIA_ASOCIADA','OBSERVACION'],
+      eq(cs, ['ID_PUNTO_CONTROL','ID_ESQUEMA','ID_LITOLOGIA','ID_ESTRUCTURA','ID_CONTACTO','ID_MUESTRA','ID_GEOMORFOLOGIA','ID_COMPONENTE','ID_ALTERACION','ID_FOTOGRAFIA_ASOCIADA','OBSERVACION'],
          'cambiaron los campos exportables de TBL_ESQUEMA_DIBUJO');
       ok(!cs.some(n => /^_/.test(n)), '_trazos/_fondo/_img se colaron a los campos del modelo');
       return 'los 4 campos del modelo intactos; _trazos, _fondo y _w/_h quedan fuera';
@@ -2375,12 +2376,12 @@ async function correr(){
       const nom = t => M.tablas[t].campos.map(c => c.nombre);
       ok(!M.dominios.TIPO_ROCA.valores.includes('Depósito') && M.dominios.TIPO_ROCA.valores.includes('Antrópico'), 'TIPO_ROCA sin cambio v152');
       eq(M.familias_estructura.map(f => f.tabla), ['TBL_DATOS_ESTRUCTURALES','EST_FALLA','EST_PLIEGUE','EST_FRACTURA'], 'familias de estructura');
-      // componentes: sin TBL_COMPONENTE; clastos bajo SED_CLASTICA y fragmentos bajo VOL_PIROCLASTICA
-      ok(!M.tablas.TBL_COMPONENTE && !M.familias_componente && !M.dominios.CLASE_COMPONENTE, 'aún queda TBL_COMPONENTE en el modelo');
-      eq(['COMP_CLASTO','COMP_FRAGMENTO'].map(t => M.relaciones.filter(r => r.hijo === t).map(r => r.padre + '.' + r.campo).join(' ')),
-         ['PUNTO_CONTROL.ID_PUNTO_CONTROL SED_CLASTICA.ID_LITOLOGIA', 'PUNTO_CONTROL.ID_PUNTO_CONTROL VOL_PIROCLASTICA.ID_LITOLOGIA'], 'relaciones de los componentes');
-      eq(['clasto','fragmento'].map(st => { const h = w.eval('HIJAS').find(x => x.store === st); return h && h.rama + ' ' + w.eval('STORE2TBL')[st]; }),
-         ['SED_CLASTICA COMP_CLASTO', 'VOL_PIROCLASTICA COMP_FRAGMENTO'], 'fichas de clastos y fragmentos');
+      // componentes (v167): una LITO_COMPONENTES bajo TBL_LITOLOGIA; sin TBL_COMPONENTE ni COMP_CLASTO/COMP_FRAGMENTO
+      ok(M.tablas.LITO_COMPONENTES && !M.tablas.TBL_COMPONENTE && !M.tablas.COMP_CLASTO && !M.tablas.COMP_FRAGMENTO, 'tablas de componentes');
+      eq(M.relaciones.filter(r => r.hijo === 'LITO_COMPONENTES').map(r => r.padre + '.' + r.campo).join(' '),
+         'PUNTO_CONTROL.ID_PUNTO_CONTROL TBL_LITOLOGIA.ID_LITOLOGIA', 'relaciones de los componentes');
+      eq(['litocomp'].map(st => { const h = w.eval('HIJAS').find(x => x.store === st); return h && h.rama + ' ' + w.eval('STORE2TBL')[st]; }),
+         ['TBL_LITOLOGIA LITO_COMPONENTES'], 'ficha de componentes');
       const viejo = {id:'x', ID_COMPONENTE:'x', CLASE_COMPONENTE:'Fragmento piroclástico', LITOLOGIA_FRAGMENTO:'Pómez'};
       eq([w.componenteASuStore(viejo), viejo.ID_FRAGMENTO, 'CLASE_COMPONENTE' in viejo], ['fragmento', 'x', false], 'componente de pruebas v152 migrado');
       // migración: depósito aluvial, tefra, antrópico y tipo de falla
@@ -2417,8 +2418,9 @@ async function correr(){
          ['none', '', ''], 'ficha de pliegue');
       eq(['TIPO_FRACTURA','NUMERO_JUEGOS','POTENCIA_FALLA'].map(n => vis('estructural', {TIPO_ESTRUCTURA:'Estructura fractura'}, n)),
          ['', '', 'none'], 'ficha de fractura');
-      eq(['LITOLOGIA_CLASTO','LITOLOGIA_FRAGMENTO'].map(n => vis('clasto', {}, n)), ['', 'falta'], 'ficha de clasto');
-      eq(['GENESIS_FRAGMENTO','TIPO_CLASTO'].map(n => vis('fragmento', {}, n)), ['', 'falta'], 'ficha de fragmento');
+      // v167: una ficha de componentes; la clase decide qué campos propios se ven
+      eq(['LITOLOGIA_CLASTO','LITOLOGIA_FRAGMENTO'].map(n => vis('litocomp', {CLASE_COMPONENTE:'Clasto'}, n)), ['', 'none'], 'componente clasto');
+      eq(['GENESIS_FRAGMENTO','TIPO_CLASTO'].map(n => vis('litocomp', {CLASE_COMPONENTE:'Fragmento piroclástico'}, n)), ['', 'none'], 'componente fragmento');
       // listas: TIPO_FALLA en cascada de su categoría y nombres de roca según roca o depósito
       const opts = (store, reg, n) => [...w.formulario(store, reg).node.querySelectorAll('[name="'+n+'"] option')].map(o => o.value).filter(Boolean);
       eq(opts('estructural', {TIPO_ESTRUCTURA:'Estructura falla', CATEGORIA_FALLA:'Falla de Rumbo'}, 'TIPO_FALLA'),
@@ -2429,20 +2431,19 @@ async function correr(){
       ok(sedRoca.includes('Arenisca') && !sedRoca.includes('Grava arenosa'), 'roca sedimentaria sin subtipo mezcla sedimentos');
       const tefra = opts('litologia', {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', LITIFICACION:'Depósito'}, 'NOMBRE_ROCA');
       ok(tefra.includes('Lapilli') && !tefra.includes('Toba de lapilli'), 'tefra: ' + tefra.slice(0, 3));
-      // export: hijas EST_FALLA, LITO_DEPOSITO y LITO_ANTROPICO con su clave 1:1; COMP_CLASTO con su litología
+      // export: hijas EST_FALLA, LITO_DEPOSITO y LITO_ANTROPICO con su clave 1:1; LITO_COMPONENTES con su litología
       const P = 'smoke-v152-', ids = [P + 'li1', P + 'li2', P + 'es1', P + 'co1', P + 'li3', P + 'li4', P + 'fr1', P + 'li5'];
       await w.put('litologia', {id:ids[0], _parent:P+'pt', TIPO_ROCA:'Sedimentaria', LITIFICACION:'Depósito', NOMBRE_ROCA:'Grava arenosa',
                                 SUBTIPO_SEDIMENTARIO:'Siliciclástico', AMBIENTE_DEPOSITACIONAL:'Aluvial', SELECCION:'Mala'});
       await w.put('litologia', {id:ids[1], _parent:P+'pt', TIPO_ROCA:'Antrópico', TIPO_ANTROPICO:'Relave minero'});
       await w.put('estructural', {id:ids[2], _parent:P+'pt', TIPO_ESTRUCTURA:'Estructura falla', AZIMUT:'30', MANTEO_BUZAMIENTO:'60',
                                   CATEGORIA_FALLA:'Falla Normal', TIPO_FALLA:'Falla normal', CRITERIO_CINEMATICO:'Escarpe; Fracturas tipo T'});
-      await w.put('clasto', {id:ids[3], _parent:P+'pt', ID_LITOLOGIA:ids[0], CLASTO_MIN_PCT:'40',
-                                 LITOLOGIA_CLASTO:'Clastos de andesita', REDONDEAMIENTO_CLASTO:'Subredondeados'});
-      // clasto y fragmento en litologías sin ningún campo de su rama: la fila de la rama debe salir igual
+      await w.put('litocomp', {id:ids[3], _parent:P+'pt', ID_LITOLOGIA:ids[0], CLASE_COMPONENTE:'Clasto', COMPONENTE_MIN_PCT:'40',
+                                 LITOLOGIA_CLASTO:'Clastos de andesita', REDONDEAMIENTO_COMPONENTE:'Subredondeados'});
       await w.put('litologia', {id:ids[4], _parent:P+'pt', TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Arenisca'});
-      await w.put('clasto', {id:ids[3] + 'b', _parent:P+'pt', ID_LITOLOGIA:ids[4], LITOLOGIA_CLASTO:'Clastos de cuarzo'});
+      await w.put('litocomp', {id:ids[3] + 'b', _parent:P+'pt', ID_LITOLOGIA:ids[4], CLASE_COMPONENTE:'Clasto', LITOLOGIA_CLASTO:'Clastos de cuarzo'});
       await w.put('litologia', {id:ids[5], _parent:P+'pt', TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas', NOMBRE_ROCA:'Toba de lapilli'});
-      await w.put('fragmento', {id:ids[6], _parent:P+'pt', ID_LITOLOGIA:ids[5], LITOLOGIA_FRAGMENTO:'Pómez'});
+      await w.put('litocomp', {id:ids[6], _parent:P+'pt', ID_LITOLOGIA:ids[5], CLASE_COMPONENTE:'Fragmento piroclástico', LITOLOGIA_FRAGMENTO:'Pómez'});
       await w.put('litologia', {id:ids[7], _parent:P+'pt', TIPO_ROCA:'Intrusiva', NOMBRE_ROCA:'Granito'});
       try {
         const r = await w.construirGPKG();
@@ -2459,18 +2460,16 @@ async function correr(){
              [{ID_ESTRUCTURA:ids[2], TIPO_FALLA:'Falla normal', CRITERIO_CINEMATICO:'Escarpe; Fracturas tipo T'}], 'fila EST_FALLA');
           eq(q("SELECT COUNT(*) n FROM EST_PLIEGUE WHERE ID_REG='"+ids[2]+"'"), [{n:0}], 'la falla no debe tener fila de pliegue');
           ok(!q("SELECT name FROM pragma_table_info('TBL_DATOS_ESTRUCTURALES')").map(x => x.name).includes('TIPO_FALLA'), 'el padre aún trae TIPO_FALLA');
-          eq(q("SELECT ID_CLASTO, ID_LITOLOGIA, CLASTO_MIN_PCT, LITOLOGIA_CLASTO FROM COMP_CLASTO WHERE ID_REG='"+ids[3]+"'"),
-             [{ID_CLASTO:ids[3], ID_LITOLOGIA:ids[0], CLASTO_MIN_PCT:'40', LITOLOGIA_CLASTO:'Clastos de andesita'}], 'fila COMP_CLASTO');
-          eq(q("SELECT COUNT(*) n FROM sqlite_master WHERE name IN ('TBL_COMPONENTE','COMP_FRAGMENTO')"), [{n:1}], 'tablas de componentes en el GeoPackage');
+          eq(q("SELECT ID_COMPONENTE, ID_LITOLOGIA, CLASE_COMPONENTE, COMPONENTE_MIN_PCT, LITOLOGIA_CLASTO FROM LITO_COMPONENTES WHERE ID_REG='"+ids[3]+"'"),
+             [{ID_COMPONENTE:ids[3], ID_LITOLOGIA:ids[0], CLASE_COMPONENTE:'Clasto', COMPONENTE_MIN_PCT:'40', LITOLOGIA_CLASTO:'Clastos de andesita'}], 'fila LITO_COMPONENTES');
+          eq(q("SELECT COUNT(*) n FROM sqlite_master WHERE name IN ('TBL_COMPONENTE','COMP_CLASTO','COMP_FRAGMENTO')"), [{n:0}], 'quedan tablas de componentes viejas en el GeoPackage');
           const filas = (t, id) => q("SELECT COUNT(*) n FROM " + t + " WHERE ID_LITOLOGIA='" + id + "'")[0].n;
-          eq([filas('SED_CLASTICA', ids[4]), filas('LITO_SEDIMENTARIA', ids[4]), filas('VOL_PIROCLASTICA', ids[5]), filas('LITO_INTRUSIVA', ids[7])],
-             [1, 1, 1, 0], 'fila de la rama de un clasto/fragmento sin campos propios (y la intrusiva vacía sin fila)');
-          eq(q("SELECT COUNT(*) n FROM COMP_CLASTO c LEFT JOIN SED_CLASTICA s ON s.ID_LITOLOGIA = c.ID_LITOLOGIA WHERE s.ID_LITOLOGIA IS NULL")
-             .concat(q("SELECT COUNT(*) n FROM COMP_FRAGMENTO c LEFT JOIN VOL_PIROCLASTICA v ON v.ID_LITOLOGIA = c.ID_LITOLOGIA WHERE v.ID_LITOLOGIA IS NULL")),
-             [{n:0}, {n:0}], 'componentes sin su fila de rama');
+          eq(filas('LITO_INTRUSIVA', ids[7]), 0, 'la intrusiva vacía no debe traer fila');
+          eq(q("SELECT COUNT(*) n FROM LITO_COMPONENTES c LEFT JOIN TBL_LITOLOGIA l ON l.ID_LITOLOGIA = c.ID_LITOLOGIA WHERE c.ID_REG LIKE '"+P+"%' AND l.ID_LITOLOGIA IS NULL"),
+             [{n:0}], 'componentes sin su litología');
         } finally { db.close(); }
-      } finally { for (const [s, id] of [['litologia',ids[0]],['litologia',ids[1]],['estructural',ids[2]],['clasto',ids[3]],['clasto',ids[3]+'b'],
-                                     ['litologia',ids[4]],['litologia',ids[5]],['fragmento',ids[6]],['litologia',ids[7]]]) await w.del(s, id); }
+      } finally { for (const [s, id] of [['litologia',ids[0]],['litologia',ids[1]],['estructural',ids[2]],['litocomp',ids[3]],['litocomp',ids[3]+'b'],
+                                     ['litologia',ids[4]],['litologia',ids[5]],['litocomp',ids[6]],['litologia',ids[7]]]) await w.del(s, id); }
       return 'migración idempotente · fichas que aparecen según el tipo · listas CDC · hijas 1:1 en el GeoPackage';
     });
 
@@ -2727,6 +2726,56 @@ async function correr(){
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
     });
 
+    // ---- v167: LITO_COMPONENTES y adjuntos vinculables a cualquier registro ----
+    await prueba('v167 LITO_COMPONENTES: clases, campos por clase, migración, prosa y fotos/esquemas vinculados', async () => {
+      const M = w.eval('MODELO');
+      eq(M.dominios.CLASE_COMPONENTE.valores, ['Clasto','Fragmento piroclástico','Fósil','Componente tufítico','Componente subordinado','Composición mineralógica'], 'clases');
+      const SALEN = ['COMPOSICION_MINERALOGICA','COMPONENTE_TUFITICO','COMPONENTE_TUFITICO_PCT','COMPONENTE_SUBORDINADO_1','COMPONENTE_SUBORDINADO_2','COMPONENTE_SUBORDINADO_3','CONTENIDO_FOSIL','CONTENIDO_FOSIL_DETALLE'];
+      eq(SALEN.filter(n => M.tablas.TBL_LITOLOGIA.campos.some(c => c.nombre === n)), [], 'LITO_SEDIMENTARIA aún tiene composición, componentes o fósil');
+      // ficha: cada clase pide sus campos
+      const vis = (reg, n) => { const f = w.formulario('litocomp', reg, {litologias:[{id:'L1', NOMBRE_ROCA:'Caliza'}]}); const i = f.node.querySelector('[name="'+n+'"]');
+        return i ? i.closest('.fld').style.display !== 'none' : null; };
+      eq(['TIPO_FOSIL','LITOLOGIA_CLASTO','REDONDEAMIENTO_COMPONENTE','TAMANO_MAX_CM','COMPONENTE_MIN_PCT'].map(n => vis({CLASE_COMPONENTE:'Fósil'}, n)), [true, false, false, true, true], 'ficha de fósil');
+      eq(['LITOLOGIA_CLASTO','TAMANO_CLASTO','REDONDEAMIENTO_COMPONENTE','LITOLOGIA_FRAGMENTO'].map(n => vis({CLASE_COMPONENTE:'Clasto'}, n)), [true, true, true, false], 'ficha de clasto');
+      eq(['COMPOSICION_MINERALOGICA','TAMANO_MAX_CM'].map(n => vis({CLASE_COMPONENTE:'Composición mineralógica'}, n)), [true, false], 'ficha de composición');
+      ok(w.formulario('litocomp', {CLASE_COMPONENTE:'Composición mineralógica'}).node.querySelectorAll('[name="COMPOSICION_MINERALOGICA"] option').length > 5, 'la composición mineralógica sin lista');
+      // migración: clasto/fragmento viejos y campos de la sedimentaria
+      const c = w.aComponenteV167('clasto', {id:'c1', _parent:'p', ID_CLASTO:'c1', ID_LITOLOGIA:'L', CLASTO_MIN_PCT:'40', REDONDEAMIENTO_CLASTO:'Subredondeados', NOTA_CLASTO:'n', LITOLOGIA_CLASTO:'Clastos de andesita'});
+      eq([c.id, c.CLASE_COMPONENTE, c.COMPONENTE_MIN_PCT, c.REDONDEAMIENTO_COMPONENTE, c.NOTA_COMPONENTE, c.LITOLOGIA_CLASTO, 'ID_CLASTO' in c, 'CLASTO_MIN_PCT' in c],
+         ['c1', 'Clasto', '40', 'Subredondeados', 'n', 'Clastos de andesita', false, false], 'clasto -> componente');
+      eq(w.aComponenteV167('fragmento', {id:'f1', ID_FRAGMENTO:'f1', LITOLOGIA_FRAGMENTO:'Pómez', COMPONENTE_MIN_PCT:'60'}).CLASE_COMPONENTE, 'Fragmento piroclástico', 'fragmento -> componente');
+      const li = {id:'L', _parent:'p', ID_PUNTO_CONTROL:'PC', TIPO_ROCA:'Sedimentaria', CONTENIDO_FOSIL:'Bivalvos; Amonites', CONTENIDO_FOSIL_DETALLE:'bien preservados',
+        COMPONENTE_TUFITICO:'tufítica', COMPONENTE_TUFITICO_PCT:'15', COMPONENTE_SUBORDINADO_1:'arcilloso', COMPONENTE_SUBORDINADO_1_PCT:'10', COMPOSICION_MINERALOGICA:'calcítica'};
+      const cs = w.componentesDeLitologiaV167(li);
+      eq(cs.map(x => [x.CLASE_COMPONENTE, x.TIPO_FOSIL || x.TIPO_COMPONENTE_TUFITICO || x.TIPO_COMPONENTE_SUBORDINADO || x.COMPOSICION_MINERALOGICA, x.COMPONENTE_MIN_PCT || '', x.ID_LITOLOGIA]),
+         [['Fósil','Bivalvos','','L'], ['Fósil','Amonites','','L'], ['Componente tufítico','tufítica','15','L'], ['Componente subordinado','arcilloso','10','L'], ['Composición mineralógica','calcítica','','L']], 'campos de la sedimentaria -> componentes');
+      eq(cs[0].NOTA_COMPONENTE, 'bien preservados', 'el detalle del fósil va en la nota');
+      eq(w.componentesDeLitologiaV167(li), [], 'la migración debe correr una sola vez');
+      // prosa: fósiles desde los componentes
+      const t = w.prosaPunto({id:'pt'}, {litos:[{id:'L', TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Caliza'}], aflora:[], estr:[], cont:[], geomorf:[], mues:[],
+        componentes:[{ID_LITOLOGIA:'L', CLASE_COMPONENTE:'Fósil', TIPO_FOSIL:'Bivalvos'}, {ID_LITOLOGIA:'L', CLASE_COMPONENTE:'Fósil', TIPO_FOSIL:'Amonites'}]}, null, null, 500);
+      ok(/contenido fósil de bivalvos y amonites/.test(t), 'prosa de fósiles: ' + t);
+      // fotos y esquemas: selector de registro del punto; guarda una sola FK
+      for (const t of ['TBL_FOTOGRAFIAS','TBL_ESQUEMA_DIBUJO'])
+        ok(['ID_LITOLOGIA','ID_ESTRUCTURA','ID_CONTACTO','ID_MUESTRA','ID_GEOMORFOLOGIA','ID_COMPONENTE','ID_ALTERACION'].every(fk => M.relaciones.some(r => r.hijo === t && r.campo === fk)), t + ': faltan vínculos a registros');
+      const pt = P + 'v167-pt', ids = [P+'v167-li', P+'v167-es', P+'v167-fo'];
+      await w.put('litologia', {id:ids[0], _parent:pt, NOMBRE_ROCA:'Andesita'});
+      await w.put('estructural', {id:ids[1], _parent:pt, TIPO_ESTRUCTURA:'Estructura falla'});
+      const foto = {id:ids[2], _parent:pt, ID_LITOLOGIA:ids[0]};
+      await w.put('foto', foto);
+      try {
+        const sel = w.selectorRegistro(foto, 'foto').querySelector('select');
+        await esperar(() => sel.querySelector('option[value="estructural|' + ids[1] + '"]'), 3000, 'las opciones del selector');
+        eq(sel.value, 'litologia|' + ids[0], 'el selector no muestra el vínculo guardado');
+        ok(!w.formulario('foto', foto).node.querySelector('[name="ID_LITOLOGIA"],[name="ID_ESTRUCTURA"]'), 'las FK siguen como campos sueltos');
+        sel.value = 'estructural|' + ids[1]; sel.dispatchEvent(new w.Event('change', {bubbles:true}));
+        await new Promise(r => setTimeout(r, 300));
+        const g = await w.get('foto', ids[2]);
+        eq([g.ID_ESTRUCTURA, g.ID_LITOLOGIA], [ids[1], ''], 'la foto debe quedar vinculada solo a la medida');
+      } finally { await w.del('foto', ids[2]); await w.del('estructural', ids[1]); await w.del('litologia', ids[0]); }
+      return '6 clases, campos por clase, migración, prosa de fósiles y adjuntos a cualquier registro';
+    });
+
     // ---- v166: el afloramiento vive en el punto ----
     await prueba('v166 afloramiento en el punto: modelo, ficha, migración, prosa y barra', async () => {
       const M = w.eval('MODELO'), pc = M.tablas.PUNTO_CONTROL.campos.map(c => c.nombre);
@@ -2774,9 +2823,9 @@ async function correr(){
       const fam = t => M.familias_litologia.find(f => f.tabla === t);
       ok(!fam('SED_CLASTICA').campos.includes('CLASTOS_TAM_MAX_CM') && fam('VOL_PIROCLASTICA').campos.includes('CLASTOS_TAM_MAX_CM'), 'el clasto mayor debe quedar solo en la piroclástica');
       ok(fam('SED_CARBONATOS') && !fam('SED_NO_CLASTICA'), 'SED_NO_CLASTICA no pasó a SED_CARBONATOS');
-      eq(M.tablas.COMP_CLASTO.campos.map(c => c.nombre).filter(n => /COMPONENTE|GRANULOMETRIA/.test(n)), [], 'quedan nombres COMPONENTE/GRANULOMETRIA en la ficha de clasto');
-      ok(['CLASTO_MIN_PCT','CLASTO_MAX_PCT','REDONDEAMIENTO_CLASTO','FORMA_CLASTO','COLOR_CLASTO','NOTA_CLASTO','TAMANO_CLASTO'].every(n => M.tablas.COMP_CLASTO.campos.some(c => c.nombre === n)), 'faltan los campos renombrados');
-      ok(M.tablas.COMP_FRAGMENTO.campos.some(c => c.nombre === 'COMPONENTE_MIN_PCT'), 'la ficha de fragmento no debía cambiar');
+      const lc = M.tablas.LITO_COMPONENTES.campos.map(c => c.nombre);   // v167: clastos en LITO_COMPONENTES
+      ok(!lc.includes('GRANULOMETRIA_CLASTO') && lc.includes('TAMANO_CLASTO'), 'el tamaño del clasto debe llamarse TAMANO_CLASTO');
+      ok(['LITOLOGIA_CLASTO','TIPO_CLASTO','COMPONENTE_MIN_PCT','REDONDEAMIENTO_COMPONENTE'].every(n => lc.includes(n)), 'faltan campos de clasto en LITO_COMPONENTES');
       eq(w.familiaAplica('SED_CARBONATOS', {TIPO_ROCA:'Sedimentaria', SUBTIPO_SEDIMENTARIO:'Carbonato', NOMBRE_ROCA:'Caliza'}), true, 'una caliza va a SED_CARBONATOS');
       // la ficha de una arenisca ya no muestra los campos de clasto; la piroclástica sí el clasto mayor
       const f = w.formulario('litologia', {TIPO_ROCA:'Sedimentaria', NOMBRE_ROCA:'Conglomerado'});

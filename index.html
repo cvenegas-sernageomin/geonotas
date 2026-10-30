@@ -646,83 +646,16 @@ const MODELO = {
           "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_CLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_CARBONATOS; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
         },
         {
-          "nombre": "COMPOSICION_MINERALOGICA",
-          "obligatorio": false,
-          "dominio": "COMPOSICION_MINERALOGICA",
-          "nota": "Solo SUBTIPO Siliciclástico (arcillosos) o Carbonato. Norma CDC 2016 Vol III."
-        },
-        {
           "nombre": "TIPO_ALOQUIMICO",
           "obligatorio": false,
           "dominio": "TIPO_ALOQUIMICO",
           "nota": "Solo SUBTIPO Carbonato o Fosfato: grano aloquímico más abundante o que mejor caracteriza la roca. Norma CDC 2016 Vol III."
         },
         {
-          "nombre": "COMPONENTE_TUFITICO",
-          "obligatorio": false,
-          "dominio": "COMPONENTE_TUFITICO",
-          "nota": "Solo SUBTIPO Siliciclástico o Volcanosedimentario: material piroclástico juvenil vítreo retrabajado. Norma CDC 2016 Vol III."
-        },
-        {
-          "nombre": "COMPONENTE_TUFITICO_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% estimado del componente tufítico."
-        },
-        {
-          "nombre": "COMPONENTE_SUBORDINADO_1",
-          "obligatorio": false,
-          "dominio": "COMPONENTE_SUBORDINADO",
-          "nota": "Componente subordinado nº 1, de mayor a menor abundancia (norma CDC 2016 Vol III; adjetivo que califica el nombre raíz, ej. arenisca calcárea)."
-        },
-        {
-          "nombre": "COMPONENTE_SUBORDINADO_1_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% estimado del componente subordinado nº 1; por ser subordinado debe ser <50%."
-        },
-        {
-          "nombre": "COMPONENTE_SUBORDINADO_2",
-          "obligatorio": false,
-          "dominio": "COMPONENTE_SUBORDINADO",
-          "nota": "Componente subordinado nº 2, de mayor a menor abundancia (norma CDC 2016 Vol III; adjetivo que califica el nombre raíz, ej. arenisca calcárea)."
-        },
-        {
-          "nombre": "COMPONENTE_SUBORDINADO_2_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% estimado del componente subordinado nº 2; por ser subordinado debe ser <50%."
-        },
-        {
-          "nombre": "COMPONENTE_SUBORDINADO_3",
-          "obligatorio": false,
-          "dominio": "COMPONENTE_SUBORDINADO",
-          "nota": "Componente subordinado nº 3, de mayor a menor abundancia (norma CDC 2016 Vol III; adjetivo que califica el nombre raíz, ej. arenisca calcárea)."
-        },
-        {
-          "nombre": "COMPONENTE_SUBORDINADO_3_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% estimado del componente subordinado nº 3; por ser subordinado debe ser <50%."
-        },
-        {
           "nombre": "CEMENTO",
           "obligatorio": false,
           "dominio": "CEMENTO",
           "nota": "Rocas sedimentarias y depósitos."
-        },
-        {
-          "nombre": "CONTENIDO_FOSIL",
-          "obligatorio": false,
-          "dominio": "CONTENIDO_FOSIL",
-          "multiple": true,
-          "nota": "Taxones/restos fósiles observados en la roca (bioestratigrafía). Campo NO normativo, propuesto por el usuario. Solo rocas sedimentarias (detríticas y calizas)."
-        },
-        {
-          "nombre": "CONTENIDO_FOSIL_DETALLE",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Texto libre: abundancia, estado de preservación o taxón fuera de la lista de CONTENIDO_FOSIL."
         },
         {
           "nombre": "COMPOSICION_MINERAL_PRINCIPAL",
@@ -1369,6 +1302,42 @@ const MODELO = {
           "nota": null
         },
         {
+          "nombre": "ID_ESTRUCTURA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_DATOS_ESTRUCTURALES). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_CONTACTO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_CONTACTO). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_MUESTRA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_MUESTREO). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_GEOMORFOLOGIA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_GEOMORFOLOGIA). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_COMPONENTE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (LITO_COMPONENTES). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_ALTERACION",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_ALTERACION). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
           "nombre": "ORIENTACION_FOTO",
           "obligatorio": true,
           "dominio": null,
@@ -1410,6 +1379,48 @@ const MODELO = {
           "obligatorio": false,
           "dominio": null,
           "nota": null
+        },
+        {
+          "nombre": "ID_LITOLOGIA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_LITOLOGIA). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_ESTRUCTURA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_DATOS_ESTRUCTURALES). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_CONTACTO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_CONTACTO). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_MUESTRA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_MUESTREO). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_GEOMORFOLOGIA",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_GEOMORFOLOGIA). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_COMPONENTE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (LITO_COMPONENTES). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
+        },
+        {
+          "nombre": "ID_ALTERACION",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Opcional: registro geológico del punto que documenta (TBL_ALTERACION). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
         },
         {
           "nombre": "ID_FOTOGRAFIA_ASOCIADA",
@@ -2116,190 +2127,6 @@ const MODELO = {
       "pk": "ID_NOTA",
       "cardinalidad": "0..N"
     },
-    "COMP_CLASTO": {
-      "campos": [
-        {
-          "nombre": "ID_PUNTO_CONTROL",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": null
-        },
-        {
-          "nombre": "ID_CLASTO",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": null
-        },
-        {
-          "nombre": "ID_LITOLOGIA",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": "Litología sedimentaria clástica (SED_CLASTICA) a la que pertenece el clasto."
-        },
-        {
-          "nombre": "CLASTO_MIN_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% mínimo estimado de este componente (PORCEN_MIN de la tabla CDC)."
-        },
-        {
-          "nombre": "CLASTO_MAX_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% máximo estimado de este componente (PORCEN_MAX de la tabla CDC)."
-        },
-        {
-          "nombre": "TAMANO_MIN_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Tamaño mínimo, cm."
-        },
-        {
-          "nombre": "TAMANO_MAX_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Tamaño máximo, cm."
-        },
-        {
-          "nombre": "REDONDEAMIENTO_CLASTO",
-          "obligatorio": false,
-          "dominio": "REDONDEAMIENTO_CDC",
-          "nota": "Escala CDC completa (Powers), con rangos."
-        },
-        {
-          "nombre": "FORMA_CLASTO",
-          "obligatorio": false,
-          "dominio": "FORMA_CDC",
-          "nota": "Esfericidad o forma (Zingg)."
-        },
-        {
-          "nombre": "COLOR_CLASTO",
-          "obligatorio": false,
-          "dominio": "COLOR_AFLORAMIENTO",
-          "nota": null
-        },
-        {
-          "nombre": "LITOLOGIA_CLASTO",
-          "obligatorio": false,
-          "dominio": "LITOLOGIA_CLASTOS_GRAVA",
-          "nota": "Litología del clasto (Vol III, 46 términos)."
-        },
-        {
-          "nombre": "TAMANO_CLASTO",
-          "obligatorio": false,
-          "dominio": "GRANULOMETRIA_CLASTOS",
-          "nota": "Tamaño (granulometría) de este tipo de clasto (Vol III DDA). Antes GRANULOMETRIA_CLASTO."
-        },
-        {
-          "nombre": "TIPO_CLASTO",
-          "obligatorio": false,
-          "dominio": "TIPO_CLASTO",
-          "nota": "Génesis del clasto."
-        },
-        {
-          "nombre": "NOTA_CLASTO",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Texto libre."
-        }
-      ],
-      "geometria": null,
-      "pk": "ID_CLASTO",
-      "cardinalidad": "0..N",
-      "descripcion": "Clasto de una roca o depósito sedimentario clástico, descrito uno a uno (CDC TBL_AF_SED_CLASTO, Vol III). 0..N por litología SED_CLASTICA."
-    },
-    "COMP_FRAGMENTO": {
-      "campos": [
-        {
-          "nombre": "ID_PUNTO_CONTROL",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": null
-        },
-        {
-          "nombre": "ID_FRAGMENTO",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": null
-        },
-        {
-          "nombre": "ID_LITOLOGIA",
-          "obligatorio": true,
-          "dominio": null,
-          "nota": "Litología piroclástica (VOL_PIROCLASTICA) a la que pertenece el fragmento."
-        },
-        {
-          "nombre": "COMPONENTE_MIN_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% mínimo estimado de este componente (PORCEN_MIN de la tabla CDC)."
-        },
-        {
-          "nombre": "COMPONENTE_MAX_PCT",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "% máximo estimado de este componente (PORCEN_MAX de la tabla CDC)."
-        },
-        {
-          "nombre": "TAMANO_MIN_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Tamaño mínimo, cm."
-        },
-        {
-          "nombre": "TAMANO_MAX_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Tamaño máximo, cm."
-        },
-        {
-          "nombre": "REDONDEAMIENTO_COMPONENTE",
-          "obligatorio": false,
-          "dominio": "REDONDEAMIENTO_CDC",
-          "nota": "Escala CDC completa (Powers), con rangos."
-        },
-        {
-          "nombre": "FORMA_COMPONENTE",
-          "obligatorio": false,
-          "dominio": "FORMA_CDC",
-          "nota": "Esfericidad o forma (Zingg)."
-        },
-        {
-          "nombre": "COLOR_COMPONENTE",
-          "obligatorio": false,
-          "dominio": "COLOR_AFLORAMIENTO",
-          "nota": null
-        },
-        {
-          "nombre": "LITOLOGIA_FRAGMENTO",
-          "obligatorio": false,
-          "dominio": "LITOLOGIA_FRAGMENTO",
-          "nota": "Litología del fragmento (Vol IV)."
-        },
-        {
-          "nombre": "ACHATAMIENTO_FRAGMENTO",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Achatamiento F = eje mayor / eje menor (promedio de más de 20 pómez); texto libre según la norma."
-        },
-        {
-          "nombre": "GENESIS_FRAGMENTO",
-          "obligatorio": false,
-          "dominio": "GENESIS_FRAGMENTO",
-          "nota": null
-        },
-        {
-          "nombre": "NOTA_COMPONENTE",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Texto libre."
-        }
-      ],
-      "geometria": null,
-      "pk": "ID_FRAGMENTO",
-      "cardinalidad": "0..N",
-      "descripcion": "Fragmento de una roca o depósito piroclástico, descrito uno a uno (CDC TBL_AF_VOLC_FRAGMENTO, Vol IV). 0..N por litología VOL_PIROCLASTICA."
-    },
     "TBL_ALTERACION": {
       "geometria": null,
       "pk": "ID_ALTERACION",
@@ -2444,6 +2271,146 @@ const MODELO = {
           "nota": "Observaciones del juego (texto libre; CDC NOTA_FRAC_JUEGO)."
         }
       ]
+    },
+    "LITO_COMPONENTES": {
+      "geometria": null,
+      "pk": "ID_COMPONENTE",
+      "cardinalidad": "0..N",
+      "descripcion": "Componente de una litología, descrito uno a uno: clasto, fragmento piroclástico, fósil, componente tufítico, componente subordinado o composición mineralógica (CLASE_COMPONENTE). 0..N por litología. Reemplaza a COMP_CLASTO y COMP_FRAGMENTO (v167).",
+      "campos": [
+        {
+          "nombre": "ID_PUNTO_CONTROL",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_COMPONENTE",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": null
+        },
+        {
+          "nombre": "ID_LITOLOGIA",
+          "obligatorio": true,
+          "dominio": null,
+          "nota": "Litología a la que pertenece el componente (TBL_LITOLOGIA)."
+        },
+        {
+          "nombre": "CLASE_COMPONENTE",
+          "obligatorio": true,
+          "dominio": "CLASE_COMPONENTE",
+          "nota": "Qué es el componente; decide qué campos propios se piden."
+        },
+        {
+          "nombre": "LITOLOGIA_CLASTO",
+          "obligatorio": false,
+          "dominio": "LITOLOGIA_CLASTOS_GRAVA",
+          "nota": "Solo Clasto. Litología del clasto (Vol III)."
+        },
+        {
+          "nombre": "LITOLOGIA_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": "LITOLOGIA_FRAGMENTO",
+          "nota": "Solo Fragmento piroclástico. Litología del fragmento (Vol IV)."
+        },
+        {
+          "nombre": "TIPO_FOSIL",
+          "obligatorio": false,
+          "dominio": "CONTENIDO_FOSIL",
+          "nota": "Solo Fósil. Taxón o resto fósil (antes CONTENIDO_FOSIL de LITO_SEDIMENTARIA)."
+        },
+        {
+          "nombre": "TIPO_COMPONENTE_TUFITICO",
+          "obligatorio": false,
+          "dominio": "COMPONENTE_TUFITICO",
+          "nota": "Solo Componente tufítico (Vol III; antes en LITO_SEDIMENTARIA)."
+        },
+        {
+          "nombre": "TIPO_COMPONENTE_SUBORDINADO",
+          "obligatorio": false,
+          "dominio": "COMPONENTE_SUBORDINADO",
+          "nota": "Solo Componente subordinado (Vol III; antes COMPONENTE_SUBORDINADO_1..3)."
+        },
+        {
+          "nombre": "COMPOSICION_MINERALOGICA",
+          "obligatorio": false,
+          "dominio": "COMPOSICION_MINERALOGICA_COMP",
+          "nota": "Solo Composición mineralógica (Vol III; antes en LITO_SEDIMENTARIA)."
+        },
+        {
+          "nombre": "COMPONENTE_MIN_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% mínimo estimado de este componente."
+        },
+        {
+          "nombre": "COMPONENTE_MAX_PCT",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "% máximo estimado de este componente."
+        },
+        {
+          "nombre": "TAMANO_MIN_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Tamaño mínimo, cm."
+        },
+        {
+          "nombre": "TAMANO_MAX_CM",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Tamaño máximo, cm."
+        },
+        {
+          "nombre": "TAMANO_CLASTO",
+          "obligatorio": false,
+          "dominio": "GRANULOMETRIA_CLASTOS",
+          "nota": "Solo Clasto. Tamaño (granulometría) de este tipo de clasto (Vol III DDA)."
+        },
+        {
+          "nombre": "REDONDEAMIENTO_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "REDONDEAMIENTO_CDC",
+          "nota": "Clasto y fragmento. Escala CDC (Powers), con rangos."
+        },
+        {
+          "nombre": "FORMA_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "FORMA_CDC",
+          "nota": "Clasto y fragmento. Esfericidad o forma (Zingg)."
+        },
+        {
+          "nombre": "COLOR_COMPONENTE",
+          "obligatorio": false,
+          "dominio": "COLOR_AFLORAMIENTO",
+          "nota": null
+        },
+        {
+          "nombre": "TIPO_CLASTO",
+          "obligatorio": false,
+          "dominio": "TIPO_CLASTO",
+          "nota": "Solo Clasto. Génesis del clasto."
+        },
+        {
+          "nombre": "ACHATAMIENTO_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Achatamiento F = eje mayor / eje menor (promedio de más de 20 pómez); texto libre según la norma."
+        },
+        {
+          "nombre": "GENESIS_FRAGMENTO",
+          "obligatorio": false,
+          "dominio": "GENESIS_FRAGMENTO",
+          "nota": "Solo Fragmento piroclástico."
+        },
+        {
+          "nombre": "NOTA_COMPONENTE",
+          "obligatorio": false,
+          "dominio": null,
+          "nota": "Texto libre."
+        }
+      ]
     }
   },
   "relaciones": [
@@ -2524,26 +2491,6 @@ const MODELO = {
     },
     {
       "padre": "PUNTO_CONTROL",
-      "hijo": "COMP_CLASTO",
-      "campo": "ID_PUNTO_CONTROL"
-    },
-    {
-      "padre": "SED_CLASTICA",
-      "hijo": "COMP_CLASTO",
-      "campo": "ID_LITOLOGIA"
-    },
-    {
-      "padre": "PUNTO_CONTROL",
-      "hijo": "COMP_FRAGMENTO",
-      "campo": "ID_PUNTO_CONTROL"
-    },
-    {
-      "padre": "VOL_PIROCLASTICA",
-      "hijo": "COMP_FRAGMENTO",
-      "campo": "ID_LITOLOGIA"
-    },
-    {
-      "padre": "PUNTO_CONTROL",
       "hijo": "TBL_ALTERACION",
       "campo": "ID_PUNTO_CONTROL"
     },
@@ -2571,6 +2518,81 @@ const MODELO = {
       "padre": "EST_FRACTURA",
       "hijo": "EST_FRAC_JUEGO",
       "campo": "ID_ESTRUCTURA"
+    },
+    {
+      "padre": "TBL_DATOS_ESTRUCTURALES",
+      "hijo": "TBL_FOTOGRAFIAS",
+      "campo": "ID_ESTRUCTURA"
+    },
+    {
+      "padre": "TBL_CONTACTO",
+      "hijo": "TBL_FOTOGRAFIAS",
+      "campo": "ID_CONTACTO"
+    },
+    {
+      "padre": "TBL_MUESTREO",
+      "hijo": "TBL_FOTOGRAFIAS",
+      "campo": "ID_MUESTRA"
+    },
+    {
+      "padre": "TBL_GEOMORFOLOGIA",
+      "hijo": "TBL_FOTOGRAFIAS",
+      "campo": "ID_GEOMORFOLOGIA"
+    },
+    {
+      "padre": "LITO_COMPONENTES",
+      "hijo": "TBL_FOTOGRAFIAS",
+      "campo": "ID_COMPONENTE"
+    },
+    {
+      "padre": "TBL_ALTERACION",
+      "hijo": "TBL_FOTOGRAFIAS",
+      "campo": "ID_ALTERACION"
+    },
+    {
+      "padre": "TBL_LITOLOGIA",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "TBL_DATOS_ESTRUCTURALES",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_ESTRUCTURA"
+    },
+    {
+      "padre": "TBL_CONTACTO",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_CONTACTO"
+    },
+    {
+      "padre": "TBL_MUESTREO",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_MUESTRA"
+    },
+    {
+      "padre": "TBL_GEOMORFOLOGIA",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_GEOMORFOLOGIA"
+    },
+    {
+      "padre": "LITO_COMPONENTES",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_COMPONENTE"
+    },
+    {
+      "padre": "TBL_ALTERACION",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_ALTERACION"
+    },
+    {
+      "padre": "PUNTO_CONTROL",
+      "hijo": "LITO_COMPONENTES",
+      "campo": "ID_PUNTO_CONTROL"
+    },
+    {
+      "padre": "TBL_LITOLOGIA",
+      "hijo": "LITO_COMPONENTES",
+      "campo": "ID_LITOLOGIA"
     }
   ],
   "dominios": {
@@ -6915,6 +6937,37 @@ const MODELO = {
         "Holomelanocrático, IC=90-100%"
       ],
       "fuente": "Norma CDC 2016 Vol IV, TBL_AF_ROCA_INTRUSIVA; 'Esquema Pts Afloramiento y muestras.xlsx', hoja Listas, lista GB_IGNEA_LUECO_MELANO (orden ordinal)"
+    },
+    "CLASE_COMPONENTE": {
+      "tipo": "simple",
+      "valores": [
+        "Clasto",
+        "Fragmento piroclástico",
+        "Fósil",
+        "Componente tufítico",
+        "Componente subordinado",
+        "Composición mineralógica"
+      ],
+      "fuente": "Estructura 28-10-2026 (LITO_COMPONENTES), v167"
+    },
+    "COMPOSICION_MINERALOGICA_COMP": {
+      "tipo": "simple",
+      "valores": [
+        "caolinítica",
+        "esmectítica",
+        "illítica",
+        "clorítica",
+        "sepiolítica",
+        "No determinado",
+        "calcítica",
+        "calcítica de bajo Mg",
+        "calcítica de alto Mg",
+        "aragonítica",
+        "dolomítica",
+        "ankerítica",
+        "siderítica"
+      ],
+      "fuente": "Norma CDC 2016 Vol III, campo COMPOSICION MINERALOGICA (siliciclásticos arcillosos y carbonatos) · lista plana para LITO_COMPONENTES (v167)"
     }
   },
   "avisos": [
@@ -6962,23 +7015,12 @@ const MODELO = {
     {
       "tabla": "LITO_SEDIMENTARIA",
       "padre": false,
-      "descripcion": "Hija 1:1. Roca o deposito sedimentario: roca o deposito (LITIFICACION), subtipo (norma CDC), composicion, componentes tufitico y subordinados, cemento, fosiles y, si es deposito, su descripcion e interpretacion (CDC TBL_AF_DEP_SEDIMENTARIO).",
+      "descripcion": "Hija 1:1. Roca o depósito sedimentario: roca o depósito (LITIFICACION), subtipo (norma CDC), cemento y campos de depósito. Composición, componentes y fósiles van en LITO_COMPONENTES (v167).",
       "aplica_a": "Sedimentaria (roca o deposito)",
       "campos": [
         "LITIFICACION",
         "SUBTIPO_SEDIMENTARIO",
-        "COMPOSICION_MINERALOGICA",
-        "COMPONENTE_TUFITICO",
-        "COMPONENTE_TUFITICO_PCT",
-        "COMPONENTE_SUBORDINADO_1",
-        "COMPONENTE_SUBORDINADO_1_PCT",
-        "COMPONENTE_SUBORDINADO_2",
-        "COMPONENTE_SUBORDINADO_2_PCT",
-        "COMPONENTE_SUBORDINADO_3",
-        "COMPONENTE_SUBORDINADO_3_PCT",
         "CEMENTO",
-        "CONTENIDO_FOSIL",
-        "CONTENIDO_FOSIL_DETALLE",
         "CONTEXTO_DEPOSITO",
         "GEOMETRIA_DEPOSITO",
         "ARREGLO_ESTRATOS",
@@ -7239,7 +7281,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v166';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v167';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7269,7 +7311,7 @@ function restaurarAbiertos(){const a=abiertosGet();
 const STORE2TBL = {proyecto:'TBL_PROYECTO',punto:'PUNTO_CONTROL',litologia:'TBL_LITOLOGIA',
   estructural:'TBL_DATOS_ESTRUCTURALES',contacto:'TBL_CONTACTO',muestreo:'TBL_MUESTREO',
   foto:'TBL_FOTOGRAFIAS',esquema:'TBL_ESQUEMA_DIBUJO',geomorf:'TBL_GEOMORFOLOGIA',
-  clasto:'COMP_CLASTO',fragmento:'COMP_FRAGMENTO',alteracion:'TBL_ALTERACION',juego:'EST_FRAC_JUEGO',
+  litocomp:'LITO_COMPONENTES',alteracion:'TBL_ALTERACION',juego:'EST_FRAC_JUEGO',
   punto_gabinete:'PUNTO_CONTROL_GABINETE',linea_gabinete:'LINEA_CONTROL_GABINETE'};
 const STORES = Object.keys(STORE2TBL);
 // 'linea' no cuelga de un punto (es una capa aparte, hermana de PUNTO_CONTROL) -> no entra
@@ -7287,8 +7329,9 @@ const HIJAS = [
   // TBL_AF_VOLC_FRAGMENTO), 0..N por litología. Cuelgan de la rama donde tienen sentido (rama):
   // el panel solo aparece si el punto tiene una litología de esa rama, y su ID_LITOLOGIA solo
   // ofrece esas litologías (ver renderPunto/bloqueHijo).
-  {store:'clasto', titulo:'Clastos', clase:'', rama:'SED_CLASTICA'},
-  {store:'fragmento', titulo:'Fragmentos piroclásticos', clase:'', rama:'VOL_PIROCLASTICA'},
+  // v167: LITO_COMPONENTES reemplaza a clastos y fragmentos (estructura del 28-10): clasto, fragmento,
+  // fósil, componente tufítico, subordinado o composición mineralógica, 0..N por litología.
+  {store:'litocomp', titulo:'Componentes', clase:'', rama:'TBL_LITOLOGIA'},
   // v160: alteración de una litología (CDC TBL_AF_ALTERACION), 0..N por litología. rama
   // TBL_LITOLOGIA = cualquier litología: el panel aparece cuando el punto tiene alguna.
   {store:'alteracion', titulo:'Alteración', clase:'', rama:'TBL_LITOLOGIA'},
@@ -7525,7 +7568,40 @@ function migrarAfloraV166(p, afl){
   if(afl||cambio){ p._afloraMigrada=true; cambio=true; }
   return cambio;
 }
-const DB='captura-terreno', VER=24;   // v24 (app v166): afloramiento en el punto (migrarAfloraV166).   // v23 (app v165): v23 (app v165): clastos sin redundancia (clastosDeLitologiaV165, renombrarClastoV165).   // v22 (app v163): v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+// v167 (decisión del usuario, estructura del 28-10): LITO_COMPONENTES (store 'litocomp') reemplaza a
+// 'clasto' y 'fragmento' y recibe lo que la sedimentaria guardaba como campos (composición mineralógica,
+// componente tufítico, subordinados 1..3 y contenido fósil). Clastos y fragmentos se MUEVEN (mismo id,
+// se borran del store viejo: la light no los conoce); la litología conserva sus campos (la light los
+// lee) y queda con _componentesMigrados.
+function aComponenteV167(store, r){
+  const c=Object.assign({}, r);
+  if(store==='clasto'){ renombrarClastoV165(c);
+    for(const [v,n] of [['CLASTO_MIN_PCT','COMPONENTE_MIN_PCT'],['CLASTO_MAX_PCT','COMPONENTE_MAX_PCT'],['REDONDEAMIENTO_CLASTO','REDONDEAMIENTO_COMPONENTE'],
+      ['FORMA_CLASTO','FORMA_COMPONENTE'],['COLOR_CLASTO','COLOR_COMPONENTE'],['NOTA_CLASTO','NOTA_COMPONENTE']])
+      if(c[v]!==undefined){ if(c[n]===undefined||c[n]==='') c[n]=c[v]; delete c[v]; }
+  }
+  delete c.ID_CLASTO; delete c.ID_FRAGMENTO;
+  c.CLASE_COMPONENTE=store==='fragmento'?'Fragmento piroclástico':'Clasto';
+  return c;
+}
+function componentesDeLitologiaV167(li){
+  if(!li||li._componentesMigrados) return [];
+  const vacio=v=>v==null||v==='', items=v=>String(v||'').split(';').map(x=>x.trim()).filter(Boolean);
+  const base=clase=>({id:uid(), _parent:li._parent, ID_PUNTO_CONTROL:li.ID_PUNTO_CONTROL, ID_LITOLOGIA:li.id, CLASE_COMPONENTE:clase});
+  const out=[];
+  const fos=items(li.CONTENIDO_FOSIL).map(t=>Object.assign(base('Fósil'),{TIPO_FOSIL:t}));
+  if(!fos.length&&!vacio(li.CONTENIDO_FOSIL_DETALLE)) fos.push(base('Fósil'));
+  if(fos.length&&!vacio(li.CONTENIDO_FOSIL_DETALLE)) fos[0].NOTA_COMPONENTE=li.CONTENIDO_FOSIL_DETALLE;
+  out.push(...fos);
+  if(!vacio(li.COMPONENTE_TUFITICO)) out.push(Object.assign(base('Componente tufítico'),{TIPO_COMPONENTE_TUFITICO:li.COMPONENTE_TUFITICO},
+    vacio(li.COMPONENTE_TUFITICO_PCT)?{}:{COMPONENTE_MIN_PCT:li.COMPONENTE_TUFITICO_PCT,COMPONENTE_MAX_PCT:li.COMPONENTE_TUFITICO_PCT}));
+  for(const k of [1,2,3]){ const v=li['COMPONENTE_SUBORDINADO_'+k], pc=li['COMPONENTE_SUBORDINADO_'+k+'_PCT'];
+    if(!vacio(v)) out.push(Object.assign(base('Componente subordinado'),{TIPO_COMPONENTE_SUBORDINADO:v},vacio(pc)?{}:{COMPONENTE_MIN_PCT:pc,COMPONENTE_MAX_PCT:pc})); }
+  if(!vacio(li.COMPOSICION_MINERALOGICA)) out.push(Object.assign(base('Composición mineralógica'),{COMPOSICION_MINERALOGICA:li.COMPOSICION_MINERALOGICA}));
+  if(out.length) li._componentesMigrados=true;
+  return out;
+}
+const DB='captura-terreno', VER=25;   // v25 (app v167): LITO_COMPONENTES (aComponenteV167, componentesDeLitologiaV167).   // v24 (app v166): v24 (app v166): afloramiento en el punto (migrarAfloraV166).   // v23 (app v165): v23 (app v165): clastos sin redundancia (clastosDeLitologiaV165, renombrarClastoV165).   // v22 (app v163): v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -7548,7 +7624,7 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
     // gdb geológica. Ver STORES_EXTRA.
     // 'poligono' (v16): polígonos del proyecto (unidades, alteración, zonas de muestreo) -- mismo
     // trato que 'planoproy': cuelga del proyecto con índice 'parent' y queda fuera del modelo CDC.
-    STORES.concat(['fotomapa','linea','nota','planoproy','poligono','aflora']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
+    STORES.concat(['fotomapa','linea','nota','planoproy','poligono','aflora','clasto','fragmento']).forEach(s=>{if(!d.objectStoreNames.contains(s)){const os=d.createObjectStore(s,{keyPath:'id'});
       if(s!=='proyecto')os.createIndex('parent','_parent',{unique:false});}});
     // v19: el store 'componente' (v18, solo en pruebas de v152) se reparte en 'clasto' y 'fragmento'
     // según CLASE_COMPONENTE. El store viejo queda como estaba (no se borra nada); la app ya no lo lee.
@@ -7755,18 +7831,24 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
       const q=noAbortar(txM.objectStore('litologia').getAll());
       q.onsuccess=ev=>{
         (ev.target.result||[]).forEach(li=>{
-          try{ const alt=alteracionDeLitologiaV160(li), cls=clastosDeLitologiaV165(li); if(!alt&&!cls.length) return;
+          // v25 (app v167): en la misma pasada, los componentes de la sedimentaria -> LITO_COMPONENTES; los
+          // clastos de v165 ya nacen como componentes
+          try{ const alt=alteracionDeLitologiaV160(li), cls=clastosDeLitologiaV165(li).map(c=>aComponenteV167('clasto',c)),
+                 comps=componentesDeLitologiaV167(li);
+            if(!alt&&!cls.length&&!comps.length) return;
             if(alt) noAbortar(txM.objectStore('alteracion').put(alt));
-            cls.forEach(c=>noAbortar(txM.objectStore('clasto').put(c)));
+            cls.concat(comps).forEach(c=>noAbortar(txM.objectStore('litocomp').put(c)));
             noAbortar(txM.objectStore('litologia').put(li)); }
-          catch(e){ console.warn('Migración v21/v23: no se pudo migrar la litología',li&&li.id,e); }
+          catch(e){ console.warn('Migración v21/v23/v25: no se pudo migrar la litología',li&&li.id,e); }
         });
       };
-      if(d.objectStoreNames.contains('clasto')){   // v23: campos de la ficha de clasto renombrados
-        const qc=noAbortar(txM.objectStore('clasto').getAll());
-        qc.onsuccess=ev=>(ev.target.result||[]).forEach(c=>{ try{ if(renombrarClastoV165(c)) noAbortar(txM.objectStore('clasto').put(c)); }
-          catch(e){ console.warn('Migración v23: no se pudo renombrar el clasto',c&&c.id,e); } });
-      }
+      // v25: las fichas de clasto y de fragmento se mueven a LITO_COMPONENTES (mismo id)
+      ['clasto','fragmento'].forEach(sv=>{
+        if(!d.objectStoreNames.contains(sv)) return;
+        const qc=noAbortar(txM.objectStore(sv).getAll());
+        qc.onsuccess=ev=>(ev.target.result||[]).forEach(c=>{ try{ noAbortar(txM.objectStore('litocomp').put(aComponenteV167(sv,c))); noAbortar(txM.objectStore(sv).delete(c.id)); }
+          catch(e){ console.warn('Migración v25: no se pudo mover',sv,c&&c.id,e); } });
+      });
     }
     // Migración v20 (app v159): coordenadas del punto -- ver migrarRegistroV159. Desde v24 (app v166) la
     // misma pasada copia el afloramiento al punto (migrarAfloraV166): dos getAll+put del mismo store se
@@ -8025,6 +8107,7 @@ async function importBackup(file, destinoColeccion = null) {
           geomorf: 'geomorf',
           clasto: 'clasto',
           fragmento: 'fragmento',
+          litocomp: 'litocomp',
           alteracion: 'alteracion',
           juego: 'juego',
           componente: 'componente',   // respaldo de pruebas de v152: cada registro va a 'clasto' o 'fragmento' (componenteASuStore)
@@ -8061,16 +8144,18 @@ async function importBackup(file, destinoColeccion = null) {
               if (record && typeof record[campoImg] === 'string' && record[campoImg].length > 100) fotosConImagen++;
             }
             try {
-              const destino = storeOrigen === 'componente' ? componenteASuStore(record) : storeDestino;
+              let destino = storeOrigen === 'componente' ? componenteASuStore(record) : storeDestino;
               migrarRegistroV151(destino, record);   // respaldo de antes de v151
               migrarRegistroV152(destino, record);   // respaldo de antes de v152
               migrarRegistroV159(destino, record);   // respaldo de antes de v159 (put() también lo hace)
               const alt = destino === 'litologia' ? alteracionDeLitologiaV160(record) : null;   // respaldo de antes de v160
               const jue = destino === 'estructural' ? migrarJuegoV163(record) : null;          // respaldo de antes de v163
-              const cls = destino === 'litologia' ? clastosDeLitologiaV165(record) : [];       // respaldo de antes de v165
-              if (destino === 'clasto') renombrarClastoV165(record);
-              await put(destino, record);
-              for (const c of cls) await put('clasto', c);
+              const cls = destino === 'litologia' ? clastosDeLitologiaV165(record).map(c => aComponenteV167('clasto', c)) : [];   // antes de v165
+              const comps = destino === 'litologia' ? componentesDeLitologiaV167(record) : [];   // respaldo de antes de v167
+              let reg = record;
+              if (destino === 'clasto' || destino === 'fragmento') { reg = aComponenteV167(destino, record); destino = 'litocomp'; }   // antes de v167
+              await put(destino, reg);
+              for (const c of cls.concat(comps)) await put('litocomp', c);
               if (alt) await put('alteracion', alt);
               if (jue) await put('juego', jue);
               totalInsertadas++;
@@ -9084,10 +9169,15 @@ function etiquetaCampo(n){
     .replace(/_/g,' ');
 }
 const esPK = (store,n)=> n===pkDe(store);
-const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_ESTRUCTURA','ID_LITOLOGIA','ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
+const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_ESTRUCTURA','ID_GEOMORFOLOGIA','ID_COMPONENTE','ID_ALTERACION','ID_LITOLOGIA','ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
 // Claves de negocio que el usuario SÍ nombra (visibles/editables); el resto de ids son técnicos y se ocultan.
 const NOMBRABLES = new Set(['ID_PROYECTO','ID_PUNTO_CONTROL','ID_MUESTRA']);
+// Fotos y esquemas (v167): sus vínculos a un registro geológico no se dibujan como campos sueltos;
+// los fija el selector «Registro asociado» (selectorRegistro).
+const FK_REGISTRO={litologia:'ID_LITOLOGIA',estructural:'ID_ESTRUCTURA',contacto:'ID_CONTACTO',muestreo:'ID_MUESTRA',
+  geomorf:'ID_GEOMORFOLOGIA',litocomp:'ID_COMPONENTE',alteracion:'ID_ALTERACION'};
 function hideField(store,n){
+  if((store==='foto'||store==='esquema') && Object.values(FK_REGISTRO).includes(n)) return true;
   if((store!=='proyecto'&&store!=='punto') && (n==='ID_PUNTO_CONTROL'||n==='ID_PROYECTO')) return true; // FK a padre en hijas
   if(store==='punto' && n==='ID_PROYECTO') return true;                                                  // FK proyecto en punto
   if(n===pkDe(store)) return !NOMBRABLES.has(n);                                                          // PK propio: ocultar salvo nombrables
@@ -9318,7 +9408,24 @@ function revelarProgresivo(store){
 const esFractura = v => v['TIPO_ESTRUCTURA']==='Estructura fractura';
 const esTectonica = v => v['TIPO_ROCA']==='Tectónica';
 const TECT_FRAGIL = new Set(['Roca de cizalle frágil','Roca de deformación regional']);
+// v167: LITO_COMPONENTES pide los campos propios de su CLASE_COMPONENTE (los comunes, siempre)
+const claseComp = (...c) => v => c.includes(v['CLASE_COMPONENTE']);
 const CONDICIONALES = {
+  LITOLOGIA_CLASTO:            {modo:'ocultar', regla: claseComp('Clasto')},
+  TAMANO_CLASTO:               {modo:'ocultar', regla: claseComp('Clasto')},
+  TIPO_CLASTO:                 {modo:'ocultar', regla: claseComp('Clasto')},
+  LITOLOGIA_FRAGMENTO:         {modo:'ocultar', regla: claseComp('Fragmento piroclástico')},
+  ACHATAMIENTO_FRAGMENTO:      {modo:'ocultar', regla: claseComp('Fragmento piroclástico')},
+  GENESIS_FRAGMENTO:           {modo:'ocultar', regla: claseComp('Fragmento piroclástico')},
+  TIPO_FOSIL:                  {modo:'ocultar', regla: claseComp('Fósil')},
+  TIPO_COMPONENTE_TUFITICO:    {modo:'ocultar', regla: claseComp('Componente tufítico')},
+  TIPO_COMPONENTE_SUBORDINADO: {modo:'ocultar', regla: claseComp('Componente subordinado')},
+  COMPOSICION_MINERALOGICA:    {modo:'ocultar', regla: claseComp('Composición mineralógica')},
+  REDONDEAMIENTO_COMPONENTE:   {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico')},
+  FORMA_COMPONENTE:            {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico')},
+  TAMANO_MIN_CM:               {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Fósil')},
+  TAMANO_MAX_CM:               {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Fósil')},
+  COLOR_COMPONENTE:            {modo:'ocultar', regla: claseComp('Clasto','Fragmento piroclástico','Fósil')},
   // Descriptores de un JUEGO de fracturas (v118): desde v163 viven en su propia ficha ('juego',
   // EST_FRAC_JUEGO), que solo existe para una fractura, así que ya no necesitan regla. El
   // ESPACIAMIENTO de un juego sigue siendo, en una colada, el diámetro de las columnas.
@@ -9366,22 +9473,11 @@ const CONDICIONALES = {
   // Clasificación de depósitos sedimentarios (norma CDC 2016 Vol III, DDA Clasificación y
   // Nomenclatura): el SUBTIPO decide qué se describe. Solo rocas sedimentarias.
   SUBTIPO_SEDIMENTARIO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
-  COMPOSICION_MINERALOGICA: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Siliciclástico','Carbonato'].includes(v['SUBTIPO_SEDIMENTARIO'])},
   TIPO_ALOQUIMICO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Carbonato','Fosfato'].includes(v['SUBTIPO_SEDIMENTARIO'])},
-  COMPONENTE_TUFITICO: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Siliciclástico','Volcanosedimentario'].includes(v['SUBTIPO_SEDIMENTARIO'])},
-  COMPONENTE_TUFITICO_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && ['Siliciclástico','Volcanosedimentario'].includes(v['SUBTIPO_SEDIMENTARIO'])},
-  COMPONENTE_SUBORDINADO_1: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
-  COMPONENTE_SUBORDINADO_1_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
-  COMPONENTE_SUBORDINADO_2: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_1']},
-  COMPONENTE_SUBORDINADO_2_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_1']},
-  COMPONENTE_SUBORDINADO_3: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_2']},
-  COMPONENTE_SUBORDINADO_3_PCT: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria' && !!v['COMPONENTE_SUBORDINADO_2']},
   // Contenido fósil (2026-08-31, a pedido del usuario): NO es un campo normativo CDC 2016 --
   // verificado contra la norma antes de diseñar (Vol III): lo más cercano es la rama carbonatada
   // de COMPOSICION_CLASTICA (clasificación litológica, no nota de contenido), que sigue sin
   // implementar para calizas. Solo rocas sedimentarias (detríticas y calizas, no Depósito).
-  CONTENIDO_FOSIL: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
-  CONTENIDO_FOSIL_DETALLE: {modo:'ocultar', regla: v => v['TIPO_ROCA']==='Sedimentaria'},
   // Composición mineral: Intrusiva y Metamórfica tienen ensambles minerales distintos (índices
   // metamórficos como granate/estaurolita/sillimanita casi no aparecen en intrusivas -- RAG,
   // 2026-08-25), así que dejaron de compartir campo (2026-08-25, mismo criterio que
@@ -14455,6 +14551,7 @@ const SVG_IC={
   lito_metamorfica:'<path d="M3 9c4-4 8 4 13 0s9 4 13 0M3 16c4-4 8 4 13 0s9 4 13 0M3 23c4-4 8 4 13 0s9 4 13 0"/>',
   lito_tectonica:'<path d="M5 28L27 4"/><path d="M6 14h9l-3-3"/><path d="M26 18h-9l3 3"/>',
   lito_antropico:'<rect x="4" y="7" width="24" height="19" rx="1.5"/><path d="M4 13.3h24M4 19.6h24M12 7v6.3M20 13.3v6.3M12 19.6V26"/>',
+  litocomp:'<circle cx="10" cy="11" r="5.5"/><circle cx="21.5" cy="19.5" r="6"/><path d="M5 24l5-3 2 6z"/><path d="M20 5c2 0 4 2 4 4"/>',
   clasto:'<circle cx="10" cy="11" r="5.5"/><circle cx="21.5" cy="19.5" r="6"/><circle cx="9" cy="24" r="3"/><circle cx="23" cy="7" r="2.5"/>',
   alteracion:'<path d="M3 27l5-13 7 4 6-9 8 18z"/><g fill="currentColor" stroke="none"><circle cx="11" cy="22" r="1.5"/><circle cx="17" cy="19" r="1.5"/><circle cx="22" cy="23" r="1.5"/></g><path d="M6 8l2 2M12 4v3M18 6l-1 2"/>',
   fragmento:'<path d="M4 9l8-4 3 7-7 3z"/><path d="M17 11l10-2-2 10-7-1z"/><path d="M6 20l7 1-1 7-7-3z"/><path d="M19 23l5 1-2 4z"/>',
@@ -14470,7 +14567,7 @@ const SVG_IC={
   __ajustes:'<path d="M5 9h22M5 16h22M5 23h22"/><circle cx="11" cy="9" r="2.6" fill="var(--surface)"/><circle cx="21" cy="16" r="2.6" fill="var(--surface)"/><circle cx="14" cy="23" r="2.6" fill="var(--surface)"/>'
 };
 const ETIQUETA_CORTA={punto:'Punto',aflora:'Afloram.',estructural:'Estructura',contacto:'Contactos',geomorf:'Geomorf.',
-  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',alteracion:'Alteración',juego:'Juegos',fotomapa:'Foto-mapa','lito:':'Sin tipo',__ajustes:'Iconos'};
+  muestreo:'Muestras',foto:'Fotos',esquema:'Esquemas',fragmento:'Fragmentos',litocomp:'Componentes',alteracion:'Alteración',juego:'Juegos',fotomapa:'Foto-mapa','lito:':'Sin tipo',__ajustes:'Iconos'};
 const COLOR_IC={sedimentaria:'sed',volcanica:'vol',intrusiva:'int',metamorfica:'met',tectonica:'tec',antropico:'ant'};
 const normIc=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function colorIc(clave){ return clave.startsWith('lito:')?(COLOR_IC[normIc(clave.slice(5))]||''):''; }
@@ -14651,7 +14748,8 @@ function marcarActivo(){
   document.querySelectorAll('.pv .di').forEach(b=>b.classList.toggle('activo',b.dataset.clave===k));
 }
 function etiquetaRegistro(h,r,i){
-  const v=['NOMBRE_ROCA','ID_MUESTRA','TIPO_ESTRUCTURA','TIPO_CONTACTO','LITOLOGIA_CLASTO','LITOLOGIA_FRAGMENTO']
+  const v=['NOMBRE_ROCA','ID_MUESTRA','TIPO_ESTRUCTURA','TIPO_CONTACTO','LITOLOGIA_CLASTO','LITOLOGIA_FRAGMENTO','TIPO_FOSIL',
+    'TIPO_COMPONENTE_TUFITICO','TIPO_COMPONENTE_SUBORDINADO','COMPOSICION_MINERALOGICA','CLASE_COMPONENTE']
     .map(k=>r[k]).find(x=>x!=null&&String(x).trim());
   const s=(i+1)+(v?' · '+String(v).trim():'');
   return s.length>26?s.slice(0,25)+'…':s;
@@ -15091,10 +15189,38 @@ function entradasFoto(onFile, clasePrincipal, etiquetas){
     el('button',{class:'btn sec'+mini,onclick:()=>galeria.click()},et[1]),
     camara, galeria);
 }
+// «Registro asociado» de una foto o un esquema (v167): además del punto, el adjunto puede documentar
+// cualquier registro geológico del punto (litología, medida, contacto, muestra, geomorfología,
+// componente o alteración). Guarda la FK de ese registro (FK_REGISTRO) y vacía las demás: a lo más uno.
+const TITULO_REGISTRO={litologia:'Litología',estructural:'Estructura',contacto:'Contacto',muestreo:'Muestra',
+  geomorf:'Geomorfología',litocomp:'Componente',alteracion:'Alteración'};
+function selectorRegistro(reg, store){
+  const fld=el('div',{class:'fld'}), sel=el('select',{name:'_REGISTRO_ASOCIADO'});
+  fld.append(el('label',{},'Registro asociado'), sel);
+  const actual=Object.entries(FK_REGISTRO).find(([,fk])=>reg[fk]);
+  sel.append(el('option',{value:''},'— solo el punto —'));
+  (async()=>{
+    for(const [st,fk] of Object.entries(FK_REGISTRO)){
+      const regs=await childrenOf(st,reg._parent); if(!regs.length) continue;
+      const g=el('optgroup',{label:TITULO_REGISTRO[st]});
+      regs.forEach((r,i)=>g.append(el('option',{value:st+'|'+r.id},TITULO_REGISTRO[st]+' '+etiquetaRegistro({},r,i))));
+      sel.append(g);
+    }
+    if(actual) sel.value=actual[0]+'|'+reg[actual[1]];
+    updateFormReadonly();
+  })();
+  sel.addEventListener('change',async()=>{
+    const [st,id]=sel.value.split('|');
+    for(const fk of Object.values(FK_REGISTRO)) reg[fk]='';
+    if(st&&FK_REGISTRO[st]) reg[FK_REGISTRO[st]]=id;
+    await put(store,reg);
+  });
+  return fld;
+}
 function bloqueFoto(reg,litos){
   const wrap=el('div');
   const f=formulario('foto',reg,{litologias:litos});
-  wrap.append(f.node);
+  wrap.append(selectorRegistro(reg,'foto'), f.node);
   const thumbs=el('div',{class:'thumbs'});
   if(reg._img)thumbs.append(el('img',{src:reg._img}));
   wrap.append(entradasFoto(async file=>{
@@ -15329,7 +15455,7 @@ async function abrirEsquema(reg, alCerrar){
 
 function bloqueEsquema(reg){
   const wrap=el('div');
-  const f=formulario('esquema',reg);wrap.append(f.node);
+  const f=formulario('esquema',reg);wrap.append(selectorRegistro(reg,'esquema'), f.node);
   const mini=el('div',{class:'sk-mini'});
   const abrir=async()=>{ Object.assign(reg,f.getData()); await put('esquema',reg); await abrirEsquema(reg,pintarMini); };
   const pintarMini=()=>{ mini.innerHTML='';
@@ -16554,7 +16680,7 @@ async function duplicarPunto(srcId){
   // dos pasadas: primero los ids nuevos de todas las fichas, después los vínculos entre ellas
   // (estructural.ID_CONTACTO -> contacto y contacto._medidaDe -> estructural, v146)
   const copias=[], mapId={};
-  for(const store of ['clasto','fragmento','alteracion','estructural','juego','contacto','muestreo','geomorf'])   // clasto/fragmento: v152; alteracion: v160; juego: v163
+  for(const store of ['litocomp','alteracion','estructural','juego','contacto','muestreo','geomorf'])   // clasto/fragmento: v152; alteracion: v160; juego: v163
     for(const it of await childrenOf(store,srcId)){const n=Object.assign({},it,{id:uid(),_parent:np.id});mapId[it.id]=n.id;copias.push([store,n]);}
   for(const [store,n] of copias){
     if(n.ID_LITOLOGIA&&mapLito[n.ID_LITOLOGIA])n.ID_LITOLOGIA=mapLito[n.ID_LITOLOGIA];
@@ -16819,7 +16945,9 @@ async function mapasFKCodigos(){
   for(const s of ['punto','punto_gabinete'])
     for(const p of await all(s)) porPunto[p.id]=p.ID_PUNTO_CONTROL||p.id;
   for(const pr of await all('proyecto')) porProyecto[pr.id]=pr.ID_PROYECTO||pr.id;
-  return {porPunto,porProyecto};   // v166: sin ID_AFLORAMIENTO (el afloramiento está en el punto)
+  const muestraPorId={};   // v167: fotos/esquemas guardan el id interno de la muestra; se exporta su ID_MUESTRA
+  for(const mu of await all('muestreo')) if(mu.ID_MUESTRA) muestraPorId[mu.id]=mu.ID_MUESTRA;
+  return {porPunto,porProyecto,muestraPorId};   // v166: sin ID_AFLORAMIENTO (el afloramiento está en el punto)
 }
 // Devuelve una copia de r con las FK rellenas (si estaban vacías) desde su _parent.
 // Con store: además rellena la PK técnica oculta (ID_LITOLOGIA, ID_CONTACTO, ID_ESTRUCTURA…) con
@@ -16831,6 +16959,7 @@ function enriquecerFK(r,fks,store){
   const pk=store&&pkDe(store);
   if(pk && !o[pk] && !NOMBRABLES.has(pk)) o[pk]=o.id;
   if(!o.ID_PUNTO_CONTROL && fks.porPunto[o._parent]) o.ID_PUNTO_CONTROL=fks.porPunto[o._parent];
+  if((store==='foto'||store==='esquema') && o.ID_MUESTRA && fks.muestraPorId && fks.muestraPorId[o.ID_MUESTRA]) o.ID_MUESTRA=fks.muestraPorId[o.ID_MUESTRA];
   if(!o.ID_PROYECTO && fks.porProyecto[o._parent]) o.ID_PROYECTO=fks.porProyecto[o._parent];
   return o;
 }
@@ -17668,7 +17797,8 @@ function actitudFrase(rumbo,manteo){
   return '';
 }
 function prosaPunto(pt,datos,toponimo,anterior,umbral){
-  const {litos,aflora,estr,cont,geomorf,mues,alter,juegos,clastos:fichasClasto}=datos;
+  const {litos,aflora,estr,cont,geomorf,mues,alter,juegos,componentes}=datos;
+  const fichasClasto=(componentes||[]).filter(c=>c.CLASE_COMPONENTE==='Clasto');   // v167
   // ¿La unidad geológica se declara en la oración-resumen o en cada litología? Se resuelve más
   // abajo (necesita la lista completa de fichas) y fraseLitologia lo lee por cierre: si TODAS
   // las rocas del punto llevan unidad, va una sola vez en el resumen; si solo algunas la
@@ -17814,8 +17944,8 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       const enumL=lista(fcl.map(c=>{
         const v=c.LITOLOGIA_CLASTO||'';
         const nom=/^Clastos /i.test(v)?v.replace(/^Clastos de(l)? /i,'').replace(/^Clastos /i,''):minuscula(v||'clastos sin litología');
-        const d=[rango(c.CLASTO_MIN_PCT,c.CLASTO_MAX_PCT,'%'), rango(c.TAMANO_MIN_CM,c.TAMANO_MAX_CM,' cm')||(c.TAMANO_CLASTO?minuscula(c.TAMANO_CLASTO):''),
-          c.REDONDEAMIENTO_CLASTO&&c.REDONDEAMIENTO_CLASTO!=='Indeterminado'?minuscula(c.REDONDEAMIENTO_CLASTO):''].filter(Boolean);
+        const d=[rango(c.COMPONENTE_MIN_PCT,c.COMPONENTE_MAX_PCT,'%'), rango(c.TAMANO_MIN_CM,c.TAMANO_MAX_CM,' cm')||(c.TAMANO_CLASTO?minuscula(c.TAMANO_CLASTO):''),
+          c.REDONDEAMIENTO_COMPONENTE&&c.REDONDEAMIENTO_COMPONENTE!=='Indeterminado'?minuscula(c.REDONDEAMIENTO_COMPONENTE):''].filter(Boolean);
         return nom+(d.length?' ('+d.join(d.some(x=>x.includes(','))?'; ':', ')+')':'');
       }));
       frag.push((clastos.length?'compuestos por ':'con clastos de ')+enumL);
@@ -18058,8 +18188,11 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // Contenido fósil (2026-08-31): oración propia, NO vía detalleSuelto() -- ese ayudante solo
     // muestra el detalle cuando la enumeración de valores trae paréntesis numéricos (%, mm), que
     // este campo no usa; con detalleSuelto() el detalle habría quedado silenciado siempre.
-    if(l.CONTENIDO_FOSIL) frases.push('Presenta contenido fósil de '+lista(multi(l.CONTENIDO_FOSIL).map(minuscula))+'.');
-    const dFosil=fraseLibre(l.CONTENIDO_FOSIL_DETALLE); if(dFosil) frases.push(dFosil);
+    // v167: los fósiles son componentes (LITO_COMPONENTES, CLASE_COMPONENTE='Fósil') de esta litología
+    const fos=(componentes||[]).filter(c=>c.ID_LITOLOGIA===l.id&&c.CLASE_COMPONENTE==='Fósil');
+    const taxa=[...new Set(fos.map(c=>c.TIPO_FOSIL).filter(Boolean).map(minuscula))];
+    if(taxa.length) frases.push('Presenta contenido fósil de '+lista(taxa)+'.');
+    fos.forEach(c=>{ const dF=fraseLibre(c.NOTA_COMPONENTE); if(dF) frases.push(dF); });
     const desc=fraseLibre(l.DESCRIPCION_LITOLOGIA); if(desc) frases.push(desc);
     // OBSERVACION y RELACION_LITOLOGIA_ESTRUCTURA son dos campos de texto libre de la ficha de
     // litología que nunca llegaron al escrito (auditoría de prosa vs. corpus, 2026-08-26). El
@@ -18233,7 +18366,7 @@ async function generarProsaProyecto(){
         litos:await childrenOf('litologia',pt.id), aflora:await childrenOf('aflora',pt.id),
         estr:await childrenOf('estructural',pt.id),
         cont:await childrenOf('contacto',pt.id), geomorf:await childrenOf('geomorf',pt.id),
-        mues:await childrenOf('muestreo',pt.id), alter:await childrenOf('alteracion',pt.id), juegos:await childrenOf('juego',pt.id), clastos:await childrenOf('clasto',pt.id),
+        mues:await childrenOf('muestreo',pt.id), alter:await childrenOf('alteracion',pt.id), juegos:await childrenOf('juego',pt.id), componentes:await childrenOf('litocomp',pt.id),
       };
       const lejosDelAnterior=!anterior||L.latLng(lat,lon).distanceTo(
         L.latLng(parseFloat(anterior.pt[inLat]),parseFloat(anterior.pt[inLon])))>umbral;
