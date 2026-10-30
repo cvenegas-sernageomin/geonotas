@@ -304,7 +304,7 @@
      de calc(var(--k)) dentro de transform/opacity: en el teléfono del usuario no se agrandaba. */
   .dock{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:4;max-width:804px;margin:0 auto;display:flex;gap:2px;overflow-x:auto;padding:30px calc(50% - 22px) 3px;scroll-snap-type:x proximity;scrollbar-width:none;touch-action:pan-x}
   .dock .di{width:44px;min-height:48px;padding:9px 0 0;scroll-snap-align:center}
-  .dock .di svg{width:22px;height:22px;transform-origin:50% 100%;transition:transform .09s linear;will-change:transform}
+  .dock .di svg{width:22px;height:22px;transform-origin:50% 100%;transition:transform .09s linear,box-shadow .09s linear;will-change:transform;border-radius:7px}
   .dock .di span{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);max-width:none;padding:0 4px;border-radius:6px;background:var(--surface);opacity:0;pointer-events:none}
   .dock .di b{transition:transform .09s linear}
   .dock .di.activo{background:none}
@@ -7301,7 +7301,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v168';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v169';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7351,10 +7351,10 @@ const HIJAS = [
   // ofrece esas litologías (ver renderPunto/bloqueHijo).
   // v167: LITO_COMPONENTES reemplaza a clastos y fragmentos (estructura del 28-10): clasto, fragmento,
   // fósil, componente tufítico, subordinado o composición mineralógica, 0..N por litología.
-  {store:'litocomp', titulo:'Componentes', clase:'', rama:'TBL_LITOLOGIA'},
+  {store:'litocomp', titulo:'Componentes', clase:'', rama:'TBL_LITOLOGIA', siempre:true},   // v169: siempre a la vista
   // v160: alteración de una litología (CDC TBL_AF_ALTERACION), 0..N por litología. rama
   // TBL_LITOLOGIA = cualquier litología: el panel aparece cuando el punto tiene alguna.
-  {store:'alteracion', titulo:'Alteración', clase:'', rama:'TBL_LITOLOGIA'},
+  {store:'alteracion', titulo:'Alteración', clase:'', rama:'TBL_LITOLOGIA', siempre:true},
   {store:'estructural', titulo:'Datos estructurales', clase:''},
   // v163: juegos (sets) de un sistema de fracturas (CDC TBL_AF_FRAC_JUEGO), 0..N por medida de
   // fractura (ID_ESTRUCTURA). deFractura: el panel aparece cuando el punto tiene una medida con
@@ -14601,7 +14601,7 @@ const SVG_IC={
   estructural:'<path d="M4 12h24"/><path d="M16 12v11"/><path d="M22 5l3 3"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/>',
   contacto:'<rect x="4" y="5" width="24" height="22" rx="2"/><path d="M4 19c6-5 11 3 24-5"/><path d="M4 19c6-5 11 3 24-5V27H4z" fill="currentColor" opacity=".3" stroke="none"/>',
   geomorf:'<path d="M2 26h28"/><path d="M2 26l8-11 5 5 6-12 9 18"/>',
-  muestreo:'<path d="M8 11h16l-2 17H10z"/><path d="M11.5 11l1.5-5h6l1.5 5"/><path d="M13 18h6M13 22h4"/>',
+  muestreo:'<g transform="rotate(-35 16 16)"><rect x="4" y="5.5" width="7.5" height="7" rx="1.2"/><path d="M11.5 6.6L28 9l-16.5 2.4z"/><path d="M14 12.5V29"/><path d="M12.4 24h3.2"/></g>',   // v169: martillo geológico
   foto:'<rect x="3" y="9" width="26" height="18" rx="3"/><path d="M11 9l2-4h6l2 4"/><circle cx="16" cy="18" r="5"/>',
   esquema:'<path d="M5 27l2-7L21 6l5 5-14 14z"/><path d="M18 9l5 5"/><path d="M7 20l5 5"/>',
   fotomapa:'<path d="M3 9l8-3 10 3 8-3v17l-8 3-10-3-8 3z"/><path d="M11 6v17M21 9v17"/><circle cx="16" cy="15" r="3.5"/>',
@@ -14646,7 +14646,9 @@ function itemsDock(ctx){
     }
     const n=conteo[h.store]||0;
     // clastos / fragmentos: solo con una litología de su rama en el punto (o fichas ya hechas)
-    if(h.rama && !n && !litos.some(L=>familiaAplica(h.rama,L))) continue;
+    // v169: componentes y alteración (siempre) se ven aunque el punto aún no tenga litología: la
+    // hoja avisa que primero hay que describir una
+    if(h.rama && !h.siempre && !n && !litos.some(L=>familiaAplica(h.rama,L))) continue;
     if(h.deFractura && !n && !ctx.nFracturas) continue;   // juegos: solo con una medida de fractura
     agregar({clave:h.store,titulo:h.titulo,n});
   }
@@ -14763,7 +14765,15 @@ function lupaDock(dock, x){
     const q=b.getBoundingClientRect(), t=Math.max(0,1-Math.abs(q.left+q.width/2-cx)/LUPA_RADIO), k=t*t*(3-2*t);
     b.style.setProperty('--k',k.toFixed(3));
     const svg=b.querySelector('svg'), nom=b.querySelector('span'), n=b.querySelector('b');
-    if(svg) svg.style.transform='translateY('+(-15*k).toFixed(1)+'px) scale('+(1+.8*k).toFixed(3)+')';
+    if(svg){
+      svg.style.transform='translateY('+(-15*k).toFixed(1)+'px) scale('+(1+.8*k).toFixed(3)+')';
+      // v169: al subir, el icono sale de la barra y queda sobre el mapa, donde el trazo verde fino no
+      // se veía (en el teléfono «la lupa no funcionaba»). Lleva su baldosa: fondo de la barra, un
+      // borde ancho del mismo color (box-shadow spread, no cambia el tamaño) y sombra según k.
+      const on=k>0.04;
+      svg.style.background=on?'var(--surface)':'';
+      svg.style.boxShadow=on?'0 0 0 4px var(--surface),0 '+(2+4*k).toFixed(1)+'px '+(6+8*k).toFixed(1)+'px rgba(0,0,0,'+(0.35*k).toFixed(2)+')':'';
+    }
     if(nom) nom.style.opacity=Math.max(0,Math.min(1,k*2.4-1.4)).toFixed(2);
     if(n) n.style.transform='translateY('+(-20*k).toFixed(1)+'px)';
   }
@@ -14887,7 +14897,7 @@ async function hojaFicha(h,it,idx){
   if(!regs.length){
     const sinRama=(h.rama&&!litosRama.length)||(h.deFractura&&!fracs.length);
     H.cuerpo.append(el('div',{class:'hoja-vacia'},
-      el('p',{},sinRama?(h.deFractura?'Primero registra una medida de fractura en Datos estructurales.':'Primero describe una litología de esta rama.'):'Sin fichas de '+nombre+' en este punto.'),
+      el('p',{},sinRama?(h.deFractura?'Primero registra una medida de fractura en Datos estructurales.':h.rama==='TBL_LITOLOGIA'?'Primero describe una litología en este punto.':'Primero describe una litología de esta rama.'):'Sin fichas de '+nombre+' en este punto.'),
       sinRama?null:el('button',{class:'btn',onclick:agregar},'+ Agregar '+nombre)));
   } else {
     bloquesContacto.clear();
@@ -15022,7 +15032,7 @@ async function renderPunto(app){
     if(h.store==='litologia')curPunto._nlito=items.length;
     // clastos / fragmentos (v152): solo con una litología de su rama en el punto (o fichas ya hechas)
     const litosRama=h.rama?litos.filter(L=>familiaAplica(h.rama,L)):litos;
-    if(h.rama && !litosRama.length && !items.length) continue;
+    if(h.rama && !h.siempre && !litosRama.length && !items.length) continue;
     const fracs=h.deFractura?await fracturasDelPunto(curPunto.id):[];
     if(h.deFractura && !fracs.length && !items.length) continue;   // v163: juegos solo con una fractura
     const hc=tarjetaColapsable(h.titulo+(h.oblig?' *':''),{clave:h.store,lleno:items.length>0,badge:items.length});

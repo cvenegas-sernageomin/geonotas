@@ -2512,7 +2512,7 @@ async function correr(){
       tipos.forEach(t => ok(cl.includes('lito:' + t), 'falta el icono de la roca ' + t));
       H.filter(h => h.store !== 'litologia' && !h.rama && !h.deFractura).forEach(h => ok(cl.includes(h.store), 'falta el icono de ' + h.store));
       ok(cl.includes('fotomapa'), 'falta el icono del foto-mapa');
-      H.filter(h => h.rama).forEach(h => ok(!cl.includes(h.store), h.store + ' sin litología de su rama no debe aparecer'));
+      H.filter(h => h.rama).forEach(h => ok(!!h.siempre === cl.includes(h.store), h.store + (h.siempre ? ' (siempre, v169) debe verse sin litología' : ' sin litología de su rama no debe aparecer')));
       ok(it.filter(i => i.clave.startsWith('lito:')).every(i => i.falta), 'sin litologías, los iconos de roca deben marcar que falta (oblig)');
       // ocultos sin datos: fuera de la barra
       it = w.itemsDock(Object.assign({}, base, {ocultos:['lito:Metamórfica', 'geomorf']}));
@@ -2724,6 +2724,27 @@ async function correr(){
         await w.del('proyecto', pr.id); w.eval('curProyecto = null');
       }
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
+    });
+
+    // ---- v169: lupa visible sobre el mapa, componentes/alteración siempre en la barra, martillo ----
+    await prueba('v169 barra: icono agrandado con baldosa, componentes y alteración siempre, martillo en muestras', async () => {
+      const cl = w.itemsDock({hijas:w.eval('HIJAS'), tiposRoca:w.tiposRoca(), litos:[], conteo:{}, ocultos:[]}).map(i => i.clave);
+      ok(cl.includes('litocomp') && cl.includes('alteracion'), 'sin litología faltan componentes o alteración en la barra: ' + cl.join(','));
+      ok(!cl.includes('juego'), 'los juegos siguen dependiendo de una fractura');
+      ok(/rotate\(-35/.test(w.iconoDe('muestreo')) && /<rect/.test(w.iconoDe('muestreo')), 'el icono de muestras no es el martillo');
+      // la lupa pone baldosa solo al icono que crece
+      const doc = w.document, dock = doc.createElement('div');
+      dock.className = 'dock'; dock.style.cssText = 'position:fixed;left:0;bottom:0;width:300px';
+      for (const c of ['punto','muestreo','foto','esquema','fotomapa']) dock.append(w.botonIcono({clave:c, titulo:c}, () => {}));
+      doc.body.append(dock);
+      try {
+        const r = dock.getBoundingClientRect(), b = dock.querySelector('[data-clave="foto"]').getBoundingClientRect();
+        w.lupaDock(dock, b.left + b.width / 2);
+        const sv = c => dock.querySelector('[data-clave="' + c + '"] svg').style;
+        ok(sv('foto').background && /4px/.test(sv('foto').boxShadow), 'el icono bajo la lupa no lleva baldosa');
+        eq(sv('punto').background, '', 'un icono lejos de la lupa no debe llevar baldosa');
+      } finally { dock.remove(); }
+      return 'baldosa en el icono que crece · componentes y alteración siempre · martillo';
     });
 
     // ---- v168: selección múltiple como lista desplegable ----
