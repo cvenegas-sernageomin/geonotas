@@ -2221,7 +2221,7 @@ const MODELO = {
       "geometria": null,
       "pk": "ID_COMPONENTE",
       "cardinalidad": "0..N",
-      "descripcion": "Componente de una litología sedimentaria o piroclástica, descrito uno a uno (CLASE_COMPONENTE): clasto (SED_CLASTICA); fragmento piroclástico, cristaloclasto o fragmento vítreo (VOL_PIROCLASTICA); fósil, componente tufítico, componente subordinado o composición mineralógica (LITO_SEDIMENTARIA). 0..N por litología.",
+      "descripcion": "Componente de una litología, descrito uno a uno (CLASE_COMPONENTE): clasto, fragmento piroclástico, cristaloclasto, fragmento vítreo, fósil, componente tufítico, componente subordinado o composición mineralógica. 0..N por litología; cuelga directo de TBL_LITOLOGIA por ID_LITOLOGIA (v173).",
       "campos": [
         {
           "nombre": "ID_PUNTO_CONTROL",
@@ -2239,7 +2239,7 @@ const MODELO = {
           "nombre": "ID_LITOLOGIA",
           "obligatorio": true,
           "dominio": null,
-          "nota": "Litología a la que pertenece el componente (TBL_LITOLOGIA)."
+          "nota": "FK a TBL_LITOLOGIA: litología del punto de la que es componente (v173)."
         },
         {
           "nombre": "CLASE_COMPONENTE",
@@ -2547,17 +2547,7 @@ const MODELO = {
       "campo": "ID_PUNTO_CONTROL"
     },
     {
-      "padre": "SED_CLASTICA",
-      "hijo": "LITO_COMPONENTES",
-      "campo": "ID_LITOLOGIA"
-    },
-    {
-      "padre": "VOL_PIROCLASTICA",
-      "hijo": "LITO_COMPONENTES",
-      "campo": "ID_LITOLOGIA"
-    },
-    {
-      "padre": "LITO_SEDIMENTARIA",
+      "padre": "TBL_LITOLOGIA",
       "hijo": "LITO_COMPONENTES",
       "campo": "ID_LITOLOGIA"
     }
@@ -7240,7 +7230,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v172';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v173';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7290,8 +7280,8 @@ const HIJAS = [
   // ofrece esas litologías (ver renderPunto/bloqueHijo).
   // v167: LITO_COMPONENTES reemplaza a clastos y fragmentos (estructura del 28-10): clasto, fragmento,
   // fósil, componente tufítico, subordinado o composición mineralógica, 0..N por litología.
-  // v171: rama COMPONENTES = litología sedimentaria o piroclástica (las que tienen componentes)
-  {store:'litocomp', titulo:'Componentes', clase:'', rama:'COMPONENTES', siempre:true},   // v169: siempre a la vista
+  // v173 (corrección del usuario): cuelga directo de TBL_LITOLOGIA, como la alteración; cualquier litología.
+  {store:'litocomp', titulo:'Componentes', clase:'', rama:'TBL_LITOLOGIA', siempre:true},   // v169: siempre a la vista
   // v160: alteración de una litología (CDC TBL_AF_ALTERACION), 0..N por litología. rama
   // TBL_LITOLOGIA = cualquier litología: el panel aparece cuando el punto tiene alguna.
   {store:'alteracion', titulo:'Alteración', clase:'', rama:'TBL_LITOLOGIA', siempre:true},
@@ -9399,7 +9389,6 @@ function familiaAplica(tabla, v){
   if(tabla==='VOL_LAVA') return v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava';
   if(tabla==='VOL_PIROCLASTICA') return esPiroclastica(v);
   if(tabla==='LITO_ANTROPICO') return v['TIPO_ROCA']==='Antrópico';
-  if(tabla==='COMPONENTES') return v['TIPO_ROCA']==='Sedimentaria' || esPiroclastica(v);   // v171: litologías con LITO_COMPONENTES
   if(tabla==='EST_FALLA') return esFalla(v);
   if(tabla==='EST_PLIEGUE') return esPliegue(v);
   if(tabla==='EST_FRACTURA') return v['TIPO_ESTRUCTURA']==='Estructura fractura';
@@ -14887,7 +14876,7 @@ async function hojaFicha(h,it,idx){
   if(!regs.length){
     const sinRama=(h.rama&&!litosRama.length)||(h.deFractura&&!fracs.length);
     H.cuerpo.append(el('div',{class:'hoja-vacia'},
-      el('p',{},sinRama?(h.deFractura?'Primero registra una medida de fractura en Datos estructurales.':h.rama==='TBL_LITOLOGIA'?'Primero describe una litología en este punto.':h.rama==='COMPONENTES'?'Primero describe una litología sedimentaria o piroclástica en este punto.':'Primero describe una litología de esta rama.'):'Sin fichas de '+nombre+' en este punto.'),
+      el('p',{},sinRama?(h.deFractura?'Primero registra una medida de fractura en Datos estructurales.':h.rama==='TBL_LITOLOGIA'?'Primero describe una litología en este punto.':'Primero describe una litología de esta rama.'):'Sin fichas de '+nombre+' en este punto.'),
       sinRama?null:el('button',{class:'btn',onclick:agregar},'+ Agregar '+nombre)));
   } else {
     bloquesContacto.clear();
@@ -17385,14 +17374,7 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
       }
       if(s==='litologia'){
         const porId=Object.fromEntries(regsS.map(r=>[r.id,r]));
-        // v171: cada componente cuelga de la hija que describe según su clase
-        const RAMA_CLASE={'Clasto':'SED_CLASTICA','Fragmento piroclástico':'VOL_PIROCLASTICA','Cristaloclasto':'VOL_PIROCLASTICA',
-          'Fragmento vítreo':'VOL_PIROCLASTICA'};
-        for(const c of await all('litocomp')){
-          const L=porId[c.ID_LITOLOGIA], rama=RAMA_CLASE[c.CLASE_COMPONENTE]||'LITO_SEDIMENTARIA';
-          if(L&&familiaAplica(rama,L)) marcar(rama,L.id);
-        }
-        for(const h of HIJAS.filter(h=>h.rama&&h.store!=='litocomp')) for(const c of await all(h.store)){
+        for(const h of HIJAS.filter(h=>h.rama)) for(const c of await all(h.store)){
           const L=porId[c.ID_LITOLOGIA]; if(L&&familiaAplica(h.rama,L)) marcar(h.rama,L.id);
         }
       }

@@ -2381,9 +2381,9 @@ async function correr(){
       // componentes (v167): una LITO_COMPONENTES bajo TBL_LITOLOGIA; sin TBL_COMPONENTE ni COMP_CLASTO/COMP_FRAGMENTO
       ok(M.tablas.LITO_COMPONENTES && !M.tablas.TBL_COMPONENTE && !M.tablas.COMP_CLASTO && !M.tablas.COMP_FRAGMENTO, 'tablas de componentes');
       eq(M.relaciones.filter(r => r.hijo === 'LITO_COMPONENTES').map(r => r.padre + '.' + r.campo).join(' '),
-         'PUNTO_CONTROL.ID_PUNTO_CONTROL SED_CLASTICA.ID_LITOLOGIA VOL_PIROCLASTICA.ID_LITOLOGIA LITO_SEDIMENTARIA.ID_LITOLOGIA', 'relaciones de los componentes (v171)');
+         'PUNTO_CONTROL.ID_PUNTO_CONTROL TBL_LITOLOGIA.ID_LITOLOGIA', 'relaciones de los componentes (v173: directo de la litología)');
       eq(['litocomp'].map(st => { const h = w.eval('HIJAS').find(x => x.store === st); return h && h.rama + ' ' + w.eval('STORE2TBL')[st]; }),
-         ['COMPONENTES LITO_COMPONENTES'], 'ficha de componentes');
+         ['TBL_LITOLOGIA LITO_COMPONENTES'], 'ficha de componentes');
       const viejo = {id:'x', ID_COMPONENTE:'x', CLASE_COMPONENTE:'Fragmento piroclástico', LITOLOGIA_FRAGMENTO:'Pómez'};
       eq([w.componenteASuStore(viejo), viejo.ID_FRAGMENTO, 'CLASE_COMPONENTE' in viejo], ['fragmento', 'x', false], 'componente de pruebas v152 migrado');
       // migración: depósito aluvial, tefra, antrópico y tipo de falla
@@ -2760,15 +2760,24 @@ async function correr(){
       return 'ficha completa (punto, litología, componentes, alteración, medidas) y fotos con tamaño y enlace';
     });
 
+    // ---- v173: LITO_COMPONENTES cuelga directo de TBL_LITOLOGIA ----
+    await prueba('v173 componentes: FK directa a TBL_LITOLOGIA, cualquier litología', async () => {
+      const M = w.eval('MODELO');
+      eq(M.relaciones.filter(r => r.hijo === 'LITO_COMPONENTES' && r.campo === 'ID_LITOLOGIA').map(r => r.padre), ['TBL_LITOLOGIA'], 'padre de LITO_COMPONENTES');
+      const h = w.eval('HIJAS').find(x => x.store === 'litocomp');
+      eq(h.rama, 'TBL_LITOLOGIA', 'rama de la ficha');
+      eq([{TIPO_ROCA:'Sedimentaria'}, {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}, {TIPO_ROCA:'Intrusiva'}, {TIPO_ROCA:'Metamórfica'}]
+         .map(v => w.familiaAplica(h.rama, v)), [true, true, true, true], 'toda litología admite componentes');
+      return 'relación única con TBL_LITOLOGIA; la ficha ofrece todas las litologías del punto';
+    });
+
     // ---- v171: componentes piroclásticos en LITO_COMPONENTES e icono «Litología» ----
     await prueba('v171 piroclástica: sus componentes van en LITO_COMPONENTES; icono Litología', async () => {
       const M = w.eval('MODELO');
       const SALEN = ['LITICOS_PCT','TIPO_LITICOS','TIPO_LITICOS_DETALLE','POMEZ_PCT','CRISTALES_PCT','CRISTALES_ESPECIE','CRISTALES_DETALLE','TIPO_FRAGMENTO_VITREO','TIPO_FRAGMENTO_VITREO_DETALLE','CLASTOS_TAM_MAX_CM'];
       eq(SALEN.filter(n => M.tablas.TBL_LITOLOGIA.campos.some(c => c.nombre === n)), [], 'VOL_PIROCLASTICA aún tiene campos de componentes');
       eq(['SOLDADURA','MATRIZ_COMPOSICION','MATRIZ_PCT','SELECCION'].filter(n => !M.familias_litologia.find(f => f.tabla === 'VOL_PIROCLASTICA').campos.concat(M.familias_litologia.find(f => f.tabla === 'VOL_PIROCLASTICA').campos_extra || []).includes(n)), [], 'faltan campos de la roca en VOL_PIROCLASTICA');
-      // ficha de componentes: solo litologías sedimentarias o piroclásticas; campos por clase
-      eq([{TIPO_ROCA:'Sedimentaria'}, {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Rocas piroclásticas'}, {TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}, {TIPO_ROCA:'Intrusiva'}]
-         .map(v => w.familiaAplica('COMPONENTES', v)), [true, true, false, false], 'litologías con componentes');
+      // ficha de componentes: campos por clase (v173: cuelga de cualquier litología, ver la prueba v173)
       const vis = (reg, n) => { const f = w.formulario('litocomp', reg); const i = f.node.querySelector('[name="'+n+'"]') || [...f.node.querySelectorAll('.multichips')].find(m => m.name === n);
         return i ? i.closest('.fld').style.display !== 'none' : null; };
       eq(['MINERAL_CRISTALOCLASTO','TAMANO_MAX_CM','LITOLOGIA_FRAGMENTO'].map(n => vis({CLASE_COMPONENTE:'Cristaloclasto'}, n)), [true, true, false], 'ficha de cristaloclasto');
