@@ -2738,6 +2738,28 @@ async function correr(){
       return 'autonumeración FR-07 · ±6.4 m y UTM 19S · foto adjunta · ubicación a mano sin error en metros';
     });
 
+    // ---- v172: KMZ con la ficha completa y fotos grandes ----
+    await prueba('v172 KMZ: el globo trae la ficha completa del punto y las fotos a 960×720 como máximo', async () => {
+      eq([w.tamKmz({w:1280, h:960}), w.tamKmz({w:960, h:1280}), w.tamKmz({w:400, h:300})],
+         ['width="960" height="720"', 'width="540" height="720"', 'width="400" height="300"'], 'tamaño de las fotos (nunca se agrandan)');
+      await sembrar(w);
+      const extra = [['litocomp', {id:P+'k-c', _parent:P+'pt-T', ID_LITOLOGIA:P+'li-T', CLASE_COMPONENTE:'Cristaloclasto', MINERAL_CRISTALOCLASTO:'Plagioclasa'}],
+                     ['alteracion', {id:P+'k-a', _parent:P+'pt-T', ID_LITOLOGIA:P+'li-T', TIPO_ALTERACION:'Propilítica'}],
+                     ['estructural', {id:P+'k-e', _parent:P+'pt-T', TIPO_ESTRUCTURA:'Estructura falla', AZIMUT:'30', MANTEO_BUZAMIENTO:'60', ID_LITOLOGIA:P+'li-T'}],
+                     ['foto', {id:P+'k-f', _parent:P+'pt-T', ORIENTACION_FOTO:'120', _img:'data:image/png;base64,'+IMG1x1}]];
+      for (const [st, r] of extra) await w.put(st, r);
+      try {
+        const cap = await capturar(w, () => w.exportKMZ(P+'pr'));
+        const kml = await (await new w.JSZip().loadAsync(await cap.blob.arrayBuffer())).file('doc.kml').async('text');
+        const pm = kml.slice(kml.indexOf('<name>PC-T</name>'), kml.indexOf('</Placemark>', kml.indexOf('<name>PC-T</name>')));
+        for (const t of ['GEOLOGO', 'Fm. Abanico', 'Componentes (1)', 'Plagioclasa', 'Alteración (1)', 'Propilítica', 'Datos estructurales (1)', 'Litología 1: Andesita'])
+          ok(pm.includes(t), 'falta «' + t + '» en el globo del punto');
+        ok(/<a href="files\/foto_[^"]+"><img src="files\/foto_[^"]+" width="1" height="1"\/><\/a>/.test(pm), 'la foto no lleva su tamaño ni el enlace al original');
+        ok(!/width="340"/.test(pm), 'quedan fotos a 340 px');
+      } finally { for (const [st, r] of extra) await w.del(st, r.id); await w.borrarProyecto(P+'pr'); }   // sembrar() corre después de la prueba que borra el proyecto smoke
+      return 'ficha completa (punto, litología, componentes, alteración, medidas) y fotos con tamaño y enlace';
+    });
+
     // ---- v171: componentes piroclásticos en LITO_COMPONENTES e icono «Litología» ----
     await prueba('v171 piroclástica: sus componentes van en LITO_COMPONENTES; icono Litología', async () => {
       const M = w.eval('MODELO');
