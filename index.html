@@ -162,6 +162,57 @@
   .list-item .t b{font-size:14px}
   .list-item .t small{color:var(--muted);font-size:11.5px;display:block;margin-top:1px}
   .pill{font-size:10px;padding:3px 9px;border-radius:20px;background:var(--surface2);color:var(--muted);border:1px solid var(--bd);white-space:nowrap}
+  /* Vista Puntos: el proyecto va en una franja discreta (sus acciones en un menú) y la pantalla es
+     de los puntos de control: buscador, fechas como fichas, filtros plegables y una lista limpia. */
+  .pj-franja{display:flex;align-items:center;gap:10px;padding:4px 2px 12px;border-bottom:1px solid var(--bd)}
+  .pj-txt{flex:1;min-width:0;line-height:1.3}
+  .pj-nom{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pj-meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pj-btn{flex:0 0 auto;border:1px solid var(--bd);background:var(--surface);color:var(--txt);border-radius:999px;padding:8px 13px;font:600 12.5px inherit;cursor:pointer;min-height:38px}
+  .pj-menu{display:flex;flex-direction:column;gap:2px}
+  .pj-menu button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:none;color:var(--txt);font:500 15px inherit;padding:13px 6px;border-radius:10px;cursor:pointer}
+  .pj-menu button:hover{background:var(--surface2)}
+  .pj-menu button i{font-style:normal;width:24px;text-align:center}
+  .pj-menu .peligro{color:var(--rojo);border-top:1px solid var(--bd);border-radius:0;margin-top:6px}
+  .pt-cab{display:flex;align-items:baseline;gap:8px;margin:16px 2px 10px}
+  .pt-cab h2{margin:0;font-size:18px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .pt-cab .pt-link{white-space:nowrap;flex:0 0 auto}
+  .pt-dup{opacity:.6}
+  .pt-panel[hidden],.pt-chips[hidden],.pt-res[hidden]{display:none}
+  .pt-busca input[type=search]{background:var(--inp);border:1px solid var(--inp-bd);border-radius:12px;padding:0 14px;min-height:44px;font-size:15px;color:var(--txt);width:auto}
+  .pt-busca input[type=search]:focus{outline:none;box-shadow:var(--ring);border-color:var(--verde)}
+  .pt-cab .n{color:var(--muted);font-size:14px;font-weight:600}
+  .pt-cab .sp{flex:1}
+  .pt-link{background:none;border:0;color:var(--verde);font:600 13px inherit;cursor:pointer;padding:6px 2px}
+  .pt-busca{display:flex;gap:8px;align-items:stretch}
+  .pt-busca input{flex:1;min-width:0;margin:0}
+  .pt-fbtn{position:relative;flex:0 0 auto;border:1px solid var(--inp-bd);background:var(--inp);color:var(--txt);border-radius:12px;padding:0 14px;font:600 13px inherit;cursor:pointer;min-height:44px}
+  .pt-fbtn.on{border-color:var(--verde);color:var(--verde)}
+  .pt-fbtn b{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--verde);color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 4px}
+  .pt-chips{display:flex;gap:6px;overflow-x:auto;padding:10px 1px 2px;scrollbar-width:none}
+  .pt-chips::-webkit-scrollbar{display:none}
+  .pt-chip{flex:0 0 auto;border:1px solid var(--bd);background:var(--surface);color:var(--txt);border-radius:999px;padding:7px 12px;font:500 12.5px inherit;cursor:pointer;white-space:nowrap}
+  .pt-chip.on{background:var(--verde);border-color:var(--verde);color:#fff}
+  .pt-chip.quita{background:var(--surface2)}
+  .pt-panel{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;margin-top:10px;border:1px solid var(--bd);border-radius:14px;background:var(--surface2)}
+  .pt-panel .fld{margin:0}
+  @media(max-width:420px){.pt-panel{grid-template-columns:1fr}}
+  .pt-res{font-size:12px;color:var(--muted);margin:10px 2px 0}
+  .pt-dia{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:16px 4px 7px;display:flex;justify-content:space-between}
+  .pt-lista{background:var(--surface);border:1px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .pt-fila{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;cursor:pointer;min-height:56px}
+  .pt-fila+.pt-fila{border-top:1px solid var(--bd)}
+  .pt-fila:active{background:var(--surface2)}
+  .pt-fila.sel{background:color-mix(in srgb,var(--verde) 12%,var(--surface))}
+  .pt-fila input[type=checkbox]{width:20px;height:20px;margin:0;accent-color:var(--verde)}
+  .pt-gps{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:var(--bd2)}
+  .pt-cuerpo{flex:1;min-width:0}
+  .pt-id{font-weight:700;font-size:15px}
+  .pt-sub{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .pt-tags{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap}
+  .pt-dup{border:0;background:none;color:var(--muted);font-size:16px;padding:8px;border-radius:8px;cursor:pointer}
+  .pt-dup:hover{background:var(--surface2)}
+  .pt-vacio{padding:28px 16px;text-align:center;color:var(--muted);font-size:14px}
   .grouphdr{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:10px 2px 6px;border-bottom:1px solid var(--bd);margin-bottom:6px}
   .grouphdr:first-child{padding-top:2px}
   .list-item.sel{border-color:var(--verde);background:var(--surface2)}
@@ -14530,6 +14581,37 @@ function editorNaming(pr){
 
 // -------- Proyecto: puntos de control --------
 let _ptFiltro={q:'',fecha:'',localidad:'',geomorf:'',muestras:''};
+let _ptPanel=false;   // panel de filtros abierto (se recuerda al volver de un punto)
+// Acciones del proyecto: antes eran cinco botones sobre la lista; ahora un menú que sale desde abajo.
+function menuProyecto(){
+  const ov=el('div',{class:'fmov',onclick:e=>{if(e.target===ov)ov.remove();}});
+  const accion=(ico,txt,fn,cls)=>el('button',{class:cls||'',onclick:()=>{ov.remove();fn();}},el('i',{},ico),txt);
+  const box=el('div',{class:'card',style:'max-width:420px;width:92vw;margin:0'},
+    el('div',{class:'muted',style:'font-size:12px;padding:0 6px 6px'},curProyecto.NOMBRE_PROYECTO||'Proyecto'),
+    el('div',{class:'pj-menu'},
+      accion('✎','Editar datos del proyecto',()=>editorProyecto(curProyecto)),
+      accion('🔤','Convención de nombres',()=>editorNaming(curProyecto)),
+      accion('⇩','Exportar este proyecto',()=>exportMenu(curProyecto.id)),
+      // Prosa de terreno: se redacta en la oficina (necesita internet para la toponimia IGM),
+      // pero opera sobre la COLECCION ACTIVA (Terreno o Gabinete).
+      accion('🏔️','Generar prosa de terreno',()=>generarProsaProyecto()),
+      accion('🗑','Eliminar proyecto…',eliminarProyectoActual,'peligro')));
+  ov.append(box); document.body.append(ov);
+}
+async function eliminarProyectoActual(){
+  if(bloqueoGabineteActivo())return;
+  // cuenta antes de confirmar, para advertir cuánto se pierde
+  const ids=await idsPuntosProyecto(curProyecto.id);
+  const lin=(await all('linea')).filter(x=>x._parent===curProyecto.id).length
+          +(await all('linea_gabinete')).filter(x=>x._parent===curProyecto.id).length;
+  const not=(await all('nota')).filter(x=>x._parent===curProyecto.id).length;
+  const msg=ids.size?
+    `¿Eliminar este proyecto y sus ${ids.size} punto(s) (${lin} línea(s), ${not} nota(s))?\nEsta acción es irreversible.` :
+    '¿Eliminar este proyecto (sin datos)?\nEsta acción es irreversible.';
+  if(!confirm(msg))return;
+  if((await borrarProyecto(curProyecto.id))===false)return;
+  toast('Proyecto eliminado'); nav({n:'home'});
+}
 async function renderProyecto(app){
   curProyecto=await get('proyecto',vista.id);
   if(!curProyecto)return nav({n:'home'});
@@ -14547,74 +14629,71 @@ async function renderProyecto(app){
     muestrasPorPunto.get(m._parent).push(m);
   });
   puntos.forEach(pt=>pt._muestras=muestrasPorPunto.get(pt.id)||[]);
-  const head=el('div',{class:'card'});
-  const barra=el('div',{class:'btnbar'},
-      el('button',{class:'btn sec mini',onclick:()=>editorProyecto(curProyecto)},'✎ Editar proyecto'),
-      el('button',{class:'btn sec mini',onclick:()=>editorNaming(curProyecto)},'🔤 Convención de nombres'),
-      el('button',{class:'btn sec mini',onclick:()=>exportMenu(curProyecto.id)},'⇩ Exportar este proyecto'),
-      // Prosa de terreno: se redacta en la oficina (necesita internet para la toponimia IGM),
-      // pero opera sobre la COLECCION ACTIVA. Estaba restringido a Gabinete, que es la
-      // coleccion de planificacion: los puntos que de verdad van a la libreta se capturan en
-      // Terreno, asi que en la practica no habia forma de generarles la prosa.
-      el('button',{class:'btn sec mini',onclick:()=>generarProsaProyecto()},'🏔️ Generar prosa de terreno'),
-      el('button',{class:'btn del mini',title:'Eliminar este proyecto y todos sus datos',
-        onclick:async()=>{
-          if(bloqueoGabineteActivo())return;
-          // cuenta antes de confirmar, para advertir cuánto se pierde
-          const ids=await idsPuntosProyecto(curProyecto.id);
-          const lin=(await all('linea')).filter(x=>x._parent===curProyecto.id).length
-                  +(await all('linea_gabinete')).filter(x=>x._parent===curProyecto.id).length;
-          const not=(await all('nota')).filter(x=>x._parent===curProyecto.id).length;
-          const msg=ids.size?
-            `¿Eliminar este proyecto y sus ${ids.size} punto(s) (${lin} línea(s), ${not} nota(s))?\nEsta acción es irreversible.` :
-            '¿Eliminar este proyecto (sin datos)?\nEsta acción es irreversible.';
-          if(!confirm(msg))return;
-          if((await borrarProyecto(curProyecto.id))===false)return;
-          toast('Proyecto eliminado'); nav({n:'home'});
-        }},'🗑'));
-  head.append(el('h2',{},'Proyecto'),barra);
-  app.append(head);
+  // ---- Franja del proyecto: discreta pero a la vista; sus acciones van en un menú ----
+  const fechasPts=[...new Set(puntos.map(p=>p.FECHA).filter(Boolean))].sort();
+  const fmtDia=f=>{ const d=new Date(f+'T12:00'); return isNaN(d)?f:d.toLocaleDateString('es-CL',{day:'numeric',month:'short'}).replace('.',''); };
+  app.append(el('div',{class:'pj-franja'},
+    el('div',{class:'pj-txt'},
+      el('div',{class:'pj-nom'},curProyecto.NOMBRE_PROYECTO||'Proyecto sin nombre'),
+      el('div',{class:'pj-meta'},['ID '+(curProyecto.ID_PROYECTO||'—'),
+        curProyecto.GEOLOGO||'',
+        fechasPts.length?(fechasPts.length>1?fmtDia(fechasPts[0])+' – '+fmtDia(fechasPts[fechasPts.length-1]):fmtDia(fechasPts[0])):''].filter(Boolean).join(' · '))),
+    el('button',{class:'pj-btn','aria-haspopup':'dialog',onclick:menuProyecto},'Proyecto ⋯')));
   // ---- Puntos de control: lista + modo selección para mover a otro proyecto ----
   let modoSel=false;
   const selIds=new Set();
-  const card=el('div',{class:'card'});
-  const btnSel=el('button',{class:'btn sec mini'},'☑ Seleccionar');
-  const btnTodos=el('button',{class:'btn sec mini',style:'display:none'},'Todos');
-  card.append(el('div',{class:'btnbar'},el('h2',{style:'margin:0'},'Puntos de control ('+puntos.length+')'),btnSel,btnTodos));
-  // --- filtros: mismo patron que renderMuestras (buscador + selects sobre el array ya cargado) ---
-  const buscar=el('input',{type:'search',placeholder:'Buscar ID o localidad…'});buscar.value=_ptFiltro.q;
-  const ffecha=el('select');
-  ffecha.append(el('option',{value:''},'Todas las fechas'));
-  [...new Set(puntos.map(p=>p.FECHA).filter(Boolean))].sort().forEach(f=>ffecha.append(el('option',{value:f},f)));
-  ffecha.value=_ptFiltro.fecha;
+  const btnSel=el('button',{class:'pt-link'},'Seleccionar');
+  const btnTodos=el('button',{class:'pt-link',style:'display:none'},'Todos');
+  const nCab=el('span',{class:'n'});
+  app.append(el('div',{class:'pt-cab'},el('h2',{},'Puntos de control'),nCab,el('span',{class:'sp'}),btnTodos,btnSel));
+  // --- filtros: buscador + fichas de fecha a la vista; localidad, contexto y muestras plegados ---
+  const buscar=el('input',{type:'search',placeholder:'Buscar ID, localidad o fecha…','aria-label':'Buscar puntos'});buscar.value=_ptFiltro.q;
   const floc=el('select');
-  floc.append(el('option',{value:''},'Todas las localidades'));
+  floc.append(el('option',{value:''},'Todas'));
   [...new Set(puntos.map(p=>p.NOMBRE_LOCALIDAD).filter(Boolean))].sort().forEach(v=>floc.append(el('option',{value:v},v)));
   floc.value=_ptFiltro.localidad;
   const fgeo=el('select');
-  fgeo.append(el('option',{value:''},'Todo contexto geomorf.'));
+  fgeo.append(el('option',{value:''},'Todos'));
   (dominio('CONTEXTO_GEOMORFOLOGICO').valores||[]).forEach(v=>fgeo.append(el('option',{value:v},v)));
   fgeo.value=_ptFiltro.geomorf;
   const fmue=el('select');
   fmue.append(el('option',{value:''},'Con o sin muestras'),el('option',{value:'si'},'Solo con muestras'),el('option',{value:'no'},'Solo sin muestras'));
   fmue.value=_ptFiltro.muestras;
-  const filtros=el('div',{class:'row'});
-  filtros.append(el('div',{class:'fld'},el('label',{},'Buscar'),buscar),
-    el('div',{class:'fld'},el('label',{},'Fecha'),ffecha),
+  const panel=el('div',{class:'pt-panel'},
     el('div',{class:'fld'},el('label',{},'Localidad'),floc),
     el('div',{class:'fld'},el('label',{},'Contexto geomorfológico'),fgeo),
     el('div',{class:'fld'},el('label',{},'Muestras'),fmue));
-  if(puntos.length)card.append(filtros);
-  const resumenFiltro=el('div',{class:'muted',style:'margin:2px 0 6px'});
-  card.append(resumenFiltro);
+  panel.hidden=!_ptPanel;
+  const btnFiltros=el('button',{class:'pt-fbtn','aria-expanded':String(!!_ptPanel)});
+  const chips=el('div',{class:'pt-chips',role:'toolbar','aria-label':'Filtros activos y fechas'});
+  const resumenFiltro=el('div',{class:'pt-res'});
   const listaBox=el('div');
-  card.append(listaBox);
-  app.append(card);
+  if(puntos.length) app.append(el('div',{class:'pt-busca'},buscar,btnFiltros),chips,panel,resumenFiltro);
+  app.append(listaBox);
+  btnFiltros.onclick=()=>{ _ptPanel=!_ptPanel; panel.hidden=!_ptPanel; btnFiltros.setAttribute('aria-expanded',String(_ptPanel)); };
   buscar.addEventListener('input',()=>{_ptFiltro.q=buscar.value;pintar();});
-  ffecha.addEventListener('change',()=>{_ptFiltro.fecha=ffecha.value;pintar();});
   floc.addEventListener('change',()=>{_ptFiltro.localidad=floc.value;pintar();});
   fgeo.addEventListener('change',()=>{_ptFiltro.geomorf=fgeo.value;pintar();});
   fmue.addEventListener('change',()=>{_ptFiltro.muestras=fmue.value;pintar();});
+  // Fichas: primero los filtros del panel que están activos (✕ para quitarlos), después las fechas
+  // como atajo: es el filtro que más se usa al revisar la jornada.
+  function pintarChips(){
+    chips.textContent='';
+    const quita=(txt,fn)=>chips.append(el('button',{class:'pt-chip quita',onclick:()=>{fn();pintar();}},txt+'  ✕'));
+    if(_ptFiltro.localidad) quita(_ptFiltro.localidad,()=>{_ptFiltro.localidad='';floc.value='';});
+    if(_ptFiltro.geomorf) quita(_ptFiltro.geomorf,()=>{_ptFiltro.geomorf='';fgeo.value='';});
+    if(_ptFiltro.muestras) quita(_ptFiltro.muestras==='si'?'Con muestras':'Sin muestras',()=>{_ptFiltro.muestras='';fmue.value='';});
+    if(fechasPts.length>1||_ptFiltro.fecha){
+      chips.append(el('button',{class:'pt-chip'+(_ptFiltro.fecha?'':' on'),onclick:()=>{_ptFiltro.fecha='';pintar();}},'Todas las fechas'));
+      fechasPts.forEach(f=>chips.append(el('button',{class:'pt-chip'+(_ptFiltro.fecha===f?' on':''),
+        onclick:()=>{_ptFiltro.fecha=_ptFiltro.fecha===f?'':f;pintar();}},fmtDia(f))));
+    }
+    chips.hidden=!chips.childElementCount;
+    const nAct=[_ptFiltro.localidad,_ptFiltro.geomorf,_ptFiltro.muestras].filter(Boolean).length;
+    btnFiltros.textContent='Filtros';
+    if(nAct) btnFiltros.append(el('b',{},String(nAct)));
+    btnFiltros.classList.toggle('on',!!nAct);
+  }
 
   function pintarFab(){
     const fab=$('#fab'); fab.innerHTML='';
@@ -14626,8 +14705,8 @@ async function renderProyecto(app){
       });
       fab.append(btnMover, el('button',{class:'btn sec',onclick:()=>{modoSel=false;selIds.clear();pintar();}},'✕ Cancelar'));
     } else {
-      fab.append(el('button',{class:'btn',onclick:()=>nav0Punto()},'+ Nuevo punto'),
-        el('button',{class:'btn sec',onclick:()=>nav({n:'home'})},'⌂ Proyectos'));
+      fab.append(el('button',{class:'btn',style:'flex:1',onclick:()=>nav0Punto()},'+ Nuevo punto'),
+        el('button',{class:'btn sec',title:'Proyectos','aria-label':'Volver a proyectos',onclick:()=>nav({n:'home'})},'⌂'));
     }
   }
 
@@ -14647,8 +14726,13 @@ async function renderProyecto(app){
       if(q && ![pt.ID_PUNTO_CONTROL,pt.NOMBRE_LOCALIDAD,pt.FECHA].some(v=>String(v||'').toLowerCase().includes(q)))return false;
       return true;
     });
-    resumenFiltro.textContent = puntos.length ? (visibles.length+' de '+puntos.length+' puntos') : '';
-    btnSel.textContent = modoSel ? '✕ Salir de selección' : '☑ Seleccionar';
+    pintarChips();
+    nCab.textContent=puntos.length?String(puntos.length):'';
+    const filtrando=visibles.length!==puntos.length;
+    resumenFiltro.textContent = filtrando ? ('Mostrando '+visibles.length+' de '+puntos.length) : '';
+    resumenFiltro.hidden=!filtrando;
+    btnSel.textContent = modoSel ? 'Listo' : 'Seleccionar';
+    btnSel.hidden=!puntos.length;
     btnTodos.style.display = (modoSel && visibles.length) ? '' : 'none';
     btnTodos.textContent = (selIds.size===visibles.length && visibles.length) ? 'Ninguno' : 'Todos';
     btnTodos.onclick=()=>{
@@ -14656,8 +14740,8 @@ async function renderProyecto(app){
       else visibles.forEach(pt=>selIds.add(pt.id));
       pintar();
     };
-    if(!puntos.length){ listaBox.append(el('div',{class:'empty'},'Sin puntos. Agrega el primero con el botón +.')); pintarFab(); return; }
-    if(!visibles.length){ listaBox.append(el('div',{class:'empty'},'Ningún punto calza con el filtro.')); pintarFab(); return; }
+    if(!puntos.length){ listaBox.append(el('div',{class:'pt-lista'},el('div',{class:'pt-vacio'},'Todavía no hay puntos. Agrega el primero con + Nuevo punto.'))); pintarFab(); return; }
+    if(!visibles.length){ listaBox.append(el('div',{class:'pt-lista'},el('div',{class:'pt-vacio'},'Ningún punto calza con los filtros.'))); pintarFab(); return; }
 
     // --- agrupar por dia (visual, no cambia el almacenamiento): mismo criterio de orden que
     // ya usa generarProsaProyecto (FECHA+HORA, formato ISO -> localeCompare basta) ---
@@ -14669,32 +14753,42 @@ async function renderProyecto(app){
 
     let contador=0;
     grupos.forEach((ptsDia,fecha)=>{
-      listaBox.append(el('div',{class:'grouphdr'},(fecha||'Sin fecha')+' · '+ptsDia.length+' punto'+(ptsDia.length===1?'':'s')));
+      listaBox.append(el('div',{class:'pt-dia'},
+        el('span',{},fecha?new Date(fecha+'T12:00').toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'}).replace(/\./g,''):'Sin fecha'),
+        el('span',{},ptsDia.length+' punto'+(ptsDia.length===1?'':'s'))));
+      const bloque=el('div',{class:'pt-lista'});
       ptsDia.forEach(pt=>{
         contador++;
         const marcado=selIds.has(pt.id);
-        const fila=el('div',{class:'list-item'+(modoSel&&marcado?' sel':''),onclick:()=>{
+        const fila=el('div',{class:'pt-fila'+(modoSel&&marcado?' sel':''),role:'button',tabindex:'0',onclick:()=>{
           if(modoSel){ marcado?selIds.delete(pt.id):selIds.add(pt.id); pintar(); return; }
           nav({n:'punto',id:pt.id});
         }});
         if(modoSel){
-          const cb=el('input',{type:'checkbox'}); cb.checked=marcado;
+          const cb=el('input',{type:'checkbox','aria-label':'Seleccionar '+(pt.ID_PUNTO_CONTROL||'punto')}); cb.checked=marcado;
           cb.addEventListener('click',e=>e.stopPropagation());
           cb.addEventListener('change',()=>{ cb.checked?selIds.add(pt.id):selIds.delete(pt.id); pintar(); });
           fila.append(cb);
         }
-        const siglas=pt._muestras.map(m=>(m.ID_MUESTRA||'').trim()||'(s/sigla)');
-        fila.append(
-          el('div',{class:'t'},
-            el('b',{},pt.ID_PUNTO_CONTROL||('Punto '+contador)),
-            siglas.length?el('span',{style:'color:var(--muted);font-weight:400;font-size:12px'},'  🧪 '+siglas.join(', ')):null,
-            el('small',{},(pt['LAT_DECIMAL']||pt.LAT||'—')+', '+(pt['LONG_DECIMAL']||pt.LONG||'—')+(pt.NOMBRE_LOCALIDAD?' · '+pt.NOMBRE_LOCALIDAD:'')) ),
-          el('span',{class:'pill'},(pt._nlito||0)+' lito'));
+        // semáforo del GPS (umbral del proyecto), igual que el anillo del mapa
+        const err=parseFloat(pt.ERROR_GPS_M), cal=isNaN(err)?null:calidadGPS(err);
+        const punto=el('span',{class:'pt-gps',title:isNaN(err)?'Sin error GPS registrado':'GPS ±'+Math.round(err)+' m'});
+        if(cal) punto.style.background=COLOR_CALIDAD[cal];
+        const nMu=pt._muestras.length;
+        fila.append(punto,
+          el('div',{class:'pt-cuerpo'},
+            el('div',{class:'pt-id'},pt.ID_PUNTO_CONTROL||('Punto '+contador)),
+            el('div',{class:'pt-sub'},[pt.NOMBRE_LOCALIDAD, pt.HORA, pt.CONTEXTO_GEOMORFOLOGICO].filter(Boolean).join(' · ')||
+              ((pt[inLat]||'—')+', '+(pt[inLon]||'—')))),
+          el('div',{class:'pt-tags'},
+            nMu?el('span',{title:pt._muestras.map(m=>(m.ID_MUESTRA||'').trim()||'(s/sigla)').join(', ')},'🧪 '+nMu):null,
+            pt._nlito?el('span',{},pt._nlito+' lito'):null));
         if(!modoSel){
-          fila.append(el('button',{class:'btn sec mini',title:'Duplicar (sin coordenadas)',onclick:async(e)=>{e.stopPropagation();if(bloqueoGabineteActivo())return;const np=await duplicarPunto(pt.id);if(!np){toast('No se pudo duplicar el punto');return;}toast('Duplicado — asigna coordenadas e ID');nav({n:'punto',id:np.id});}},'⧉'));
+          fila.append(el('button',{class:'pt-dup',title:'Duplicar (sin coordenadas)','aria-label':'Duplicar punto',onclick:async(e)=>{e.stopPropagation();if(bloqueoGabineteActivo())return;const np=await duplicarPunto(pt.id);if(!np){toast('No se pudo duplicar el punto');return;}toast('Duplicado — asigna coordenadas e ID');nav({n:'punto',id:np.id});}},'⧉'));
         }
-        listaBox.append(fila);
+        bloque.append(fila);
       });
+      listaBox.append(bloque);
     });
     pintarFab();
   }
