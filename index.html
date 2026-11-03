@@ -7242,7 +7242,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v175';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v176';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -7254,6 +7254,18 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'
 const STICKY=['GEOLOGO','PROYECCION','FUENTE_COORDENADAS','METODO_UBICACION','CONTEXTO_GEOMORFOLOGICO','NOMBRE_LOCALIDAD'];
 function stickyGet(){try{return JSON.parse(localStorage.getItem('gt-sticky')||'{}');}catch(e){return {};}}
 function stickySet(reg){const s=stickyGet();STICKY.forEach(k=>{if(reg[k])s[k]=reg[k];});localStorage.setItem('gt-sticky',JSON.stringify(s));}
+// v176: lo recordado vive en localStorage y se pierde al borrar datos del sitio, al cambiar de
+// teléfono o al trabajar un respaldo restaurado. Para un punto nuevo, lo que falte se toma del
+// último punto del proyecto que lo tenga (por FECHA+HORA). Lo del dispositivo manda: en un
+// proyecto compartido cada geólogo sigue viendo su nombre.
+async function stickyPunto(){
+  const s=stickyGet(), faltan=STICKY.filter(k=>!s[k]);
+  if(!faltan.length||!curProyecto) return s;
+  const pts=(await childrenOf(storeActivo(),curProyecto.id))
+    .sort((a,b)=>((b.FECHA||'')+(b.HORA||'')).localeCompare((a.FECHA||'')+(a.HORA||'')));
+  faltan.forEach(k=>{ const q=pts.find(x=>x[k]); if(q) s[k]=q[k]; });
+  return s;
+}
 function ahora(){const d=new Date();return {FECHA:d.toISOString().slice(0,10),HORA:d.toTimeString().slice(0,5)};}
 
 // Dominios abiertos (UNIDAD_GEOLOGICA, CATEGORIA_NOTA): lo que el usuario agrega con
@@ -14657,7 +14669,7 @@ async function renderPuntoIconos(app){
   if(!reusar){
     app.innerHTML=''; $('#fab').innerHTML=''; $('#fab').className='fab';
     const nuevo = vista.id==='__new__';
-    curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, stickyGet(), ahora())
+    curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, await stickyPunto(), ahora())
                      : await get(storeActivo(),vista.id);
     if(!curPunto)return nav({n:'proyecto',id:curProyecto.id});
     if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
@@ -14982,7 +14994,7 @@ async function renderPunto(app){
   app.innerHTML=''; $('#fab').innerHTML=''; $('#fab').className='fab';   // evita duplicar al re-render directo (agregar/eliminar hijo)
   const nuevo = vista.id==='__new__';
   // punto nuevo: precarga colector y campos constantes recordados + fecha/hora automáticas
-  curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, stickyGet(), ahora())
+  curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, await stickyPunto(), ahora())
                    : await get(storeActivo(),vista.id);
   if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
   if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);curPunto.FUENTE_COORDENADAS='Google Earth / imagen';coordsPendientes=null;}   // tocado en el mapa: a mano, no GPS
@@ -16958,7 +16970,7 @@ async function agregarFotoAlPunto(img){
 // foto. r: la posición de capturarPosicion() o {fuente:'manual',lat,lon}. Devuelve el punto.
 async function registrarPuntoRapido(img, r){
   const nc=namingCfg(curProyecto).pc, ah=ahora();
-  const p=Object.assign({id:uid(),_parent:curProyecto.id}, stickyGet(), ah,
+  const p=Object.assign({id:uid(),_parent:curProyecto.id}, await stickyPunto(), ah,
     {ID_PROYECTO:curProyecto.ID_PROYECTO||curProyecto.id, _idDone:true});
   if(nc.on){ p.ID_PUNTO_CONTROL=fmtName(nc); const full=namingCfg(curProyecto); full.pc.next=nc.next+1; curProyecto._naming=full; await put('proyecto',curProyecto); }
   else p.ID_PUNTO_CONTROL='FOTO-'+ah.HORA.replace(':','')+String(new Date().getSeconds()).padStart(2,'0');   // sin autonumeración: un nombre que se pueda cambiar
