@@ -263,6 +263,29 @@
     text-align:center;padding:16px;color:#eef4ee;font-size:13px;line-height:1.6;
     background:rgba(16,21,26,.86);pointer-events:none}
   .v3d-msg.acc{pointer-events:auto}
+  /* Barra de dibujo sobre el visor 3D: abajo, al alcance del pulgar y lejos de la barra de Cesium
+     (arriba a la derecha); queda sobre los créditos. */
+  .v3d-dib{position:absolute;left:8px;right:8px;bottom:30px;z-index:6;display:flex;flex-wrap:wrap;align-items:center;
+    gap:8px 10px;background:rgba(16,21,26,.92);color:#eef4ee;border:1px solid #33404c;border-radius:12px;
+    padding:10px 12px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+  .v3d-dib-txt{flex:1 1 200px;display:flex;flex-direction:column;gap:2px;font-size:12.5px;line-height:1.35}
+  .v3d-dib-txt b{font-size:14px;color:#fff}
+  .v3d-dib-txt span{color:#9fb0c0}
+  .v3d-dib-btns{display:flex;gap:6px;margin-left:auto}
+  .v3d-dib .btn{min-height:44px;padding:8px 14px;font-size:13px}
+  .v3d-dib .btn[disabled]{opacity:.4;pointer-events:none}
+  .v3d-top-btns{display:flex;gap:6px}
+  .v3d-top .btn[disabled]{opacity:.4;pointer-events:none}
+  @media(max-width:480px){
+    .v3d-dib{left:6px;right:6px;bottom:26px;padding:8px 10px;gap:6px}
+    .v3d-dib-btns{width:100%}
+    .v3d-dib-btns .btn{flex:1;min-height:42px;padding:6px 8px}
+    .v3d-dib .txt-largo{display:none}
+  }
+  @media(min-width:760px){ .v3d-dib{left:50%;right:auto;transform:translateX(-50%);width:520px;max-width:calc(100% - 16px)} }
+  /* Con la Vista 3D abierta (z-index 4000) las fichas y avisos tienen que quedar encima de ella. */
+  body:has(.v3d-ov) .fmov{z-index:4100}
+  body:has(.v3d-ov) .toast{z-index:4200;bottom:auto;top:calc(56px + env(safe-area-inset-top))}   /* arriba: abajo tapaba la barra de dibujo */
   @media(min-width:760px){
     .v3d-cuerpo{flex-direction:row}
     .v3d-lado{flex:0 0 300px;max-height:none}
@@ -12763,7 +12786,7 @@ async function v3dPintarProyecto(){
              outlineColor:Cesium.Color.WHITE, outlineWidth:2,
              disableDepthTestDistance:Number.POSITIVE_INFINITY},
       label:p.ID_PUNTO_CONTROL?etiqueta(p.ID_PUNTO_CONTROL):undefined });
-    if(e) e._v3dPunto=p.id;
+    if(e){ e._v3dPunto=p.id; e._v3dNombre=p.ID_PUNTO_CONTROL||'punto'; }
     // --- actitudes medidas en ese punto: un cuadrado con el rumbo/manteo real ---
     for(const store of ['estructural','contacto']){
       const campos=PLANO_CAMPOS[store];
@@ -12803,8 +12826,9 @@ async function v3dPintarProyecto(){
     const pos=pegaAlSuelo
       ? Cesium.Cartesian3.fromDegreesArray(ln.geom.flatMap(([la,lo])=>[lo,la]))
       : Cesium.Cartesian3.fromDegreesArrayHeights(ln.geom.flatMap(([la,lo])=>[lo,la,v3dAlturaDe(la,lo,null)]));
-    add({ polyline:{ positions:pos, width:4, clampToGround:pegaAlSuelo,
+    const e=add({ polyline:{ positions:pos, width:4, clampToGround:pegaAlSuelo,
       material:Cesium.Color.fromCssColorString(est.color) }});
+    if(e) e._v3dLinea=ln;           // tocarla abre su ficha (v3dEditarLinea)
   }
 
   // --- planos proyectados: footprint chico (solo orientación, NO a escala real -- un
@@ -13273,6 +13297,153 @@ async function v3dGuardarPlano(reemplazar){
   v3dPintarLado();
 }
 
+// ---- Dibujar una línea de control sobre el relieve (mapeo 3D) ----
+// Es el MISMO registro que el ✏️ del mapa 2D (store de líneas activo, geom [[lat,lon],...],
+// formLinea): lo dibujado acá aparece tal cual en el mapa, el KMZ, el GPKG y la GDB. Cada toque
+// lanza el rayo de la cámara contra el terreno; tocar un punto de control lo toma como vértice
+// exacto, así la traza queda amarrada a lo medido con GPS. La cota de cada vértice va aparte, en
+// _v3d.z: geom sigue siendo 2D para todo el resto de la app.
+let v3dDibujo=null;              // null | { verts:[{lat,lon,z,pt,nombre}], ents:[], linea, barra, enFicha }
+let v3dLineasCambiaron=false;    // al cerrar la vista se rehace el mapa 2D
+let v3dBtnDib=null;
+
+function v3dPlanoSinGuardar(){
+  return !!v3dPlano && (v3dPlano.rumbo!==v3dPlano.rumbo0 || v3dPlano.manteo!==v3dPlano.manteo0);
+}
+function v3dIniciarDibujo(){
+  if(!v3dViewer || v3dDibujo) return;
+  if(bloqueoGabineteActivo()) return;
+  if(!curProyecto){ toast('Abre un proyecto para dibujar'); return; }
+  if(v3dPlanoSinGuardar() && !confirm('El plano que estabas ajustando tiene cambios sin guardar. ¿Soltarlo?')) return;
+  v3dSoltarPlano(); v3dFormPlano=null;
+  v3dDibujo={verts:[], ents:[], linea:null, barra:null, enFicha:false};
+  v3dViewer.container.style.cursor='crosshair';
+  v3dPintarDibujo();
+  v3dPintarLado();
+}
+function v3dLimpiarDibujo(){
+  const d=v3dDibujo; if(!d) return;
+  if(v3dViewer){
+    [...d.ents, d.linea].forEach(e=>{ if(e) try{ v3dViewer.entities.remove(e); }catch(_){} });
+    v3dViewer.container.style.cursor='';
+  }
+  if(d.barra) d.barra.remove();
+  v3dDibujo=null;
+  if(v3dBtnDib) v3dBtnDib.removeAttribute('disabled');
+  v3dPintarLado();
+}
+function v3dCancelarDibujo(){
+  const d=v3dDibujo; if(!d) return;
+  if(d.verts.length>1 && !confirm('¿Descartar la línea que estás dibujando?')) return;
+  v3dLimpiarDibujo();
+}
+// Largo en planta y desnivel: lo que el geólogo quiere saber mientras traza.
+function v3dMedirDibujo(verts){
+  let largo=0, zmin=Infinity, zmax=-Infinity;
+  verts.forEach((v,i)=>{
+    if(i) largo+=L.latLng(verts[i-1].lat,verts[i-1].lon).distanceTo(L.latLng(v.lat,v.lon));
+    if(v.z!=null){ zmin=Math.min(zmin,v.z); zmax=Math.max(zmax,v.z); }
+  });
+  return {largo, desnivel:zmax>zmin?zmax-zmin:0};
+}
+// Línea temporal y barra. Se rehacen enteras en cada cambio: son toques, no cuadros, y una
+// polilínea pegada al suelo con CallbackProperty no es confiable en todas las GPU.
+function v3dPintarDibujo(){
+  const d=v3dDibujo; if(!d || !v3dViewer) return;
+  if(d.linea){ try{ v3dViewer.entities.remove(d.linea); }catch(_){} d.linea=null; }
+  if(d.verts.length>1){
+    const suelo=Cesium.GroundPolylinePrimitive.isSupported(v3dViewer.scene);
+    d.linea=v3dViewer.entities.add({ polyline:{ width:4, clampToGround:suelo,
+      positions: suelo ? Cesium.Cartesian3.fromDegreesArray(d.verts.flatMap(v=>[v.lon,v.lat]))
+                       : Cesium.Cartesian3.fromDegreesArrayHeights(d.verts.flatMap(v=>[v.lon,v.lat,(v.zv||0)+2])),
+      material:Cesium.Color.fromCssColorString('#facc15') }});
+  }
+  if(!d.barra){ d.barra=el('div',{class:'v3d-dib',role:'toolbar'}); v3dViewer.container.append(d.barra); }
+  d.barra.style.display=d.enFicha?'none':'';
+  if(v3dBtnDib) v3dBtnDib.setAttribute('disabled','disabled');
+  const n=d.verts.length, m=v3dMedirDibujo(d.verts), des=o=>o?{disabled:'disabled'}:{};
+  const fuera=d.verts.filter(v=>v.z==null).length;
+  const cotas=!v3dDEM ? 'sin relieve cargado'
+    : 'desnivel '+Math.round(m.desnivel)+' m'+(fuera ? ' · '+fuera+' fuera del relieve' : '');
+  d.barra.textContent='';
+  d.barra.append(
+    el('div',{class:'v3d-dib-txt'},
+      el('b',{}, n ? 'Línea · '+n+' vértice'+(n===1?'':'s') : 'Dibujar línea'),
+      el('span',{}, n<2 ? 'Toca el terreno para poner cada vértice. Arrastra para mover la vista.'
+                        : fmtDistancia(m.largo)+' en planta · '+cotas)),
+    el('div',{class:'v3d-dib-btns'},
+      el('button',{class:'btn sec',title:'Quitar el último vértice','aria-label':'Deshacer',...des(!n),onclick:v3dDeshacerVertice},
+        '↶',el('span',{class:'txt-largo'},' Deshacer')),
+      el('button',{class:'btn sec',onclick:v3dCancelarDibujo},'Cancelar'),
+      el('button',{class:'btn',...des(n<2),onclick:v3dTerminarDibujo},'✓ Terminar')));
+}
+function v3dAgregarVertice(pos){
+  const d=v3dDibujo; if(!d || d.enFicha) return;
+  const sc=v3dViewer.scene, pk=sc.pick(pos), ent=pk&&pk.id;
+  let v;
+  if(ent && ent._v3dPunto && ent.position){
+    // punto de control: el vértice es el punto mismo, no el terreno que hay detrás
+    const c=Cesium.Cartographic.fromCartesian(ent.position.getValue(v3dViewer.clock.currentTime));
+    v={lat:Cesium.Math.toDegrees(c.latitude), lon:Cesium.Math.toDegrees(c.longitude), z:c.height, zv:c.height,
+       pt:ent._v3dPunto, nombre:ent._v3dNombre};
+    if(d.verts.length && d.verts[d.verts.length-1].pt===v.pt) return;   // doble toque sobre el mismo punto
+  }else{
+    const ray=v3dViewer.camera.getPickRay(pos), inter=ray && sc.globe.pick(ray,sc);
+    if(!inter){ toast('Toca sobre el terreno'); return; }
+    const c=Cesium.Cartographic.fromCartesian(inter);
+    const lat=Cesium.Math.toDegrees(c.latitude), lon=Cesium.Math.toDegrees(c.longitude), zd=v3dElevSync(lat,lon);
+    // Fuera del relieve cargado el globo es liso: su altura (~0) no es una cota. z queda null
+    // (sin dato) y zv, la altura del dibujo, sigue siendo la del globo.
+    v={lat, lon, z:zd, zv:c.height, pt:null};
+  }
+  d.verts.push(v);
+  d.ents.push(v3dViewer.entities.add({ position:Cesium.Cartesian3.fromDegrees(v.lon,v.lat,v.zv),
+    point:{ pixelSize:v.pt?15:11, color:Cesium.Color.fromCssColorString(v.pt?'#16a34a':'#ffffff'),
+      outlineColor:Cesium.Color.fromCssColorString(v.pt?'#ffffff':'#111111'), outlineWidth:2,
+      disableDepthTestDistance:Number.POSITIVE_INFINITY } }));
+  if(v.pt) toast('Vértice en el punto '+v.nombre);
+  v3dPintarDibujo();
+}
+function v3dDeshacerVertice(){
+  const d=v3dDibujo; if(!d || !d.verts.length) return;
+  d.verts.pop();
+  const e=d.ents.pop(); if(e) try{ v3dViewer.entities.remove(e); }catch(_){}
+  v3dPintarDibujo();
+}
+// La ficha se abre sobre la vista; mientras está abierta el dibujo queda en pausa (no se pierde
+// si el geólogo la cierra sin guardar: vuelve a la barra con los mismos vértices).
+function v3dTerminarDibujo(){
+  const d=v3dDibujo; if(!d) return;
+  if(d.verts.length<2){ toast('Traza al menos 2 vértices'); return; }
+  if(bloqueoGabineteActivo()) return;
+  const vs=d.verts;
+  const l={id:uid(), _parent:curProyecto.id, geom:vs.map(v=>[v.lat,v.lon]),
+    CLASE_LINEA:'Contacto', TIPO_INFORMACION:'Observada', NOTA:'',
+    // los puntos de control tocados quedan como puntos de apoyo de la línea (FK del modelo)
+    PUNTOS_APOYO:[...new Set(vs.filter(v=>v.pt).map(v=>v.pt))].join('; '),
+    _v3d:{fecha:new Date().toISOString(), z:vs.map(v=>v.z!=null?Math.round(v.z*10)/10:null), puntos:vs.map(v=>v.pt||null)}};
+  d.enFicha=true; v3dPintarDibujo();
+  formLinea(l, async()=>{
+    if(bloqueoGabineteActivo()){ d.enFicha=false; v3dPintarDibujo(); return; }
+    await put(storeLineaActivo(), l);
+    v3dLineasCambiaron=true;
+    v3dLimpiarDibujo();
+    await v3dPintarProyecto();
+    toast('Línea guardada en el proyecto');
+  }, null, {sinVertices:true, alCancelar:()=>{ if(v3dDibujo===d){ d.enFicha=false; v3dPintarDibujo(); } }});
+}
+// Tocar una línea ya guardada: su ficha, para clasificarla o borrarla. Los vértices se editan en
+// el mapa 2D (✥ Vértices), que es donde se ven en planta.
+function v3dEditarLinea(ln){
+  formLinea(ln, async()=>{
+    if(bloqueoGabineteActivo()) return;
+    await put(storeLineaActivo(), ln); v3dLineasCambiaron=true; await v3dPintarProyecto(); toast('Línea guardada');
+  }, async()=>{
+    if(bloqueoGabineteActivo()) return;
+    await del(storeLineaActivo(), ln.id); v3dLineasCambiaron=true; await v3dPintarProyecto(); toast('Línea eliminada');
+  }, {sinVertices:true});
+}
+
 // Panel lateral: estado del relieve y del motor 3D. Lo repintan las acciones que lo cambian.
 // Se puede plegar para agrandar el visor 3D (mismo botón "hacer lo mismo" que la cortina del
 // mapa 2D); persiste entre aperturas, igual que fabPlegado/topPlegado.
@@ -13306,8 +13477,16 @@ async function v3dPintarLado(){
     soltar:cambia=>{ lado.style.transition=''; lado.style.transform=''; if(cambia) v3dToggleLado(); } });
   // Colapsado no se pinta nada más: menos trabajo y nada que la CSS deba esconder aparte.
   if(colapsado) return;
+  // --- dibujo en curso: la barra sobre el visor manda; acá solo la guía ---
+  if(v3dDibujo){
+    lado.append(el('div',{},el('b',{},'✏️ Dibujando una línea')));
+    lado.append(el('div',{class:'muted',style:'color:#9fb0c0;line-height:1.5'},
+      'Toca el terreno para poner cada vértice. Si tocas un punto de control (verde), la línea pasa exactamente por él. ',
+      'Al terminar eliges el tipo: contacto, falla, cuerpo tabular…'));
+    lado.append(el('hr',{style:'border:0;border-top:1px solid #33404c;width:100%'}));
+  }
   // --- plano seleccionado: lo primero, porque es lo que el geólogo está mirando ---
-  if(v3dPlano){
+  else if(v3dPlano){
     const p=v3dPlano, cambiado=(p.rumbo!==p.rumbo0||p.manteo!==p.manteo0);
     const fila=(txt,campo,paso)=>el('div',{class:'v3d-fila'},
       el('span',{style:'width:56px'},txt),
@@ -13365,11 +13544,14 @@ async function v3dPintarLado(){
     lado.append(el('button',{class:'btn sec',onclick:()=>{v3dColocando=false; v3dPintarLado();}},'Cancelar'));
     lado.append(el('hr',{style:'border:0;border-top:1px solid #33404c;width:100%'}));
   }else{
+    lado.append(el('div',{},el('b',{},'✏️ Líneas')));
+    lado.append(el('button',{class:'btn',onclick:v3dIniciarDibujo},'✏️ Dibujar una línea sobre el relieve'));
     lado.append(el('div',{class:'muted',style:'color:#9fb0c0'},
-      'Toca un plano de actitud (los cuadrados azules) para ajustarlo sobre el terreno.'));
+      'Toca una línea del proyecto para clasificarla o borrarla, o un plano de actitud (cuadrado azul) para ajustarlo sobre el terreno.'));
+    lado.append(el('hr',{style:'border:0;border-top:1px solid #33404c;width:100%'}));
   }
   // --- planos proyectados: crear uno nuevo y listar los guardados del proyecto ---
-  if(!v3dPlano && !v3dColocando){
+  if(!v3dPlano && !v3dColocando && !v3dDibujo){
     lado.append(el('div',{},el('b',{},'📐 Planos proyectados')));
     lado.append(el('div',{class:'v3d-fila'},
       el('button',{class:'btn sec',onclick:v3dNuevoPlanoProyectado},'👆 Tocar el terreno'),
@@ -13445,9 +13627,12 @@ async function v3dAbrir(){
   v3dOv=el('div',{class:'v3d-ov'},
     el('div',{class:'v3d-top'},
       el('b',{},'⛰️ Vista 3D'),
-      el('button',{class:'btn',onclick:()=>v3dCerrar()},'✓ Listo')),
+      el('div',{class:'v3d-top-btns'},
+        v3dBtnDib=el('button',{class:'btn sec',disabled:'disabled',title:'Dibujar una línea sobre el relieve',onclick:v3dIniciarDibujo},'✏️ Dibujar'),
+        el('button',{class:'btn',onclick:()=>v3dCerrar()},'✓ Listo'))),
     el('div',{class:'v3d-cuerpo'}, cv, v3dLado));
-  v3dOnKey=e=>{ if(e.key==='Escape') v3dCerrar(); };
+  // Escape suelta primero el dibujo en curso; recién sin dibujo cierra la vista.
+  v3dOnKey=e=>{ if(e.key!=='Escape' || document.querySelector('.fmov')) return; if(v3dDibujo) v3dCancelarDibujo(); else v3dCerrar(); };
   document.addEventListener('keydown',v3dOnKey);
   document.body.append(v3dOv);
   // El contenedor tiene que estar MEDIDO antes de crear el Viewer (ver la regla dura del CSS).
@@ -13527,6 +13712,7 @@ async function v3dAbrir(){
   if(v3dMsg){ v3dMsg.remove(); v3dMsg=null; }
   v3dHandler=new Cesium.ScreenSpaceEventHandler(v3dViewer.scene.canvas);
   v3dHandler.setInputAction(mov=>{
+    if(v3dDibujo){ v3dAgregarVertice(mov.position); return; }
     const p=v3dViewer.scene.pick(mov.position);
     const ent=p&&p.id;
     if(v3dColocando){
@@ -13548,6 +13734,7 @@ async function v3dAbrir(){
     if(!ent) return;
     if(ent._v3dPlano){ v3dSeleccionarPlano(ent._v3dPlano); return; }
     if(ent._v3dPlanoProy){ v3dAbrirPlanoProy(ent._v3dPlanoProy); return; }
+    if(ent._v3dLinea){ v3dEditarLinea(ent._v3dLinea); return; }
     // Abrir la ficha obliga a cerrar la vista: si el usuario prefiere quedarse (ajuste sin
     // guardar), v3dCerrar devuelve false y no se navega a ninguna parte.
     if(ent._v3dPunto){ const id=ent._v3dPunto; if(v3dCerrar()){ curPunto=null; vista={n:'punto',id}; render(); } }
@@ -13555,6 +13742,7 @@ async function v3dAbrir(){
   v3dInstalarGizmos();
   await v3dPintarProyecto();
   v3dPintarLado();
+  if(v3dBtnDib && v3dOv) v3dBtnDib.removeAttribute('disabled');
   v3dBtnEstado('⛰️ 3D', true);
 }
 
@@ -13562,6 +13750,9 @@ async function v3dAbrir(){
 function v3dCerrar(){
   if(v3dPlano && (v3dPlano.rumbo!==v3dPlano.rumbo0 || v3dPlano.manteo!==v3dPlano.manteo0) &&
      !confirm('Hay un plano ajustado sin guardar. ¿Salir igual?')) return false;
+  if(v3dDibujo && v3dDibujo.verts.length>1 &&
+     !confirm('Hay una línea sin terminar. ¿Salir igual?')) return false;
+  v3dDibujo=null; v3dBtnDib=null;
   if(v3dOnKey){ document.removeEventListener('keydown',v3dOnKey); v3dOnKey=null; }
   if(v3dHandler){ try{ v3dHandler.destroy(); }catch(e){} v3dHandler=null; }
   if(v3dViewer){
@@ -13581,7 +13772,8 @@ function v3dCerrar(){
   // A proposito NO se sueltan v3dDEM ni el <script> de Cesium ya cargado: reabrir es instantaneo
   // y el DEM cuesta una descarga. Lo que si se destruye es el Viewer, porque el overlay sale del
   // DOM al cerrar y un canvas de Cesium desprendido queda roto para siempre.
-  if(mapaVista) setTimeout(()=>{ try{ mapaVista.invalidateSize(); }catch(e){} },120);
+  if(v3dLineasCambiaron && mapaVista){ v3dLineasCambiaron=false; initMapaVista(_puntosMapa); }
+  else if(mapaVista) setTimeout(()=>{ try{ mapaVista.invalidateSize(); }catch(e){} },120);
   return true;
 }
 
@@ -16623,8 +16815,12 @@ function bannerMedir(){
     el('button',{class:'btn del mini',onclick:cancelarMedir},'✕ Cerrar'));
   cont.append(b);
 }
-function formLinea(linea,onSave,onDelete){
-  const ov=el('div',{class:'fmov',onclick:e=>{if(e.target===ov)ov.remove();}});
+// opts (Vista 3D): sinVertices oculta ✥ Vértices (editor 2D, que no se ve bajo la vista);
+// alCancelar avisa que la ficha se cerró sin guardar, para retomar el dibujo en curso.
+function formLinea(linea,onSave,onDelete,opts){
+  opts=opts||{};
+  const cerrarSinGuardar=()=>{ ov.remove(); if(opts.alCancelar) opts.alCancelar(); };
+  const ov=el('div',{class:'fmov',onclick:e=>{if(e.target===ov)cerrarSinGuardar();}});
   const box=el('div',{class:'card',style:'max-width:440px;width:92vw'});
   box.append(el('h2',{},'✏️ Línea de control'));
   const f=formulario('linea', linea, {puntos:_puntosMapa});
@@ -16632,12 +16828,12 @@ function formLinea(linea,onSave,onDelete){
   box.append(el('div',{class:'muted',style:'font-size:11px'},(linea.geom||[]).length+' vértices'));
   const bar=el('div',{class:'btnbar'});
   bar.append(el('button',{class:'btn',onclick:()=>{Object.assign(linea,f.getData());ov.remove();onSave();}},'Guardar'));
-  if((linea.geom||[]).length>1)bar.append(el('button',{class:'btn blue',onclick:()=>{ov.remove();perfilAbrir(linea.geom,linea.ID_LINEA||linea.CLASE_LINEA||'Línea');}},'📈 Perfil'));
+  if((linea.geom||[]).length>1)bar.append(el('button',{class:'btn blue',onclick:()=>{cerrarSinGuardar();perfilAbrir(linea.geom,linea.ID_LINEA||linea.CLASE_LINEA||'Línea');}},'📈 Perfil'));
   // ✥ solo en una línea ya guardada (onDelete existe): al terminar se reabre la ficha con la forma nueva
-  if(onDelete&&(linea.geom||[]).length>1)bar.append(el('button',{class:'btn sec',onclick:()=>{Object.assign(linea,f.getData());ov.remove();
+  if(onDelete&&!opts.sinVertices&&(linea.geom||[]).length>1)bar.append(el('button',{class:'btn sec',onclick:()=>{Object.assign(linea,f.getData());ov.remove();
     editarVertices(linea.geom,false,g=>{linea.geom=g;formLinea(linea,onSave,onDelete);},()=>formLinea(linea,onSave,onDelete));}},'✥ Vértices'));
   if(onDelete)bar.append(el('button',{class:'btn del',onclick:()=>{if(confirm('¿Eliminar esta línea?')){ov.remove();onDelete();}}},'Eliminar'));
-  bar.append(el('button',{class:'btn sec',onclick:()=>ov.remove()},'Cancelar'));
+  bar.append(el('button',{class:'btn sec',onclick:cerrarSinGuardar},'Cancelar'));
   box.append(bar);ov.append(box);document.body.append(ov);
 }
 
