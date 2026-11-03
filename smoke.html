@@ -2206,6 +2206,22 @@ async function correr(){
       return nombre + ': fuera de MIAS, solo se purgan sus versiones viejas';
     });
 
+    await prueba('Mapeo RA (vendor/ra) vive en su propia caché y carga el módulo', async () => {
+      const sw = await (await fetch('sw.js?smoke=' + Date.now())).text();
+      const nombre = (sw.match(/const RA_CACHE='([^']+)'/) || [])[1];
+      ok(/^geonotas-ra-v\d+$/.test(nombre || ''), 'nombre de la caché RA: ' + nombre);
+      const mias = (sw.match(/const MIAS=\[([^\]]+)\]/) || ['', ''])[1];
+      const patrones = [...mias.matchAll(/\/\^([^/]+)\$\//g)].map(m => new RegExp('^' + m[1] + '$'));
+      ok(!patrones.some(re => re.test(nombre)), 'MIAS purgaría la caché RA');
+      ok(/k!==RA_CACHE&&esRaCache\(k\)/.test(sw), 'activate debe purgar solo las versiones VIEJAS de la RA');
+      ok(/esRa\(u\)[\s\S]{0,80}caches\.open\(RA_CACHE\)/.test(sw), 'la rama de fetch de la RA no usa su caché');
+      ok(!/vendor\/ra/.test((sw.match(/const ASSETS=\[[\s\S]*?\];/) || [''])[0]), 'vendor/ra no va en ASSETS');
+      const m = await w.eval("import('./vendor/ra/ra-mapeo.js')");
+      ok(typeof m.abrir === 'function' && typeof m.cerrar === 'function' && m.abierto() === false, 'el módulo exporta abrir/cerrar');
+      ok(typeof w.raAbrir === 'function' && typeof w.raTerminar === 'function', 'la app tiene raAbrir/raTerminar');
+      return nombre + ': módulo cargado con import(), fuera de ASSETS';
+    });
+
     await prueba('Versión nueva: aviso con botón, sin recargar a mitad de una ficha', async () => {
       w.avisoActualizacion(); w.avisoActualizacion();
       const avisos = w.document.querySelectorAll('#aviso-version');

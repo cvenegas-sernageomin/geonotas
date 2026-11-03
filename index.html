@@ -284,8 +284,8 @@
   }
   @media(min-width:760px){ .v3d-dib{left:50%;right:auto;transform:translateX(-50%);width:520px;max-width:calc(100% - 16px)} }
   /* Con la Vista 3D abierta (z-index 4000) las fichas y avisos tienen que quedar encima de ella. */
-  body:has(.v3d-ov) .fmov{z-index:4100}
-  body:has(.v3d-ov) .toast{z-index:4200;bottom:auto;top:calc(56px + env(safe-area-inset-top))}   /* arriba: abajo tapaba la barra de dibujo */
+  body:has(.v3d-ov) .fmov, body:has(.ra-ov) .fmov{z-index:4100}
+  body:has(.v3d-ov) .toast, body:has(.ra-ov) .toast{z-index:4200;bottom:auto;top:calc(56px + env(safe-area-inset-top))}   /* arriba: abajo tapaba la barra de dibujo */
   @media(min-width:760px){
     .v3d-cuerpo{flex-direction:row}
     .v3d-lado{flex:0 0 300px;max-height:none}
@@ -13432,6 +13432,55 @@ function v3dTerminarDibujo(){
     toast('Línea guardada en el proyecto');
   }, null, {sinVertices:true, alCancelar:()=>{ if(v3dDibujo===d){ d.enFicha=false; v3dPintarDibujo(); } }});
 }
+// ---- Mapeo RA (cámara): módulo de carga diferida en vendor/ra/ ----
+// three.js y el motor RA (~850 KB) se bajan solo al tocar 📷 RA; quedan cacheados por la rama
+// cache-first del SW. El módulo dibuja sobre la imagen calzada con el relieve y entrega los
+// vértices; acá se arma el MISMO registro de línea que en el mapa 2D y en la Vista 3D.
+let raMod=null, raCambios=false;
+async function raAbrir(){
+  if(!curProyecto){ toast('Abre un proyecto para dibujar'); return; }
+  if(bloqueoGabineteActivo()) return;
+  // iPhone: el permiso de orientación hay que pedirlo DENTRO del toque, antes de cualquier await
+  let permisoOri=null;
+  if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function')
+    permisoOri=DeviceOrientationEvent.requestPermission().catch(()=>'denied');
+  try{ raMod=raMod||await import('./vendor/ra/ra-mapeo.js'); }
+  catch(e){ console.warn('RA:',e); toast('No se pudo cargar la RA. Ábrela una vez con conexión.'); return; }
+  // ?rasim=lat,lon,rumbo: posición simulada sin cámara ni sensores (pruebas en escritorio)
+  const s=(new URLSearchParams(location.search).get('rasim')||'').split(',').map(Number);
+  const sim=s.length>=2&&s.every(isFinite)?{lat:s[0],lon:s[1],rumbo:s[2]||0}:null;
+  raMod.abrir({ permisoOri, sim, toast,
+    declinacion:(lat,lon)=>declinacionMagnetica(lat,lon),
+    datos:raDatos, terminar:raTerminar,
+    alCerrar:()=>{ if(raCambios&&mapaVista){ raCambios=false; initMapaVista(_puntosMapa); } } });
+}
+async function raDatos(){
+  const puntos=(await childrenOf(storeActivo(),curProyecto.id)).map(p=>{
+    const lat=parseFloat(p[inLat]), lon=parseFloat(p[inLon]), c=parseFloat(p.COTA);
+    return isNaN(lat)||isNaN(lon)?null:{id:p.id, lat, lon, nombre:p.ID_PUNTO_CONTROL||'', cota:isNaN(c)?null:c};
+  }).filter(Boolean);
+  const lineas=(await childrenOf(storeLineaActivo(),curProyecto.id))
+    .filter(l=>l.geom&&l.geom.length>1).map(l=>({geom:l.geom, color:estiloLinea(l).color}));
+  return {puntos, lineas};
+}
+// Resuelve true si la línea quedó guardada; false si la ficha se cerró sin guardar (el dibujo sigue).
+function raTerminar(res){
+  return new Promise(resolve=>{
+    if(bloqueoGabineteActivo()){ resolve(false); return; }
+    const vs=res.verts;
+    const l={id:uid(), _parent:curProyecto.id, geom:vs.map(v=>[v.lat,v.lon]),
+      CLASE_LINEA:'Contacto', TIPO_INFORMACION:'Observada', NOTA:'',
+      PUNTOS_APOYO:[...new Set(vs.filter(v=>v.pt).map(v=>v.pt))].join('; '),
+      // trazabilidad: desde dónde se miró, con qué ajuste y qué tan confiable es cada vértice
+      _ra:{fecha:new Date().toISOString(), estacion:res.estacion, ajuste:res.ajuste,
+        z:vs.map(v=>v.z!=null?Math.round(v.z*10)/10:null), dist:vs.map(v=>v.dist), rasante:vs.map(v=>v.rasante), calidad:vs.map(v=>v.calidad)}};
+    formLinea(l, async()=>{
+      if(bloqueoGabineteActivo()){ resolve(false); return; }
+      await put(storeLineaActivo(), l); raCambios=true;
+      toast('Línea guardada en el proyecto'); resolve(true);
+    }, null, {sinVertices:true, alCancelar:()=>resolve(false)});
+  });
+}
 // Tocar una línea ya guardada: su ficha, para clasificarla o borrarla. Los vértices se editan en
 // el mapa 2D (✥ Vértices), que es donde se ven en planta.
 function v3dEditarLinea(ln){
@@ -16214,6 +16263,7 @@ async function renderMapa(app){
     // una capa del mapa que haya que reenganchar cuando initMapaVista reconstruye el Leaflet,
     // es un overlay que se crea y se destruye entero en cada apertura.
     el('button',{class:'btn sec mini',id:'btnVista3D',onclick:v3dAbrir},'⛰️ 3D'),
+    el('button',{class:'btn sec mini',id:'btnRA',title:'Dibujar líneas sobre la cámara, calzada con el relieve',onclick:raAbrir},'📷 RA'),
     el('button',{class:'btn sec mini',id:'btnArticulos',onclick:agToggle},'📚 Artículos'),
     el('button',{class:'btn sec mini',onclick:()=>nav({n:'home'})},'⌂'));
   setTimeout(()=>initMapaVista(conC),80);
