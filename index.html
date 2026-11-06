@@ -396,6 +396,27 @@
   [data-c="met"]{color:var(--ic-met)} [data-c="tec"]{color:var(--ic-tec)} [data-c="ant"]{color:var(--ic-ant)}
   .hoja{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:820px;height:72vh;height:72dvh;max-height:calc(100dvh - var(--headh,90px) - 8px);z-index:60;background:var(--surface);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px -12px rgba(0,0,0,.45);display:flex;flex-direction:column;animation:hojaSube .2s ease-out;transition:transform .15s}
   .hoja.alta{height:calc(100dvh - var(--headh,90px) - 8px)}
+  /* En la vista del punto la hoja se apoya SOBRE la barra de iconos (pedido del usuario: el flujo
+     estaba fragmentado; para pasar de Punto a Litología o a Fotos había que cerrar la hoja y volver
+     al mapa). La barra queda siempre a la vista y un toque cambia de ficha. */
+  .hoja.sobre-dock{bottom:calc(68px + env(safe-area-inset-bottom));border-radius:18px;
+    height:calc(72dvh - 68px);max-height:calc(100dvh - var(--headh,90px) - 76px - env(safe-area-inset-bottom));
+    box-shadow:0 -10px 30px -12px rgba(0,0,0,.45),0 6px 14px -8px rgba(0,0,0,.35)}
+  .hoja.sobre-dock.alta{height:calc(100dvh - var(--headh,90px) - 76px - env(safe-area-inset-bottom))}
+  .hoja.sobre-dock .hoja-cuerpo{padding-bottom:16px}
+  .hoja-cam{width:40px;height:40px;border-radius:50%;border:none;background:var(--surface2);color:var(--verde);cursor:pointer;flex:0 0 auto;padding:0;display:flex;align-items:center;justify-content:center}
+  .hoja-cam svg{width:22px;height:22px}
+  /* Invitación a otra foto: arriba de la barra de iconos, se va sola (la barra marca el tiempo) */
+  .otra-foto{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));z-index:4300;
+    width:min(420px,calc(100vw - 24px));display:flex;align-items:center;gap:8px;background:var(--surface);color:var(--txt);
+    border:1px solid var(--bd);border-radius:16px;padding:10px 10px 12px 14px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);overflow:hidden;animation:ofEntra .18s ease-out}
+  @keyframes ofEntra{from{opacity:0}to{opacity:1}}
+  .otra-foto .of-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+  .otra-foto .of-txt b{font-size:14.5px}
+  .otra-foto .of-txt span{font-size:12px;color:var(--muted)}
+  .otra-foto .btn{min-height:44px;margin:0}
+  .otra-foto .of-barra{position:absolute;left:0;bottom:0;height:3px;background:var(--verde);animation:ofBarra 8s linear forwards}
+  @keyframes ofBarra{from{width:100%}to{width:0}}
   @keyframes hojaSube{from{transform:translateY(35%);opacity:.5}}
   .hoja-manija{width:44px;height:5px;border-radius:3px;background:var(--bd2);margin:8px auto 2px;flex:0 0 auto}
   .hoja-cab{display:flex;align-items:center;gap:10px;padding:4px 12px 8px;flex:0 0 auto;touch-action:none}
@@ -10801,24 +10822,77 @@ async function zonasPintarBlob(img,blob){
 // Tesela de una capa base con zonas: la zona primero; si no la trae, la red; si la red falla
 // (sin señal), el sobre-zoom. Leaflet recibe done() recién al final, para no marcar la tesela
 // como errónea (queda oculta) cuando la red falla pero el sobre-zoom sí la resuelve.
+// Más allá del zoom bajado (pedido del usuario): la imagen de la zona NO puede desaparecer al
+// acercar. Antes el sobre-zoom solo entraba si la red FALLABA; con señal, Esri entrega a zoom alto
+// una tesela gris «Map data not yet available» (HTTP 200) que tapaba la imagen, y con señal débil
+// la tesela quedaba vacía hasta que la petición caducaba. Ahora, con sobre-zoom disponible:
+// - sin red: el sobre-zoom directo;
+// - con red: se pide la tesela con blankTile=false (Esri responde 404 donde no tiene imagen, en vez
+//   de la tesela gris) y con plazo de 6 s; si no llega, el sobre-zoom.
+const ZONAS_PLAZO_RED=6000;
+function urlSinBlanco(u){ return /arcgisonline\.com\/ArcGIS\/rest\/services\/.+\/MapServer\/tile\//.test(u)?u+(u.includes('?')?'&':'?')+'blankTile=false':u; }
+async function zonasRedBlob(url){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),ZONAS_PLAZO_RED);
+  try{
+    const r=await fetch(urlSinBlanco(url),{mode:'cors',signal:ctl.signal});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const b=await r.blob(); if(!b.size) throw new Error('tesela vacía');
+    return b;
+  } finally { clearTimeout(t); }
+}
 async function zonasPintar(img,base,c,urlRed){
   const zs=zonasDeBase(base,c.z,c.x,c.y);
   const blob=zs.length?await zonasLeerTesela(zs,c.z,c.x,c.y):null;
   if(blob) return zonasPintarBlob(img,blob);
+  const sz=zonasSobrezoomDeBase(base,c.z,c.x,c.y);
+  if(sz.length){
+    let b=null;
+    if(navigator.onLine){ try{ b=await zonasRedBlob(urlRed); }catch(e){} }
+    if(!b) b=await zonasLeerSobrezoom(sz,c.z,c.x,c.y);
+    if(!b) throw new Error('sin tesela');
+    return zonasPintarBlob(img,b);
+  }
   try{ img.crossOrigin=''; return await zonasCargarImg(img,urlRed); }
   catch(e){
-    const sz=zonasSobrezoomDeBase(base,c.z,c.x,c.y);
-    const b2=sz.length?await zonasLeerSobrezoom(sz,c.z,c.x,c.y):null;
+    const b2=await sobrezoomRed(this,c);   // sin zona: una antepasada ya vista (caché del navegador)
     if(!b2) throw e;
     img.removeAttribute('crossorigin'); return zonasPintarBlob(img,b2);
   }
 }
+// Sin zona bajada, una tesela que falla (sin señal, o Esri sin imagen a ese zoom) se reemplaza por
+// la antepasada ampliada, si el navegador la tiene (se vio al acercar). Hasta 4 niveles.
+async function sobrezoomRed(tl,c){
+  if(!tl||!tl._url) return null;
+  for(let dz=1;dz<=4&&c.z-dz>=0;dz++){
+    const px=c.x>>dz, py=c.y>>dz, k=2**dz;
+    const url=L.Util.template(tl._url,L.extend({},tl.options,{x:px,y:py,z:c.z-dz,s:tl._getSubdomain?tl._getSubdomain({x:px,y:py}):'a',r:''}));
+    let blob=null;
+    try{ const r=await fetch(url,{mode:'cors',cache:'force-cache'}); if(r.ok) blob=await r.blob(); }catch(e){}
+    if(!blob||!blob.size) continue;
+    const im=await v3dBlobADibujable(blob), lado=im.width/k;
+    const cv=document.createElement('canvas'); cv.width=cv.height=256;
+    cv.getContext('2d').drawImage(im,(c.x-px*k)*lado,(c.y-py*k)*lado,lado,lado,0,0,256,256);
+    if(im.close) im.close();
+    return await new Promise(r=>cv.toBlob(r,'image/jpeg',0.9));
+  }
+  return null;
+}
 function zonasEnganchar(tl,base){
   const orig=tl.createTile.bind(tl);
   tl.createTile=function(c,done){
-    if(!zonasDeBase(base,c.z,c.x,c.y).length&&!zonasSobrezoomDeBase(base,c.z,c.x,c.y).length) return orig(c,done);
+    if(!zonasDeBase(base,c.z,c.x,c.y).length&&!zonasSobrezoomDeBase(base,c.z,c.x,c.y).length){
+      // la tesela de siempre; si falla, la antepasada ampliada en vez de un hueco gris
+      return orig(c,(err,im)=>{
+        if(!err) return done(null,im);
+        sobrezoomRed(tl,c).then(b=>{
+          if(!b) return done(err,im);
+          im.onload=im.onerror=null; im.removeAttribute('crossorigin');
+          zonasPintarBlob(im,b).then(()=>done(null,im),()=>done(err,im));
+        },()=>done(err,im));
+      });
+    }
     const img=document.createElement('img'); img.alt=''; img.setAttribute('role','presentation');
-    zonasPintar(img,base,c,this.getTileUrl(c)).then(()=>done(null,img),e=>done(e,img));
+    zonasPintar.call(this,img,base,c,this.getTileUrl(c)).then(()=>done(null,img),e=>done(e,img));
     return img;
   };
 }
@@ -15020,7 +15094,7 @@ async function renderPuntoIconos(app){
     const herr=el('div',{class:'pv-herr'},
       el('button',{type:'button',title:'Ver como lista','aria-label':'Ver como lista',onclick:()=>fijarModoVistaPunto('lista')},'≡'),
       el('button',{type:'button',title:'Centrar en el punto','aria-label':'Centrar en el punto',
-        onclick:()=>{ if(mapa&&marcador) mapa.setView(marcador.getLatLng(),Math.max(mapa.getZoom(),16)); }},'⌖'));
+        onclick:()=>{ if(mapa&&marcador) mapa.setView(marcador.getLatLng(),Math.max(mapa.getZoom(),GPS_ZOOM)); }},'⌖'));
     const dock=el('div',{class:'dock',role:'toolbar','aria-label':'Fichas del punto'});
     const raiz=el('div',{class:'pv','data-id':curPunto.id},el('div',{id:'map',class:'pv-mapa'}),fotoBox,herr,
       el('div',{class:'pv-aviso'}),el('div',{class:'dock-fondo'}),dock,
@@ -15154,9 +15228,15 @@ function crearHoja(titulo, clave){
   cerrarHojas();
   const tabs=el('div',{class:'hoja-tabs',role:'tablist'}), cuerpo=el('div',{class:'hoja-cuerpo'});
   const manija=el('div',{class:'hoja-manija'});
+  // En la vista del punto: la hoja queda sobre la barra de iconos y lleva su propio 📷 (la foto va
+  // al punto abierto), así desde cualquier ficha se saca una foto sin cerrar nada.
+  const enPunto=!!(pv&&document.querySelector('.pv .dock'));
   const cab=el('div',{class:'hoja-cab'},el('span',{class:'hoja-ic','data-c':colorIc(clave),html:iconoDe(clave)}),
-    el('b',{},titulo),el('button',{type:'button',class:'hoja-x','aria-label':'Cerrar',onclick:()=>cerrarHojas()},'✕'));
-  const hoja=el('div',{class:'hoja','data-clave':clave,role:'dialog','aria-label':titulo},manija,cab,tabs,cuerpo);
+    el('b',{},titulo),
+    enPunto&&clave!=='__ajustes'?el('button',{type:'button',class:'hoja-cam',title:'Foto para este punto','aria-label':'Tomar una foto para este punto',
+      onclick:()=>fotoAlPunto(),html:iconoDe('foto')}):null,
+    el('button',{type:'button',class:'hoja-x','aria-label':'Cerrar',onclick:()=>cerrarHojas()},'✕'));
+  const hoja=el('div',{class:'hoja'+(enPunto?' sobre-dock':''),'data-clave':clave,role:'dialog','aria-label':titulo},manija,cab,tabs,cuerpo);
   document.body.append(hoja);
   arrastreHoja(hoja,[manija,cab]);
   return {hoja,tabs,cuerpo};
@@ -15620,7 +15700,17 @@ function bloqueFoto(reg,litos){
   wrap.append(entradasFoto(async file=>{
     const img=await comprimir(file,1280,.72);reg._img=img;
     Object.assign(reg,f.getData());await put('foto',reg);
-    thumbs.innerHTML='';thumbs.append(el('img',{src:img}));toast('Foto agregada');
+    thumbs.innerHTML='';thumbs.append(el('img',{src:img}));
+    // vista del punto: invitar a la siguiente foto, que entra como ficha nueva y se abre en la hoja
+    if(pv&&curPunto&&document.querySelector('.pv')&&reg._parent===curPunto.id){
+      const otra=()=>abrirCamara(async file2=>{
+        await agregarFotoAlPunto(await comprimir(file2,1280,.72));
+        const n=(await childrenOf('foto',curPunto.id)).length;
+        pv.hoja={clave:'foto',idx:n-1}; await renderPuntoIconos($('#app'));
+        invitarOtraFoto(n,otra);
+      });
+      invitarOtraFoto((await childrenOf('foto',reg._parent)).length,otra);
+    } else toast('Foto agregada');
   },'blue mini'),thumbs);
   f.node.addEventListener('change',async()=>{Object.assign(reg,f.getData());await put('foto',reg);});
   return wrap;
@@ -16816,6 +16906,7 @@ let midiendo=false;   // modo medir distancia: reusa _verts/_tmpLine/_tmpMk de d
 // z15). Antes cada lectura forzaba z17 bajo z15, así que alejarse para ver el contexto duraba
 // hasta el siguiente fix (~1 s). Arrastrar el mapa pausa el recentrado (el punto azul se sigue
 // moviendo); tocar 📡 con el seguimiento pausado recentra en vez de apagar.
+const GPS_ZOOM=18;   // zoom al que acerca el 📡 (mapa del proyecto) y el ⌖ del punto
 let gpsWatchId=null, gpsDot=null, gpsAcc=null, gpsSiguiendo=true, gpsPrimerFix=true, gpsUltimo=null, gpsBtn=null;
 function gpsPintarBtn(){
   if(!gpsBtn) return;
@@ -16840,7 +16931,8 @@ function toggleGPSLive(btn){
   if(btn) gpsBtn=btn;
   if(gpsWatchId!=null && !gpsSiguiendo){
     gpsSiguiendo=true; gpsPintarBtn();
-    if(gpsUltimo && mapaVista) mapaVista.panTo(gpsUltimo,{animate:false});
+    // tocar 📡 en pausa: vuelve a la posición Y se acerca (si el usuario estaba más cerca, se respeta)
+    if(gpsUltimo && mapaVista) mapaVista.setView(gpsUltimo,Math.max(mapaVista.getZoom(),GPS_ZOOM),{animate:false});
     return;
   }
   if(gpsWatchId!=null){ pararGPSLive(); gpsPintarBtn(); return; }
@@ -16862,7 +16954,9 @@ function toggleGPSLive(btn){
       gpsDot.setLatLng(ll); gpsAcc.setLatLng(ll).setRadius(p.coords.accuracy);
     }
     pillGPS(p.coords.accuracy);
-    if(gpsPrimerFix){ gpsPrimerFix=false; mapaVista.setView(ll, mapaVista.getZoom()<15?17:mapaVista.getZoom()); }
+    // pedido del usuario: al encender el GPS el mapa se acerca de verdad a donde está (z18, ~0,6 m/px);
+    // antes z17 solo si venía de más lejos que z15, y entre z15 y z17 quedaba «muy lejos»
+    if(gpsPrimerFix){ gpsPrimerFix=false; mapaVista.setView(ll, Math.max(mapaVista.getZoom(),GPS_ZOOM)); }
     else if(gpsSiguiendo) mapaVista.panTo(ll,{animate:false});
   }, e=>toast('GPS: '+e.message), {enableHighAccuracy:true, maximumAge:0, timeout:20000});
   gpsPintarBtn();
@@ -17268,8 +17362,16 @@ function fotoRapida(){
     const p=await registrarPuntoRapido(img,r);
     toast('📷 '+p.ID_PUNTO_CONTROL+' registrado · ±'+Math.round(r.acc)+' m'+(calidadGPS(r.acc)==='malo'?' (fuera del umbral)':''));
     if(vista.n==='mapa') render();
+    otraFotoRapida(p,1);
   });
   inp.click();
+}
+// Las fotos siguientes de un registro rápido van al MISMO punto (mismo afloramiento), sin otro GPS.
+function otraFotoRapida(p,n){
+  invitarOtraFoto(n,()=>abrirCamara(async file=>{
+    await put('foto',{id:uid(),_parent:p.id,_img:await comprimir(file,1280,.72)});
+    otraFotoRapida(p,n+1);
+  }));
 }
 // GPS insuficiente y el usuario eligió ubicarlo a mano: un toque en el mapa fija el punto.
 function ubicarFotoEnMapa(img){
@@ -17286,19 +17388,37 @@ function ubicarFotoEnMapa(img){
   mapaVista.getContainer().style.cursor='crosshair';
   mapaVista.on('click',tocar);
 }
-// 📷 de la vista del punto (v158): la foto se suma a las del punto abierto, sin crear otro punto.
-function fotoAlPunto(){
-  if(bloqueoGabineteActivo()||!pv) return;
+// Abre la cámara del teléfono. Tiene que llamarse DENTRO de un toque: el navegador solo abre la
+// cámara (input.click) con un gesto del usuario, por eso «otra foto» no puede reabrirla sola.
+function abrirCamara(onFile){
   const inp=el('input',{type:'file',accept:'image/*',capture:'environment',style:'display:none'});
   document.body.append(inp);
   inp.addEventListener('cancel',()=>inp.remove());
-  inp.addEventListener('change',async()=>{
-    const file=inp.files[0]; inp.remove(); if(!file) return;
-    await agregarFotoAlPunto(await comprimir(file,1280,.72));
-    toast('📷 Foto agregada a '+(curPunto.ID_PUNTO_CONTROL||'el punto'));
-    if(document.querySelector('.pv')) await renderPuntoIconos($('#app'));   // la cuenta del icono Fotos
-  });
+  inp.addEventListener('change',async()=>{ const file=inp.files[0]; inp.remove(); if(file) await onFile(file); });
   inp.click();
+}
+// Después de guardar una foto se invita a sacar otra (pedido del usuario: el «agregar otra foto»
+// era engorroso). Un toque en «📷 Otra foto» abre la cámara; si no se toca, la invitación se va
+// sola a los 8 s y se sigue donde se estaba: la foto ya quedó guardada.
+function invitarOtraFoto(n, alOtra){
+  const prev=document.getElementById('otraFoto'); if(prev){ clearTimeout(prev._t); prev.remove(); }
+  const fin=otra=>{ clearTimeout(box._t); box.remove(); if(otra) alOtra(); };
+  const box=el('div',{id:'otraFoto',class:'otra-foto',role:'status'},
+    el('div',{class:'of-txt'},el('b',{},'✓ Foto guardada'),el('span',{},n>1?n+' fotos en este punto':'Puedes seguir sacando')),
+    el('button',{class:'btn sec',onclick:()=>fin(false)},'Listo'),
+    el('button',{class:'btn',onclick:()=>fin(true),html:'📷 Otra foto'}),
+    el('i',{class:'of-barra'}));
+  box._t=setTimeout(()=>fin(false),8000);
+  document.body.append(box);
+}
+// 📷 de la vista del punto (v158): la foto se suma a las del punto abierto, sin crear otro punto.
+function fotoAlPunto(){
+  if(bloqueoGabineteActivo()||!pv) return;
+  abrirCamara(async file=>{
+    await agregarFotoAlPunto(await comprimir(file,1280,.72));
+    if(document.querySelector('.pv')) await renderPuntoIconos($('#app'));   // la cuenta del icono Fotos
+    invitarOtraFoto((await childrenOf('foto',curPunto.id)).length, fotoAlPunto);
+  });
 }
 async function agregarFotoAlPunto(img){
   await guardarPuntoForm(pv.f);   // un punto nuevo todavía sin guardar tiene que existir para colgarle la foto

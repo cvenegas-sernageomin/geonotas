@@ -1763,7 +1763,7 @@ async function correr(){
         const fix = (la, lo) => cb({coords:{latitude:la, longitude:lo, accuracy:10}});
         w.toggleGPSLive(null);
         fix(-33.4, -70.6);
-        eq(m.getZoom(), 17, 'el primer fix debe acercar a z17');
+        eq(m.getZoom(), 18, 'el primer fix debe acercar a z18');
         m.setZoom(10, {animate:false});
         fix(-33.41, -70.61);
         eq(m.getZoom(), 10, 'un fix posterior volvió a forzar el zoom');
@@ -1771,10 +1771,12 @@ async function correr(){
         m.fire('dragstart');
         fix(-33.6, -70.9);
         ok(Math.abs(m.getCenter().lat + 33.41) < 1e-3, 'tras arrastrar, el seguimiento debe quedar pausado');
-        w.toggleGPSLive(null);   // pausado → recentra (panTo animado: esperar a que termine)
+        w.toggleGPSLive(null);   // pausado → recentra y acerca
         for (let i = 0; i < 40 && Math.abs(m.getCenter().lat + 33.6) >= 1e-3; i++) await new Promise(r => setTimeout(r, 50));
         ok(Math.abs(m.getCenter().lat + 33.6) < 1e-3, 'tocar 📡 en pausa debe recentrar en la última posición');
-        eq(m.getZoom(), 10, 'recentrar no debe cambiar el zoom');
+        eq(m.getZoom(), 18, 'tocar 📡 en pausa debe acercar a z18');
+        m.setZoom(19, {animate:false}); m.fire('dragstart'); w.toggleGPSLive(null);
+        eq(m.getZoom(), 19, 'si ya estaba más cerca que z18, recentrar no aleja');
       } finally {
         w.pararGPSLive();
         try { w.eval('mapaVista').remove(); } catch(e) {}
@@ -1782,7 +1784,7 @@ async function correr(){
         if (geoOrig) Object.defineProperty(w.navigator, 'geolocation', geoOrig); else delete w.navigator.geolocation;
         div.remove();
       }
-      return 'z17 solo al inicio, zoom del usuario respetado, pausa al arrastrar y recentrado';
+      return 'z18 al inicio y al recentrar, zoom del usuario respetado entre fixes, pausa al arrastrar';
     });
 
 
