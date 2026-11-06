@@ -9815,18 +9815,48 @@ const CONDICIONALES = {
   UNIDAD_BASE_LINEA:  {modo:'ocultar', regla: v => v['CLASE_LINEA']==='Contacto'},
 };
 
+// Orden de las fichas en pantalla (auditoría 2026-11-06, pedido del usuario: «no puede quedar un
+// dato relevante abajo, pero siempre con coherencia»). La misma regla en todas:
+//   1. qué es: tipo → subtipo → nombre (la cascada que define el registro)
+//   2. la medida: actitud, dimensiones
+//   3. con qué se asocia: litología, contacto
+//   4. el detalle de cada rama (lo que ya venía, en su orden)
+//   5. al final, siempre: grado de confianza y texto libre (descripción, observación, nota)
+// `inicio` fija los primeros en ese orden; `fin` los manda al cierre (en fichas con grupos, a un
+// grupo «Confianza y notas» después de todas las ramas). Lo no listado conserva el orden del modelo.
+const ORDEN_FICHA={
+  litologia:{inicio:['TIPO_ROCA','TIPO_VOLCANICA','LITIFICACION','SUBTIPO_SEDIMENTARIO','SUBTIPO_TECTONICA',
+      'NOMBRE_ROCA','GRANULOMETRIA','UNIDAD_GEOLOGICA','COLOR_FRESCO','COLOR_METEORIZADO','TEXTURA','ESTRUCTURA_TIPO_ROCA',
+      'ESPESOR_ESTRATO_MIN_CM','ESPESOR_ESTRATO_MAX_CM','ESPESOR_TOTAL_MIN_M'],
+    fin:['GRADO_CONFIANZA_LITO','DESCRIPCION_LITOLOGIA','OBSERVACION']},
+  estructural:{inicio:['TIPO_ESTRUCTURA','TIPO_MEDIDA_ESTRUCTURAL','AZIMUT','MANTEO_BUZAMIENTO','TREND','PLUNGE','RAKE',
+      'ID_LITOLOGIA','ID_CONTACTO'],
+    fin:['GRADO_CONFIANZA_ESTRUCTURA','DESCRIPCION_ESTRUCTURA']},
+  contacto:{inicio:['TIPO_CONTACTO','SUBTIPO_CONTACTO','LITOLOGIA_TECHO','LITOLOGIA_BASE','RUMBO_CONTACTO','MANTEO_CONTACTO',
+      'EXPOSICION_CONTACTO','ID_LITOLOGIA'],
+    fin:['GRADO_CONFIANZA_CONTACTO','DESCRIPCION_CONTACTO']},
+  muestreo:{inicio:['ID_MUESTRA','TIPO_MUESTRA','PROPOSITO_ANALISIS','ID_LITOLOGIA','ORIENTACION_MUESTRA','PESO','VOLUMEN'],
+    fin:['DESCRIPCION_MUESTRA']},
+  punto:{inicio:[], fin:['NOTA','PROSA_CAMPO']},            // NOTA_AFLORAMIENTO cierra su propio grupo
+  punto_gabinete:{inicio:[], fin:['NOTA','PROSA_CAMPO']},
+  geomorf:{inicio:[], fin:['DESCRIPCION_GEOMORFOLOGIA']},
+  alteracion:{inicio:['TIPO_ALTERACION','INTENSIDAD_ALTERACION','MINERAL_ALTERACION','TEXTURA_ALTERACION','ID_LITOLOGIA'],
+    fin:['OBSERVACIONES_ALTERACION']},
+  litocomp:{inicio:[], fin:['NOTA_COMPONENTE']},
+  juego:{inicio:[], fin:['NOTA_FRAC_JUEGO']},
+};
 // Construye el DOM de un formulario para (store, registro). Devuelve {node, getData}
 function formulario(store, reg, ctx){
   const cont=el('div');
   const inputs={};
   let cs=campos(store).filter(c=> !hideField(store,c.nombre));
-  // Panel Litología: NOMBRE_ROCA se muestra al final. Es la CONCLUSIÓN de la clasificación
-  // (el geólogo describe/clasifica primero y nombra la roca al final); en el modelo quedó en
-  // posición media. Solo reordena ESTE formulario (PWA); el modelo canónico y el Track B
-  // (QField/GDB), que usan campos() directo, conservan su orden.
-  if(store==='litologia'){
-    const i=cs.findIndex(c=>c.nombre==='NOMBRE_ROCA');
-    if(i>=0){const nr=cs.splice(i,1)[0];cs.push(nr);}
+  // Orden de ficha (auditoría de formularios 2026-11-06, ver ORDEN_FICHA): lo que define el
+  // registro arriba y el texto libre al final, igual en todas las fichas. Solo reordena ESTE
+  // formulario (PWA); el modelo canónico y la exportación conservan su orden.
+  const of=ORDEN_FICHA[store];
+  if(of){
+    const rk=n=>{ const a=of.inicio.indexOf(n); if(a>=0) return a; const z=of.fin.indexOf(n); return z>=0?1e6+z:1e3; };
+    cs=cs.map((c,i)=>({c,i})).sort((a,b)=>rk(a.c.nombre)-rk(b.c.nombre)||a.i-b.i).map(x=>x.c);
   }
   // Ficha de litología agrupada por familia (v149): los campos se ordenan y se agrupan igual que
   // las tablas de la GDB (TBL_LITOLOGIA + LITO_*, MODELO.familias_litologia) y cada grupo se ve
@@ -9846,16 +9876,18 @@ function formulario(store, reg, ctx){
       LITO_ANTROPICO:'Depósito antrópico'}
       :Object.fromEntries(fam.lista.filter(f=>!f.padre).map(f=>[f.tabla,f.titulo||f.tabla]));
     const famDe={}; fam.lista.forEach(f=>f.campos.forEach(n=>famDe[n]=f.tabla));
-    // TIPO_VOLCANICA y LITIFICACION se exportan en su rama pero se eligen junto a TIPO_ROCA: deciden qué rama se abre
-    if(lito){ famDe.TIPO_VOLCANICA='TBL_LITOLOGIA'; famDe.LITIFICACION='TBL_LITOLOGIA'; famDe.NOMBRE_ROCA='__nombre'; }
-    const orden=fam.lista.map(f=>f.tabla).concat(lito?['__nombre']:[]);
+    // La cascada de clasificación (tipo → subtipo → nombre → granulometría) se elige en el grupo
+    // de arriba aunque cada campo se exporte en su rama: decide qué rama se abre y acota el nombre.
+    // Antes NOMBRE_ROCA, el dato que identifica la roca, quedaba al fondo de la ficha.
+    if(lito) ['TIPO_VOLCANICA','LITIFICACION','SUBTIPO_SEDIMENTARIO','SUBTIPO_TECTONICA','NOMBRE_ROCA','GRANULOMETRIA']
+      .forEach(n=>famDe[n]='TBL_LITOLOGIA');
+    // confianza y texto libre cierran la ficha, después de todas las ramas
+    if(of) of.fin.forEach(n=>famDe[n]='__notas');
+    TITULO.__notas=of&&of.fin.some(n=>/^GRADO_CONFIANZA/.test(n))?'Confianza y notas':'Notas';
+    const orden=fam.lista.map(f=>f.tabla).concat(['__notas']);
     const pos=n=>{const k=orden.indexOf(famDe[n]); return k<0?0:k;};
-    // orden estable: dentro de cada grupo se respeta el orden previo; TIPO_VOLCANICA tras TIPO_ROCA
+    // orden estable: dentro de cada grupo manda el orden de ORDEN_FICHA aplicado arriba
     cs=cs.map((c,i)=>({c,i})).sort((a,b)=>pos(a.c.nombre)-pos(b.c.nombre)||a.i-b.i).map(x=>x.c);
-    const iv=cs.findIndex(c=>c.nombre==='TIPO_VOLCANICA'), ir=cs.findIndex(c=>c.nombre==='TIPO_ROCA');
-    if(iv>=0&&ir>=0){const tv=cs.splice(iv,1)[0]; cs.splice(cs.findIndex(c=>c.nombre==='TIPO_ROCA')+1,0,tv);}
-    const il=cs.findIndex(c=>c.nombre==='LITIFICACION');
-    if(il>=0){const lt=cs.splice(il,1)[0]; const k=cs.findIndex(c=>c.nombre==='TIPO_VOLCANICA'); cs.splice((k>=0?k:cs.findIndex(c=>c.nombre==='TIPO_ROCA'))+1,0,lt);}
     for(const t of orden){
       const g={tabla:t, nodo:el('div',{class:'grupo-lito','data-familia':t}), row:el('div',{class:'row'})};
       if(TITULO[t]) g.nodo.append(el('h4',{},TITULO[t]));

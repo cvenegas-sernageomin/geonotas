@@ -346,7 +346,7 @@ async function correr(){
       const grupos = (reg, todo = true) => { const f = w.formulario('litologia', reg, {}); w.document.body.append(f.node);
         if (todo) verTodo(f);
         try { return [...f.node.querySelectorAll('.grupo-lito')].filter(g => g.style.display !== 'none')
-          .map(g => g.dataset.familia).filter(t => t !== '__nombre'); } finally { f.node.remove(); } };
+          .map(g => g.dataset.familia).filter(t => t !== '__notas'); } finally { f.node.remove(); } };
       eq(grupos({TIPO_ROCA:'Intrusiva'}), ['TBL_LITOLOGIA','LITO_INTRUSIVA'], 'intrusiva');
       eq(grupos({TIPO_ROCA:'Metamórfica'}), ['TBL_LITOLOGIA','LITO_METAMORFICA'], 'metamórfica');
       eq(grupos({TIPO_ROCA:'Volcánica', TIPO_VOLCANICA:'Lava'}), ['TBL_LITOLOGIA','LITO_VOLCANICA','VOL_LAVA'], 'lava');
@@ -369,7 +369,15 @@ async function correr(){
         eq(f.node.querySelector('[data-familia="LITO_METAMORFICA"]').style.display, '', 'el grupo metamórfico no apareció');
         const orden = [...f.node.querySelectorAll('[name]')].map(i => i.name);
         ok(orden.indexOf('TIPO_VOLCANICA') === orden.indexOf('TIPO_ROCA') + 1, 'TIPO_VOLCANICA debe ir junto a TIPO_ROCA');
-        eq(orden[orden.length - 1], 'NOMBRE_ROCA', 'NOMBRE_ROCA debe seguir al final');
+        // auditoría 2026-11-06: el nombre de la roca va arriba, tras la cascada que lo acota, y el texto libre cierra
+        ok(orden.indexOf('NOMBRE_ROCA') < orden.indexOf('UNIDAD_GEOLOGICA'), 'NOMBRE_ROCA debe ir arriba, antes de la unidad');
+        ok(orden.indexOf('NOMBRE_ROCA') < orden.indexOf('MINERAL_PORFIROCLASTOS') || orden.indexOf('MINERAL_PORFIROCLASTOS') < 0, 'NOMBRE_ROCA antes de las ramas');
+        eq(orden.slice(-3), ['GRADO_CONFIANZA_LITO','DESCRIPCION_LITOLOGIA','OBSERVACION'], 'confianza y notas deben cerrar la ficha');
+        const fe = w.formulario('estructural', {}, {}); const oe = [...fe.node.querySelectorAll('[name]')].map(i => i.name);
+        eq(oe[0], 'TIPO_ESTRUCTURA', 'la estructura empieza por su tipo');
+        eq(oe.slice(-2), ['GRADO_CONFIANZA_ESTRUCTURA','DESCRIPCION_ESTRUCTURA'], 'la estructura cierra con confianza y descripción');
+        const fm = w.formulario('muestreo', {}, {}); const om = [...fm.node.querySelectorAll('[name]')].map(i => i.name);
+        eq(om[om.length - 1], 'DESCRIPCION_MUESTRA', 'la muestra cierra con su descripción');
       } finally { f.node.remove(); }
       return 'grupos por tipo de roca = reglas de aplicabilidad; se abren/cierran al cambiar el tipo';
     });
