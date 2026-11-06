@@ -14566,6 +14566,12 @@ function medirHeader(){
     document.documentElement.style.setProperty('--headh', Math.max(0,tarjeta.getBoundingClientRect().top+scrollY)+'px');
     return;
   }
+  // Vista de un punto: el mapa fijo (.pv) empieza bajo la barra Mapa · Libreta · Muestras.
+  const barra=document.getElementById('modoBarPunto');
+  if(barra&&document.querySelector('.pv')){
+    document.documentElement.style.setProperty('--headh', Math.max(0,barra.getBoundingClientRect().bottom+scrollY+4)+'px');
+    return;
+  }
   const h=document.querySelector('header');
   if(h) document.documentElement.style.setProperty('--headh', h.offsetHeight+'px');
 }
@@ -15278,7 +15284,8 @@ async function renderPuntoIconos(app){
       el('button',{type:'button',class:'cam-fab',title:'Foto para este punto','aria-label':'Tomar una foto para este punto',
         onclick:fotoAlPunto,html:iconoDe('foto')}));
     armarLupa(dock);
-    app.append(raiz);
+    const modo=toggleModo('puntos'); modo.id='modoBarPunto';
+    app.append(modo, raiz);
     medirHeader();
     initMapPunto(curPunto,f,{fijo:true});
     // Autoguardado: aquí no hay «✓ Guardar punto». Se engancha DESPUÉS de initMapPunto, cuyo
@@ -15608,6 +15615,7 @@ async function renderPunto(app){
   $('#ttl').textContent = curPunto.ID_PUNTO_CONTROL || (nuevo?'Nuevo punto':'Punto');
   $('#ctx').textContent = curProyecto.NOMBRE_PROYECTO||'';
   if(ultimoPuntoRender!==curPunto.id){secAbiertas=new Set(['punto']);ultimoPuntoRender=curPunto.id;}  // reset acordeón al cambiar de punto
+  app.append(toggleModo('puntos'));
 
   // --- formulario del punto (colapsable, abierto por defecto) ---
   const puntoLleno=!!(curPunto['LAT_DECIMAL']||curPunto.GEOLOGO);
@@ -16602,9 +16610,12 @@ function wkbPolygon(geom){   // anillo exterior único, cerrado; coords [lat,lon
 // ============================ Modo Mapa + simbología estructural ============================
 function toggleModo(activo){
   const bar=el('div',{class:'modtoggle'});
-  const mk=(n,txt,dest)=>el('button',{class:'btn '+(activo===n?'':'sec'),onclick:()=>{if(activo!==n)dest();}},txt);
-  bar.append(mk('mapa','🗺️ Mapa',()=>nav({n:'mapa',id:curProyecto.id})),
-             mk('puntos','📋 Puntos',()=>nav({n:'proyecto',id:curProyecto.id})),
+  // Dentro de un punto la barra sigue arriba con «Libreta» marcada, pero tocarla vuelve a la
+  // libreta (la lista del proyecto); «Mapa» abre el del proyecto centrado en este punto.
+  const enPunto=vista.n==='punto';
+  const mk=(n,txt,dest)=>el('button',{class:'btn '+(activo===n?'':'sec'),onclick:()=>{if(activo!==n||enPunto)dest();}},txt);
+  bar.append(mk('mapa','🗺️ Mapa',()=>enPunto?verPuntoEnMapa():nav({n:'mapa',id:curProyecto.id})),
+             mk('puntos','📋 Libreta',()=>nav({n:'proyecto',id:curProyecto.id})),
              mk('muestras','🧪 Muestras',()=>nav({n:'muestras',id:curProyecto.id})));
   return bar;
 }
