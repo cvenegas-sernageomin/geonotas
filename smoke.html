@@ -1687,8 +1687,8 @@ async function correr(){
       eq(w.estiloLinea(Object.assign({}, conK, {CLASE_LINEA:'Contacto'})).color === '#ff0000', false,
          'una línea ya clasificada debe usar la simbología de la app');
       eq(w.estiloLinea({_estiloKml:{linea:'red"/><script>'}}).color, '#666666', 'un color no hexadecimal debe descartarse');
-      ok(w.iconoPunto([], [], '#22a33a').options.html.includes('#22a33a'), 'el ícono del punto no tomó el color del KML');
-      ok(!w.iconoPunto([], [], '"><script>').options.html.includes('script'), 'el ícono aceptó un color inseguro');
+      ok(w.iconoPunto({ck:'#22a33a'}).options.html.includes('#22a33a'), 'el ícono del punto no tomó el color del KML');
+      ok(!w.iconoPunto({ck:'"><script>'}).options.html.includes('script'), 'el ícono aceptó un color inseguro');
       return '5 placemarks: Style, StyleMap normal, pushpin por nombre, tinte inline, sin estilo';
     });
 
@@ -2102,8 +2102,47 @@ async function correr(){
       const l0 = {TREND:'10', PLUNGE:'20'}, l1 = {TREND:'340', PLUNGE:'20'};
       eq(w.svgEstructura(l0, 30, 30, -30), w.svgEstructura(l1, 30, 30, 0), 'lineación girada');
       eq(w.svgEstructura(e0, 30, 30), w.svgEstructura(e0, 30, 30, 0), 'sin giro cambia el dibujo');
-      ok(/>30</.test(w.svgPunto([e0], [], null, 90)), 'el número de manteo debe seguir escrito derecho');
+      ok(/>30</.test(w.svgPunto({estr:[e0]}, 90)), 'el número de manteo debe seguir escrito derecho');
       return 'az+giro y número sin rotar';
+    });
+    await prueba('Símbolo del punto según sus datos: muestra encima, litología, solo foto, vacío', async () => {
+      const s = d => w.svgPunto(d, 0);
+      const tri = '<polygon points="0,-9.5', cam = '<rect x="-8" y="-5.5"', vol = 'var(--ic-vol)', sed = 'var(--ic-sed)';
+      const conTodo = s({mus:[{}], litos:[{TIPO_ROCA:'Volcánica'}], nFotos:2});
+      ok(conTodo.includes(tri) && conTodo.includes(vol), 'muestra + litología: deben verse las dos');
+      ok(conTodo.lastIndexOf(tri) > conTodo.lastIndexOf(vol), 'la muestra debe quedar ENCIMA de la litología');
+      ok(!conTodo.includes(cam), 'con litología o muestra no va la cámara');
+      ok(/>3</.test(s({mus:[{},{},{}]})) && !/>1</.test(s({mus:[{}]})), 'el número de muestras solo si hay más de una');
+      const dos = s({litos:[{TIPO_ROCA:'Volcánica'},{TIPO_ROCA:'Sedimentaria'}]});
+      ok(dos.includes(vol) && dos.includes(sed), 'dos tipos de roca: centro + anillo');
+      ok(s({nFotos:1}).includes(cam), 'solo fotos: cámara');
+      ok(!s({}).includes(cam) && !s({}).includes(tri) && s({}).includes('#c0392b'), 'sin fichas: círculo hueco');
+      ok(s({cal:'malo'}).includes('#d0453a') && s({cal:'ok'}).includes('#2e9d5b'), 'semáforo del GPS');
+      return 'jerarquía: estructuras < litología < muestra; cámara solo con fotos';
+    });
+    await prueba('Autonumeración: salta IDs ya usados; duplicar da ID nuevo y renumera muestras', async () => {
+      const pr = {id:P+'an-pr', ID_PROYECTO:P+'an', NOMBRE_PROYECTO:'Autonumeración', _naming:{pc:{on:true, prefix:'AN-', pad:3, next:2}, smp:{on:true, prefix:'MA-', pad:2, next:1}}};
+      await w.put('proyecto', pr);
+      const ids = [];
+      try {
+        w.__smokePr = pr; w.eval('curProyecto = window.__smokePr');
+        // un respaldo restaurado trae AN-005 aunque el correlativo diga 2
+        const viejo = {id:P+'an-p1', _parent:pr.id, ID_PUNTO_CONTROL:'AN-005', _idDone:true}; await w.put('punto', viejo); ids.push(['punto', viejo.id]);
+        const mu = {id:P+'an-m1', _parent:viejo.id, ID_MUESTRA:'MA-04'}; await w.put('muestreo', mu); ids.push(['muestreo', mu.id]);
+        eq(await w.verNumero('pc'), 'AN-006', 'la vista previa debe saltar los IDs usados');
+        eq(await w.tomarNumero('pc'), 'AN-006', 'tomar debe saltar los IDs usados');
+        eq(await w.tomarNumero('pc'), 'AN-007', 'el correlativo debe avanzar');
+        eq((await w.get('proyecto', pr.id))._naming.pc.next, 8, 'el correlativo debe quedar guardado');
+        const dup = await w.duplicarPunto(viejo.id); ids.push(['punto', dup.id]);
+        eq(dup.ID_PUNTO_CONTROL, 'AN-008', 'el duplicado debe recibir el siguiente número');
+        ok(!dup._idPreview, 'el duplicado no puede heredar la vista previa');
+        const muDup = (await w.childrenOf('muestreo', dup.id))[0]; if (muDup) ids.push(['muestreo', muDup.id]);
+        eq(muDup && muDup.ID_MUESTRA, 'MA-05', 'la muestra copiada debe llevar número nuevo');
+      } finally {
+        for (const [st, id] of ids) await w.del(st, id);
+        await w.del('proyecto', pr.id); w.eval('curProyecto = null'); delete w.__smokePr;
+      }
+      return 'AN-005 restaurado → siguiente AN-006; duplicado AN-008 con muestra MA-05';
     });
     await prueba('Mapa girable: girar con los dedos pasa a modo libre, la grilla UTM rotula, la aguja vuelve al norte', async () => {
       const div = w.document.createElement('div');
@@ -2691,8 +2730,8 @@ async function correr(){
       eq(w.calidadDePunto({PRECISION_GPS:'Poco confiable'}, 10), 'malo', 'un punto viejo sin metros usa su categoría');
       eq(w.calidadDePunto({}, 10), '', 'sin dato no hay calidad');
       eq(w.umbralGPS({_gpsUmbral:5}), 5, 'el umbral del proyecto'); eq(w.umbralGPS({_gpsUmbral:7}), 10, 'un umbral fuera de la lista vuelve a 10 m');
-      ok(w.svgPunto([], [], null, 0, 'malo').includes('#d0453a'), 'el punto fuera del umbral no lleva anillo rojo');
-      ok(!w.svgPunto([], [], null, 0).includes('stroke-dasharray'), 'sin calidad pedida no se dibuja anillo (otras llamadas)');
+      ok(w.svgPunto({cal:'malo'}, 0).includes('#d0453a'), 'el punto fuera del umbral no lleva el semáforo rojo');
+      ok(!w.svgPunto({}, 0).includes('#d0453a'), 'sin calidad pedida no se dibuja semáforo (otras llamadas)');
       ok(w.eval('MODELO').tablas.PUNTO_CONTROL.campos.some(c => c.nombre === 'ERROR_GPS_M'), 'ERROR_GPS_M no está en el modelo');
       return 'semáforo, umbral por proyecto, anillo en el mapa y ERROR_GPS_M en el modelo';
     });
@@ -2731,6 +2770,28 @@ async function correr(){
         eq(await p, null, '.cancelar() debía devolver null');
       } finally { delete g.watchPosition; delete g.clearWatch; w.confirm = conf; doc.querySelectorAll('.gpsdlg-ov').forEach(n => n.remove()); }
       return 'buena señal sin diálogo · mala: error en vivo, registrar igual, ubicar a mano, cancelar';
+    });
+
+    await prueba('GPS caliente: un fix reciente dentro del umbral se usa al tiro; uno viejo no', async () => {
+      const g = w.navigator.geolocation, gv = w.eval('gpsVivo'), previo = gv.ultimo;
+      let llamadas = 0;
+      g.watchPosition = () => { llamadas++; return 78; };   // el GPS "nuevo" nunca responde
+      g.clearWatch = () => {};
+      try {
+        w.eval('curProyecto = null');   // umbral 10 m
+        gv.ultimo = {timestamp: Date.now() - 2000, coords:{latitude:-33.4, longitude:-70.6, accuracy:4, altitude:null}};
+        const t0 = Date.now(), r = await w.capturarPosicion();
+        eq([r.fuente, r.acc], ['gps', 4], 'el fix caliente de ±4 m debía usarse');
+        ok(Date.now() - t0 < 500, 'con GPS caliente no debía esperar');
+        eq(llamadas, 0, 'con un fix caliente bueno no hace falta abrir otro watchPosition');
+        // un fix de hace 30 s puede ser de otro lugar: no cuenta
+        gv.ultimo = {timestamp: Date.now() - 30000, coords:{latitude:-33.4, longitude:-70.6, accuracy:4, altitude:null}};
+        const p = w.capturarPosicion(); let listo = false; p.then(() => listo = true);
+        await new Promise(res => setTimeout(res, 300));
+        ok(!listo, 'un fix viejo no debía registrarse');
+        p.cancelar(); await p;
+      } finally { gv.ultimo = previo; delete g.watchPosition; delete g.clearWatch; w.document.querySelectorAll('.gpsdlg-ov').forEach(n => n.remove()); }
+      return 'fix ≤10 s y dentro del umbral: inmediato; fix viejo: espera uno nuevo';
     });
 
     await prueba('v157 foto rápida: crea el punto con su error GPS y la foto colgando', async () => {

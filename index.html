@@ -198,7 +198,13 @@
   .pt-panel .fld{margin:0}
   @media(max-width:420px){.pt-panel{grid-template-columns:1fr}}
   .pt-res{font-size:12px;color:var(--muted);margin:10px 2px 0}
-  .pt-dia{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:16px 4px 7px;display:flex;justify-content:space-between}
+  .pt-dia{width:100%;border:0;background:none;font:700 11.5px inherit;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;
+    padding:14px 4px 8px;display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left}
+  .pt-dia-f{flex:1;color:var(--txt)}
+  .pt-dia-n{text-transform:none;letter-spacing:0;font-weight:600}
+  .pt-dia-ch{width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s;margin:0 4px 0 2px}
+  .pt-dia[aria-expanded="true"] .pt-dia-ch{transform:rotate(45deg)}
+  .pt-lista[hidden]{display:none}
   .pt-lista{background:var(--surface);border:1px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
   .pt-fila{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;cursor:pointer;min-height:56px}
   .pt-fila+.pt-fila{border-top:1px solid var(--bd)}
@@ -14397,6 +14403,7 @@ async function render(){
   // a la vista mapa, el primer toque abria la ficha de nota sin que nadie la pidiera.
   dibujando=false; agregandoPunto=false; agregandoNota=false; midiendo=false;
   if(vista.n!=='mapa') pararGPSLive();     // no seguir consumiendo GPS fuera de la vista mapa
+  gpsTemplar();                            // GPS caliente solo en el punto y en el mapa
   enEditor=false;
   cerrarHojas();          // la hoja de la vista iconos vive en <body>: no se va sola al cambiar de pantalla
   const app=$('#app'); app.innerHTML=''; $('#fab').innerHTML=''; $('#fab').className='fab';
@@ -14622,6 +14629,36 @@ function namingCfg(pr){
   return {pc:Object.assign({},d.pc,n.pc), smp:Object.assign({},d.smp,n.smp)};
 }
 function fmtName(c){return c.prefix+String(c.next).padStart(c.pad||0,'0');}
+// El correlativo guardado puede quedar ATRÁS de los IDs que ya existen: al restaurar un respaldo, al
+// mover puntos entre proyectos o al trabajar el mismo proyecto en dos teléfonos. Antes eso repetía
+// IDs (dos PC-005). El número que se entrega es siempre mayor que el mayor ID del proyecto con ese
+// prefijo (puntos: Terreno + Gabinete; muestras: las de todos sus puntos).
+async function idsUsados(tipo){
+  const pts=[...await childrenOf(RM_STORE,curProyecto.id),...await childrenOf(RM_GAB_STORE,curProyecto.id)];
+  if(tipo==='pc') return pts.map(p=>p.ID_PUNTO_CONTROL);
+  const ids=new Set(pts.map(p=>p.id));
+  return (await all('muestreo')).filter(m=>ids.has(m._parent)).map(m=>m.ID_MUESTRA);
+}
+async function siguienteNumero(c,tipo){
+  const re=new RegExp('^'+c.prefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(\\d+)$');
+  let max=0; for(const v of await idsUsados(tipo)){ const m=re.exec(String(v||'').trim()); if(m) max=Math.max(max,+m[1]); }
+  return Math.max(c.next||1, max+1);
+}
+// Vista previa del próximo ID (no lo consume) y toma definitiva (lo consume y avanza el correlativo).
+// Ambas leen la convención desde la base: el proyecto en memoria puede ser una copia vieja.
+async function verNumero(tipo){
+  const pr=await get('proyecto',curProyecto.id); if(pr) curProyecto._naming=pr._naming;
+  const c=namingCfg(curProyecto)[tipo]; if(!c.on) return null;
+  return fmtName(Object.assign({},c,{next:await siguienteNumero(c,tipo)}));
+}
+async function tomarNumero(tipo){
+  const pr=await get('proyecto',curProyecto.id); if(pr) curProyecto._naming=pr._naming;
+  const full=namingCfg(curProyecto), c=full[tipo]; if(!c.on) return null;
+  c.next=await siguienteNumero(c,tipo);
+  const nombre=fmtName(c); c.next++;
+  curProyecto._naming=full; await put('proyecto',curProyecto);
+  return nombre;
+}
 
 function editorNaming(pr){
   enEditor=true; armarAtras();   // pantalla fuera de `vista`: el atrás repinta la vista (ver volverVista)
@@ -14656,6 +14693,7 @@ function editorNaming(pr){
 // -------- Proyecto: puntos de control --------
 let _ptFiltro={q:'',fecha:'',localidad:'',geomorf:'',muestras:''};
 let _ptPanel=false;   // panel de filtros abierto (se recuerda al volver de un punto)
+let _ptDias={proyecto:null, estado:{}};   // días abiertos/cerrados a mano en la lista de puntos
 // Acciones del proyecto: antes eran cinco botones sobre la lista; ahora un menú que sale desde abajo.
 function menuProyecto(){
   const ov=el('div',{class:'fmov',onclick:e=>{if(e.target===ov)ov.remove();}});
@@ -14826,11 +14864,25 @@ async function renderProyecto(app){
     if(sinFecha.length)grupos.set('',sinFecha);
 
     let contador=0;
+    // Días plegables (pedido del usuario: descongestionar la vista). Abierto por defecto: el día más
+    // reciente; con búsqueda o filtros, todos los que tienen resultados. Lo que el usuario abre o
+    // cierra a mano se recuerda mientras siga en el proyecto.
+    const hayFiltro=!!(_ptFiltro.q.trim()||_ptFiltro.fecha||_ptFiltro.localidad||_ptFiltro.geomorf||_ptFiltro.muestras);
+    const masReciente=conFecha.length?conFecha[conFecha.length-1].FECHA:'';
+    // el día de hoy (el más reciente) arriba; dentro de cada día, en orden de hora
+    const dias=[...grupos.keys()].filter(Boolean).reverse();
+    const sinF=grupos.get(''); grupos.clear(); dias.forEach(f=>grupos.set(f,conFecha.filter(p=>p.FECHA===f))); if(sinF) grupos.set('',sinF);
+    if(_ptDias.proyecto!==curProyecto.id){ _ptDias.proyecto=curProyecto.id; _ptDias.estado={}; }
     grupos.forEach((ptsDia,fecha)=>{
-      listaBox.append(el('div',{class:'pt-dia'},
-        el('span',{},fecha?new Date(fecha+'T12:00').toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'}).replace(/\./g,''):'Sin fecha'),
-        el('span',{},ptsDia.length+' punto'+(ptsDia.length===1?'':'s'))));
-      const bloque=el('div',{class:'pt-lista'});
+      const abierto=hayFiltro||grupos.size===1||(_ptDias.estado[fecha]!=null?_ptDias.estado[fecha]:fecha===masReciente);
+      const bloque=el('div',{class:'pt-lista'}); bloque.hidden=!abierto;
+      const nMu=ptsDia.reduce((s,p)=>s+p._muestras.length,0);
+      const cab=el('button',{type:'button',class:'pt-dia','aria-expanded':String(abierto),onclick:()=>{
+        const ab=bloque.hidden; bloque.hidden=!ab; cab.setAttribute('aria-expanded',String(ab)); _ptDias.estado[fecha]=ab; }},
+        el('span',{class:'pt-dia-f'},fecha?new Date(fecha+'T12:00').toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'}).replace(/\./g,''):'Sin fecha'),
+        el('span',{class:'pt-dia-n'},ptsDia.length+' punto'+(ptsDia.length===1?'':'s')+(nMu?' · 🧪 '+nMu:'')),
+        el('i',{class:'pt-dia-ch','aria-hidden':'true'}));
+      listaBox.append(cab);
       ptsDia.forEach(pt=>{
         contador++;
         const marcado=selIds.has(pt.id);
@@ -14858,7 +14910,7 @@ async function renderProyecto(app){
             nMu?el('span',{title:pt._muestras.map(m=>(m.ID_MUESTRA||'').trim()||'(s/sigla)').join(', ')},'🧪 '+nMu):null,
             pt._nlito?el('span',{},pt._nlito+' lito'):null));
         if(!modoSel){
-          fila.append(el('button',{class:'pt-dup',title:'Duplicar (sin coordenadas)','aria-label':'Duplicar punto',onclick:async(e)=>{e.stopPropagation();if(bloqueoGabineteActivo())return;const np=await duplicarPunto(pt.id);if(!np){toast('No se pudo duplicar el punto');return;}toast('Duplicado — asigna coordenadas e ID');nav({n:'punto',id:np.id});}},'⧉'));
+          fila.append(el('button',{class:'pt-dup',title:'Duplicar (sin coordenadas)','aria-label':'Duplicar punto',onclick:async(e)=>{e.stopPropagation();if(bloqueoGabineteActivo())return;const np=await duplicarPunto(pt.id);if(!np){toast('No se pudo duplicar el punto');return;}toast('Duplicado'+(np.ID_PUNTO_CONTROL?' como '+np.ID_PUNTO_CONTROL:'')+' — asigna las coordenadas'+(np.ID_PUNTO_CONTROL?'':' y el ID'));nav({n:'punto',id:np.id});}},'⧉'));
         }
         bloque.append(fila);
       });
@@ -14950,12 +15002,16 @@ async function guardarPuntoForm(f){
   const d=f.getData();Object.assign(curPunto,d);curPunto._parent=curProyecto.id;
   curPunto.ID_PROYECTO=curProyecto.ID_PROYECTO||curProyecto.id;
   // autonumeración del ID de punto: al primer guardado, si el usuario no lo cambió, asigna y avanza el correlativo
-  const nc=namingCfg(curProyecto).pc;
-  if(nc.on && !curPunto._idDone && (!curPunto.ID_PUNTO_CONTROL || curPunto.ID_PUNTO_CONTROL===curPunto._idPreview)){
-    curPunto.ID_PUNTO_CONTROL=fmtName(nc);
-    const full=namingCfg(curProyecto);full.pc.next=nc.next+1;curProyecto._naming=full;await put('proyecto',curProyecto);
+  if(!curPunto._idDone && (!curPunto.ID_PUNTO_CONTROL || curPunto.ID_PUNTO_CONTROL===curPunto._idPreview)){
+    const id=await tomarNumero('pc');
+    if(id){
+      curPunto.ID_PUNTO_CONTROL=id;
+      // la vista previa pudo quedar vieja (otro punto tomó ese número mientras tanto): se corrige en pantalla
+      const inp=f.node.querySelector('[name="ID_PUNTO_CONTROL"]'); if(inp&&inp.value!==id) inp.value=id;
+      if($('#ttl')) $('#ttl').textContent=id;
+    }
   }
-  curPunto._idDone=true;
+  curPunto._idDone=true; delete curPunto._idPreview;
   await put(storeActivo(),curPunto);
   stickySet(curPunto);  // recuerda colector/proyección/etc. para el próximo punto
   if(vista.id==='__new__')vista={n:'punto',id:curPunto.id};  // fija id real: evita re-crear punto vacío al re-render
@@ -14966,8 +15022,7 @@ async function guardarPuntoForm(f){
 async function crearHijo(h, litosRama, extra){
   const reg={id:uid(),_parent:curPunto.id};
   if(h.rama && litosRama && litosRama.length===1) reg.ID_LITOLOGIA=litosRama[0].id;   // única litología posible
-  if(h.store==='muestreo'){const sc=namingCfg(curProyecto).smp;
-    if(sc.on){reg.ID_MUESTRA=fmtName(sc);const full=namingCfg(curProyecto);full.smp.next=sc.next+1;curProyecto._naming=full;await put('proyecto',curProyecto);}}
+  if(h.store==='muestreo'){ const id=await tomarNumero('smp'); if(id) reg.ID_MUESTRA=id; }
   Object.assign(reg, extra||{});
   await put(h.store,reg);
   return reg;
@@ -15081,7 +15136,7 @@ async function renderPuntoIconos(app){
     curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, await stickyPunto(), ahora())
                      : await get(storeActivo(),vista.id);
     if(!curPunto)return nav({n:'proyecto',id:curProyecto.id});
-    if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
+    if(nuevo){stat('nuevo_punto');const vp=await verNumero('pc'); if(vp){curPunto.ID_PUNTO_CONTROL=vp;curPunto._idPreview=vp;}}
     if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);curPunto.FUENTE_COORDENADAS='Google Earth / imagen';coordsPendientes=null;}   // tocado en el mapa: a mano, no GPS
     $('#btnBack').style.display='';
     $('#ttl').textContent = curPunto.ID_PUNTO_CONTROL || (nuevo?'Nuevo punto':'Punto');
@@ -15285,7 +15340,7 @@ function hojaPunto(){
     el('div',{class:'btnbar',style:'margin-top:14px'},
       el('button',{class:'btn sec mini',onclick:async()=>{if(bloqueoGabineteActivo())return;await guardarPuntoForm(f);
         const np=await duplicarPunto(curPunto.id);if(!np){toast('No se pudo duplicar el punto');return;}
-        toast('Duplicado — asigna coordenadas e ID');nav({n:'punto',id:np.id});}},'⧉ Duplicar punto'),
+        toast('Duplicado'+(np.ID_PUNTO_CONTROL?' como '+np.ID_PUNTO_CONTROL:'')+' — asigna las coordenadas'+(np.ID_PUNTO_CONTROL?'':' y el ID'));nav({n:'punto',id:np.id});}},'⧉ Duplicar punto'),
       nuevo?null:el('button',{class:'btn del mini',onclick:async()=>{if(bloqueoGabineteActivo())return;
         if(confirm('¿Eliminar este punto y sus datos asociados?')){if(await borrarPunto(curPunto.id)===false)return;nav({n:'proyecto',id:curProyecto.id});}}},'🗑 Eliminar punto')));
   updateFormReadonly(); marcarActivo();
@@ -15411,7 +15466,7 @@ async function renderPunto(app){
   // punto nuevo: precarga colector y campos constantes recordados + fecha/hora automáticas
   curPunto = nuevo ? Object.assign({id:uid(),_parent:curProyecto.id}, await stickyPunto(), ahora())
                    : await get(storeActivo(),vista.id);
-  if(nuevo){stat('nuevo_punto');const c=namingCfg(curProyecto).pc; if(c.on){curPunto.ID_PUNTO_CONTROL=fmtName(c);curPunto._idPreview=curPunto.ID_PUNTO_CONTROL;}}
+  if(nuevo){stat('nuevo_punto');const vp=await verNumero('pc'); if(vp){curPunto.ID_PUNTO_CONTROL=vp;curPunto._idPreview=vp;}}
   if(nuevo&&coordsPendientes){curPunto[inLat]=coordsPendientes[0].toFixed(6);curPunto[inLon]=coordsPendientes[1].toFixed(6);curPunto.FUENTE_COORDENADAS='Google Earth / imagen';coordsPendientes=null;}   // tocado en el mapa: a mano, no GPS
   if(!curPunto)return nav({n:'proyecto',id:curProyecto.id});
   $('#btnBack').style.display='';
@@ -15496,7 +15551,7 @@ async function renderPunto(app){
 
   $('#fab').append(
     el('button',{class:'btn',onclick:async()=>{await guardarPunto();toast('Punto guardado');nav({n:'proyecto',id:curProyecto.id});}},'✓ Guardar punto'),
-    el('button',{class:'btn sec',onclick:async()=>{if(bloqueoGabineteActivo())return;await guardarPunto();const np=await duplicarPunto(curPunto.id);if(!np){toast('No se pudo duplicar el punto');return;}toast('Duplicado — asigna coordenadas e ID');nav({n:'punto',id:np.id});}},'⧉ Duplicar'),
+    el('button',{class:'btn sec',onclick:async()=>{if(bloqueoGabineteActivo())return;await guardarPunto();const np=await duplicarPunto(curPunto.id);if(!np){toast('No se pudo duplicar el punto');return;}toast('Duplicado'+(np.ID_PUNTO_CONTROL?' como '+np.ID_PUNTO_CONTROL:'')+' — asigna las coordenadas'+(np.ID_PUNTO_CONTROL?'':' y el ID'));nav({n:'punto',id:np.id});}},'⧉ Duplicar'),
     el('button',{class:'btn sec',onclick:()=>guardarPunto().then(()=>nav({n:'proyecto',id:curProyecto.id}))},'Volver'),
     el('button',{class:'btn sec',title:'Ver el punto sobre el mapa, con iconos',onclick:async()=>{await guardarPunto();fijarModoVistaPunto('iconos');}},'◉ Iconos'),
     nuevo?null:el('button',{class:'btn del',onclick:async()=>{if(bloqueoGabineteActivo())return;if(confirm('¿Eliminar este punto y sus datos asociados?')){if(await borrarPunto(curPunto.id)===false)return;nav({n:'proyecto',id:curProyecto.id});}}},'🗑'));
@@ -16632,12 +16687,21 @@ function legendaSimbologia(){
   const ov=el('div',{class:'fmov',onclick:e=>{if(e.target===ov)ov.remove();}});
   const box=el('div',{class:'card',style:'max-width:420px'});
   box.append(el('h2',{},'Simbología'));
-  box.append(el('div',{class:'muted',html:
-    '<b>●</b> estación (punto de control) · con su ID<br>'
-   +'<b>—⊢ 30</b> rumbo/manteo de un <b>plano</b> (tick al lado del manteo, valor en grados)<br>'
-   +'<b>→ 40</b> <b>lineación</b> (flecha = trend, valor = plunge)<br>'
-   +'plano + flecha en rojo = <b>falla</b> con estría<br>'
-   +'<b>▲</b> azul = punto con <b>muestras</b> (número)<br><br>Toca un punto para abrir su ficha.'}));
+  // la leyenda usa los MISMOS símbolos que el mapa (svgPunto), no una descripción aparte
+  const ej=(d,txt)=>el('div',{style:'display:flex;align-items:center;gap:10px;margin:2px 0'},
+    el('span',{style:'flex:0 0 40px;height:40px;overflow:hidden',html:svgPunto(d,0).replace('width="60" height="60" viewBox="0 0 60 60"','width="40" height="40" viewBox="10 10 40 40"')}),
+    el('span',{html:txt}));
+  const L1=t=>({TIPO_ROCA:t});
+  box.append(
+    ej({mus:[{}]},'<b>Muestra</b>: va encima de todo (con el número si hay más de una)'),
+    ej({litos:[L1('Volcánica')]},'<b>Litología</b>: color del tipo de roca'),
+    ej({litos:[L1('Sedimentaria'),L1('Intrusiva')]},'Dos o más tipos de roca: anillo con el segundo'),
+    ej({estr:[{AZIMUT:40,MANTEO_BUZAMIENTO:30}],litos:[L1('Sedimentaria')]},'<b>Plano</b> (estratificación…): rumbo/manteo orientado'),
+    ej({estr:[{TREND:120,PLUNGE:25}]},'<b>Lineación</b>: flecha = trend, número = plunge'),
+    ej({nFotos:1},'<b>Solo fotos</b>'),
+    ej({},'<b>Sin fichas</b> todavía'),
+    ej({litos:[L1('Volcánica')],cal:'malo'},'Punto chico abajo: <b>GPS</b> (verde bueno · amarillo en el umbral · rojo fuera)'),
+    el('div',{class:'muted',style:'margin-top:6px'},'En rojo, plano + flecha = falla con estría. Toca un punto para abrir su ficha.'));
   box.append(el('div',{class:'btnbar'},el('button',{class:'btn',onclick:()=>ov.remove()},'Cerrar')));
   ov.append(box);document.body.append(ov);
 }
@@ -16660,14 +16724,16 @@ async function initMapaVista(puntos){
   gpsMontar(mapaVista);
   giroMontar(mapaVista);
   const pts=[];
+  // las fichas que deciden el símbolo, leídas UNA vez y agrupadas por punto (antes dos consultas por punto)
+  const porPunto=async store=>{ const m=new Map(); for(const r of await all(store)){ if(!m.has(r._parent)) m.set(r._parent,[]); m.get(r._parent).push(r); } return m; };
+  const [mEstr,mMus,mLito,mFoto]=await Promise.all(['estructural','muestreo','litologia','foto'].map(porPunto));
   for(const p of puntos){
     const lat=parseFloat(p['LAT_DECIMAL']), lon=parseFloat(p['LONG_DECIMAL']);
     if(isNaN(lat)||isNaN(lon))continue;
-    const estr=await childrenOf('estructural',p.id), mus=await childrenOf('muestreo',p.id);
-    const ck=p._estiloKml&&p._estiloKml.punto;
-    const cal=calidadDePunto(p);
-    const m=L.marker([lat,lon],{icon:iconoPunto(estr,mus,ck,mapaVista.getBearing(),cal)}).addTo(mapaVista);
-    if(estr.length) giroMapa.marcas.push({m,estr,mus,ck,cal});   // se redibujan al girar el mapa
+    const d={estr:mEstr.get(p.id)||[], mus:mMus.get(p.id)||[], litos:mLito.get(p.id)||[],
+      nFotos:(mFoto.get(p.id)||[]).length, ck:p._estiloKml&&p._estiloKml.punto, cal:calidadDePunto(p)};
+    const m=L.marker([lat,lon],{icon:iconoPunto(d,mapaVista.getBearing())}).addTo(mapaVista);
+    if(d.estr.length) giroMapa.marcas.push({m,d});   // se redibujan al girar el mapa
     if(p.ID_PUNTO_CONTROL)m.bindTooltip(p.ID_PUNTO_CONTROL,{permanent:true,direction:'bottom',offset:[0,18],className:'ptlabel'});
     m.on('click',()=>{if(editandoVertices)return;curPunto=null;vista={n:'punto',id:p.id};render();});
     pts.push([lat,lon]);
@@ -16782,7 +16848,7 @@ function giroIconos(){
   if(giroMapa.rafIco)return;
   giroMapa.rafIco=requestAnimationFrame(()=>{ giroMapa.rafIco=0; if(!giroMapa.map)return;
     const g=giroMapa.map.getBearing();
-    for(const k of giroMapa.marcas){ k.m.options.icon=iconoPunto(k.estr,k.mus,k.ck,g,k.cal); if(k.m._icon) k.m._icon.innerHTML=svgPunto(k.estr,k.mus,k.ck,g,k.cal); } });
+    for(const k of giroMapa.marcas){ k.m.options.icon=iconoPunto(k.d,g); if(k.m._icon) k.m._icon.innerHTML=svgPunto(k.d,g); } });
 }
 function giroMontar(map){
   giroMapa.marcas=[]; giroMapa.map=map;
@@ -17134,21 +17200,43 @@ function formPlanoProy(pl,onSave,onDelete){
 // giro = bearing del mapa (v141): los símbolos se dibujan en az+giro para seguir apuntando al
 // rumbo real con el mapa girado, y los números de manteo/plunge quedan derechos (por eso no se
 // usa rotateWithView, que giraría también el texto y el triángulo de muestras).
-function iconoPunto(estr,mus,colorKml,giro,cal){
-  return L.divIcon({className:'estsym',html:svgPunto(estr,mus,colorKml,giro,cal),iconSize:[60,60],iconAnchor:[30,30]});
+// d = {estr, mus, litos, nFotos, ck (color KMZ), cal (semáforo GPS)}; giro = bearing del mapa
+function iconoPunto(d,giro){
+  return L.divIcon({className:'estsym',html:svgPunto(d,giro),iconSize:[60,60],iconAnchor:[30,30]});
 }
-// cal (v157): calidad del GPS del punto ('ok'|'medio'|'malo'|''), un anillo de semáforo alrededor
-// de la estación para ver la calidad del dato en el mapa sin abrir el punto.
-function svgPunto(estr,mus,colorKml,giro,cal){
-  const cx=30,cy=30;let inner='';
-  if(cal!=null) inner+='<circle cx="30" cy="30" r="8.5" fill="none" stroke="'+COLOR_CALIDAD[cal||'']+'" stroke-width="2.6"'+(cal?'':' stroke-dasharray="3 2.4"')+'/>';
-  (estr||[]).forEach(e=>inner+=svgEstructura(e,cx,cy,giro));   // símbolos estructurales orientados
-  // estación; un punto importado de KMZ usa el color de su icono original, un poco más grande
-  const ck=hexSeguro(colorKml);
-  inner+= ck ? '<circle cx="30" cy="30" r="5.5" fill="'+ck+'" stroke="#222" stroke-width="1.4"/>'
-             : '<circle cx="30" cy="30" r="4.2" fill="#c0392b" stroke="#fff" stroke-width="1.6"/>';
-  if(mus&&mus.length)inner+='<g transform="translate(45,15)"><polygon points="0,-6 6,5 -6,5" fill="#2166a8" stroke="#fff" stroke-width="1.2"/><text x="0" y="2.5" font-size="7" fill="#fff" text-anchor="middle" font-weight="bold">'+mus.length+'</text></g>';
-  return '<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">'+inner+'</svg>';
+// Color de cada tipo de roca: el mismo de los iconos de la barra (variables --ic-*).
+const COLOR_ROCA_VAR={sed:'var(--ic-sed)',vol:'var(--ic-vol)',int:'var(--ic-int)',met:'var(--ic-met)',tec:'var(--ic-tec)',ant:'var(--ic-ant)'};
+function colorRoca(tipo){ return COLOR_ROCA_VAR[COLOR_IC[normIc(tipo)]]||'#8a948c'; }
+// Símbolo del punto en el mapa según lo que tiene guardado (pedido del usuario, 2026-11-06). Jerarquía,
+// de abajo hacia arriba:
+//   1. medidas estructurales: rumbo/manteo de planos y lineaciones, orientados (como antes);
+//   2. el centro dice qué hay: litología = círculo del color de su tipo de roca (anillo con el segundo
+//      tipo si hay más de uno); solo fotos = una cámara; nada todavía = círculo hueco (falta describirlo);
+//   3. muestra: el triángulo azul se SOBREPONE a todo en el centro (con el número si hay más de una);
+//   4. semáforo del GPS: un punto chico abajo a la derecha (antes un anillo que competía con la litología).
+// Un punto importado de KMZ, sin fichas, conserva el color de su icono original.
+function svgPunto(d,giro){
+  const cx=30,cy=30, estr=d.estr||[], mus=d.mus||[], litos=d.litos||[];
+  let s='';
+  estr.forEach(e=>s+=svgEstructura(e,cx,cy,giro));
+  const tipos=[...new Set(litos.map(L=>L.TIPO_ROCA).filter(Boolean))];
+  const ck=hexSeguro(d.ck);
+  if(tipos.length>1) s+='<circle cx="30" cy="30" r="9" fill="none" stroke="'+colorRoca(tipos[1])+'" stroke-width="3"/>'
+                      +'<circle cx="30" cy="30" r="10.6" fill="none" stroke="#fff" stroke-width="1"/>';
+  if(litos.length)
+    s+='<circle cx="30" cy="30" r="6.4" fill="'+(tipos.length?colorRoca(tipos[0]):'#8a948c')+'" stroke="#fff" stroke-width="1.8"/>';
+  else if(d.nFotos&&!mus.length)
+    s+='<g transform="translate(30 30)"><rect x="-8" y="-5.5" width="16" height="11.5" rx="2.6" fill="#fff" stroke="#1f4d3a" stroke-width="1.6"/>'
+      +'<path d="M-3.4-5.5l1.4-2.2h4l1.4 2.2" fill="#fff" stroke="#1f4d3a" stroke-width="1.4" stroke-linejoin="round"/>'
+      +'<circle r="3" fill="none" stroke="#1f4d3a" stroke-width="1.6"/></g>';
+  else if(!mus.length)
+    s+= ck ? '<circle cx="30" cy="30" r="5.5" fill="'+ck+'" stroke="#222" stroke-width="1.4"/>'
+           : '<circle cx="30" cy="30" r="4.6" fill="#fff" fill-opacity=".85" stroke="#c0392b" stroke-width="2"/>';
+  if(mus.length)
+    s+='<g transform="translate(30 31)"><polygon points="0,-9.5 9,6.5 -9,6.5" fill="#2166a8" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>'
+      +(mus.length>1?'<text x="0" y="3.6" font-size="8" fill="#fff" text-anchor="middle" font-weight="700">'+mus.length+'</text>':'')+'</g>';
+  if(d.cal!=null) s+='<circle cx="40" cy="40" r="3.4" fill="'+COLOR_CALIDAD[d.cal||'']+'" stroke="#fff" stroke-width="1.3"/>';
+  return '<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">'+s+'</svg>';
 }
 // compone la foto base con pines numerados (para la libreta PDF)
 function compositaFotomapa(node){return new Promise(async res=>{
@@ -17178,6 +17266,11 @@ async function duplicarPunto(srcId){
   ['LAT_DECIMAL','LONG_DECIMAL',LAT_V158,LON_V158,'ESTE_UTM','NORTE_UTM','HUSO_UTM','COTA','ERROR_GPS_M','PRECISION_GPS','ID_PUNTO_CONTROL']
     .forEach(k=>np[k]='');
   delete np._satelital; delete np._satBounds;   // la vista satelital es del sitio anterior
+  // la copia heredaba _idDone del original y quedaba SIN ID para siempre (la autonumeración no
+  // volvía a actuar): con convención activa se le da el siguiente número; sin ella, queda vacío
+  delete np._idDone; delete np._idPreview;
+  const idNuevo=curProyecto&&curProyecto.id===np._parent?await tomarNumero('pc'):null;
+  if(idNuevo){ np.ID_PUNTO_CONTROL=idNuevo; np._idDone=true; }
   await put(storeActivo(),np);
   // litologías (remapear ids para reenlazar estructurales)
   const mapLito={};
@@ -17188,6 +17281,8 @@ async function duplicarPunto(srcId){
   for(const store of ['litocomp','alteracion','estructural','juego','contacto','muestreo','geomorf'])   // clasto/fragmento: v152; alteracion: v160; juego: v163
     for(const it of await childrenOf(store,srcId)){const n=Object.assign({},it,{id:uid(),_parent:np.id});mapId[it.id]=n.id;copias.push([store,n]);}
   for(const [store,n] of copias){
+    // una muestra copiada no puede llevar el mismo número que la original
+    if(store==='muestreo'){ const ms=curProyecto&&curProyecto.id===np._parent?await tomarNumero('smp'):null; if(ms) n.ID_MUESTRA=ms; }
     if(n.ID_LITOLOGIA&&mapLito[n.ID_LITOLOGIA])n.ID_LITOLOGIA=mapLito[n.ID_LITOLOGIA];
     for(const k of ['ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE']) if(n[k]&&mapLito[n[k]])n[k]=mapLito[n[k]];   // v162
     if(n.ID_CONTACTO&&mapId[n.ID_CONTACTO])n.ID_CONTACTO=mapId[n.ID_CONTACTO];
@@ -17240,6 +17335,32 @@ function textoErrorPunto(p){
   return p&&p.FUENTE_COORDENADAS&&!/GPS/.test(p.FUENTE_COORDENADAS)?'a mano':'';
 }
 
+// ---- GPS caliente (auditoría 2026-11-06, pedido del usuario: «cuesta mucho que la app lo lea aun
+// cuando el GPS ya está bien») ----
+// Cada «Tomar GPS» abría un watchPosition NUEVO con maximumAge:0 y lo cerraba al terminar. En Android
+// el proveedor de alta precisión del navegador se apaga cuando nadie lo escucha y al reabrirlo parte
+// de cero: varios segundos de «Buscando…» aunque el teléfono (u otra app) ya tuviera un buen fix.
+// Ahora, mientras se está en un punto o en el mapa, queda un watchPosition escuchando: el chip se
+// mantiene enganchado y «Tomar GPS» usa el último fix si es reciente (≤ GPS_FRESCO) y cumple el umbral.
+// Se apaga al salir de esas pantallas y con la app en segundo plano (batería). Solo se enciende si
+// el permiso de ubicación ya está dado: abrir un punto no debe disparar el diálogo del permiso.
+const GPS_FRESCO=10000;   // ms: un fix más viejo puede ser de otro lugar si el geólogo caminó
+const gpsVivo={id:null, ultimo:null, subs:new Set()};
+function gpsQuiereCalor(){ return !document.hidden && (vista.n==='punto'||vista.n==='mapa'); }
+async function gpsCalentar(){
+  if(gpsVivo.id!=null||!navigator.geolocation) return;
+  try{ const st=await navigator.permissions.query({name:'geolocation'}); if(st.state!=='granted') return; }catch(e){ return; }
+  if(gpsVivo.id!=null||!gpsQuiereCalor()) return;
+  gpsVivo.id=navigator.geolocation.watchPosition(p=>{
+    gpsVivo.ultimo=p; anotarPosGPS(p); gpsVivo.subs.forEach(f=>f(p));
+  },()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:60000});
+}
+function gpsEnfriar(){ if(gpsVivo.id!=null){ navigator.geolocation.clearWatch(gpsVivo.id); gpsVivo.id=null; } }
+function gpsTemplar(){ if(gpsQuiereCalor()) gpsCalentar(); else gpsEnfriar(); }
+document.addEventListener('visibilitychange',gpsTemplar);
+// último fix del GPS caliente si es reciente (o null)
+function gpsReciente(){ const p=gpsVivo.ultimo; return p&&Date.now()-p.timestamp<=GPS_FRESCO?p:null; }
+
 // Pide una posición que cumpla el umbral. Devuelve una promesa con
 //   {fuente:'gps'|'forzado', lat, lon, acc, alt}  — GPS dentro del umbral, o «Registrar igual»
 //   {fuente:'manual'}                              — el usuario prefirió ubicarlo en el mapa
@@ -17255,7 +17376,7 @@ function capturarPosicion(){
     const t0=Date.now();
     const pos=f=>({fuente:f, lat:mejor.coords.latitude, lon:mejor.coords.longitude, acc:mejor.coords.accuracy, alt:mejor.coords.altitude});
     const cerrar=v=>{ if(fin) return; fin=true; if(watchId!=null) navigator.geolocation.clearWatch(watchId);
-      clearInterval(tic); clearTimeout(tDlg); if(ov) ov.remove(); res(v); };
+      gpsVivo.subs.delete(recibir); clearInterval(tic); clearTimeout(tDlg); if(ov) ov.remove(); res(v); };
     cancelar=()=>cerrar(null);
     const n=el('div',{class:'gpsdlg-num'}), meta=el('div',{class:'gpsdlg-meta'}), barra=el('i'), aviso=el('div',{class:'muted gpsdlg-aviso'});
     const forzar=el('button',{type:'button',class:'btn sec',disabled:'',onclick:()=>{
@@ -17286,13 +17407,22 @@ function capturarPosicion(){
           el('button',{type:'button',class:'btn del',onclick:()=>cerrar(null)},'Cancelar'))));
       document.body.append(ov); pintar(); };
     const tDlg=setTimeout(abrir,1200), tic=setInterval(()=>{ if(ov) pintar(); },1000);
-    watchId=navigator.geolocation.watchPosition(p=>{
+    const recibir=p=>{
+      if(fin) return;
       anotarPosGPS(p);
       if(!mejor||p.coords.accuracy<mejor.coords.accuracy) mejor=p;
       if(mejor.coords.accuracy<=umbralGPS()) return cerrar(pos('gps'));
       if(ov) pintar();
-    },e=>{ error=e.code===1?'sin permiso de ubicación':e.message; if(e.code===1) abrir(); if(ov) pintar(); },
-    {enableHighAccuracy:true,maximumAge:0,timeout:60000});
+    };
+    // con el GPS caliente: su fix reciente cuenta de inmediato (si cumple el umbral no se espera nada)
+    const rec=gpsReciente(); if(rec){ recibir(rec); if(fin) return; }
+    gpsVivo.subs.add(recibir);
+    // maximumAge 5 s: si el navegador ya tiene un fix de hace un instante lo entrega al tiro (el
+    // umbral de error sigue mandando); antes 0 obligaba a esperar uno nuevo aunque el chip estuviera listo
+    watchId=navigator.geolocation.watchPosition(recibir,
+    e=>{ error=e.code===1?'sin permiso de ubicación':e.message; if(e.code===1) abrir(); if(ov) pintar(); },
+    {enableHighAccuracy:true,maximumAge:5000,timeout:60000});
+    gpsCalentar();   // el permiso pudo darse recién ahora: desde aquí el GPS queda caliente
   });
   prom.cancelar=()=>cancelar();
   return prom;
@@ -17432,7 +17562,7 @@ async function registrarPuntoRapido(img, r){
   const nc=namingCfg(curProyecto).pc, ah=ahora();
   const p=Object.assign({id:uid(),_parent:curProyecto.id}, await stickyPunto(), ah,
     {ID_PROYECTO:curProyecto.ID_PROYECTO||curProyecto.id, _idDone:true});
-  if(nc.on){ p.ID_PUNTO_CONTROL=fmtName(nc); const full=namingCfg(curProyecto); full.pc.next=nc.next+1; curProyecto._naming=full; await put('proyecto',curProyecto); }
+  if(nc.on) p.ID_PUNTO_CONTROL=await tomarNumero('pc');
   else p.ID_PUNTO_CONTROL='FOTO-'+ah.HORA.replace(':','')+String(new Date().getSeconds()).padStart(2,'0');   // sin autonumeración: un nombre que se pueda cambiar
   if(r.fuente==='manual'){ p[inLat]=r.lat.toFixed(6); p[inLon]=r.lon.toFixed(6); p.FUENTE_COORDENADAS='Google Earth / imagen'; }
   else Object.assign(p, camposDePosicion(r));
