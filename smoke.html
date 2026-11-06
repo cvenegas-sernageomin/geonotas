@@ -2126,6 +2126,36 @@ async function correr(){
       } finally { w.__cg = prev; w.eval('cgData = window.__cg'); delete w.__cg; }
       return 'dentro → aquí; empate → más detalle; luego distancia al borde';
     });
+    await prueba('Cartas SG: la carta descargada es una capa del control de capas, con opacidad y leyenda ahí', async () => {
+      const div = w.document.createElement('div'); div.style.cssText = 'position:fixed;left:0;top:0;width:400px;height:300px'; w.document.body.append(div);
+      const c = w.document.createElement('canvas'); c.width = c.height = 4; const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+      const mapaPrevio = w.eval('mapaVista'), datosPrev = w.eval('cgData');
+      await w.put('cartageo', {id:'smoke-carta', titulo:'Smoke carta', bounds:{s:-33.6, n:-33.3, w:-70.8, e:-70.4}, overlayBlob:blob, tamB:blob.size});
+      try {
+        w.__div = div;
+        w.eval('mapaVista = L.map(window.__div, {zoomAnimation:false, fadeAnimation:false}).setView([-33.4,-70.6],9); cgData = null');
+        const m = w.eval('mapaVista');
+        m._ctrlCapas = w.L.control.layers({}, null).addTo(m);
+        await w.cgCapasSync();
+        const caja = () => [...m._ctrlCapas._container.querySelectorAll('label')].find(l => /Smoke carta/.test(l.textContent));
+        ok(caja(), 'la carta descargada no aparece en el control de capas');
+        caja().querySelector('input').click();
+        for (let i = 0; i < 40 && !w.eval('cgActivoId'); i++) await new Promise(r => setTimeout(r, 50));
+        eq(w.eval('cgActivoId'), 'smoke-carta', 'marcarla en Capas debe encenderla');
+        ok(m.hasLayer(w.eval('cgOverlay')), 'la imagen de la carta no quedó en el mapa');
+        ok(m._ctrlCapas._container.querySelector('.cg-capa-extra input[type=range]'), 'falta la opacidad en el control de capas');
+        caja().querySelector('input').click();
+        eq(w.eval('cgActivoId'), null, 'desmarcarla debe apagarla');
+        ok(!m._ctrlCapas._container.querySelector('.cg-capa-extra'), 'sin carta encendida no debe quedar la opacidad');
+      } finally {
+        try { w.cgQuitarOverlay(); w.eval('cgActivoId = null'); } catch(e) {}
+        await w.del('cartageo', 'smoke-carta');
+        try { w.eval('mapaVista').remove(); } catch(e) {}
+        w.__mp = mapaPrevio; w.__cd = datosPrev; w.eval('mapaVista = window.__mp; cgData = window.__cd'); delete w.__mp; delete w.__cd; delete w.__div;
+        div.remove();
+      }
+      return 'aparece en Capas, se enciende/apaga desde ahí, opacidad solo con carta encendida';
+    });
     await prueba('Símbolo del punto según sus datos: muestra encima, litología, solo foto, vacío', async () => {
       const s = d => w.svgPunto(d, 0);
       const tri = '<polygon points="0,-9.5', cam = '<rect x="-8" y="-5.5"', vol = 'var(--ic-vol)', sed = 'var(--ic-sed)';

@@ -11667,9 +11667,13 @@ function cgQuitarOverlay(){
 // Prioridad LOCAL primero (funciona sin conexión): si la carta está descargada usa el Blob del
 // dispositivo; si no, intenta la red; si no hay ninguna de las dos, pide descargarla antes.
 async function cgMostrar(id, fly){
-  const m=(cgData||[]).find(x=>x.id===id); if(!m||!mapaVista) return;
-  cgQuitarOverlay();
   const rec=await get('cartageo', id);
+  // desde el control de capas se puede encender una carta descargada sin haber abierto el catálogo
+  // en esta sesión (cgData vacío): basta con lo guardado en el dispositivo
+  const m=(cgData||[]).find(x=>x.id===id)
+    || (rec&&{id:rec.id,titulo:rec.titulo,bounds:rec.bounds,opacidad:rec.opacidad,rev:rec.rev,overlay:null,leyenda:null});
+  if(!m||!mapaVista) return;
+  cgQuitarOverlay();
   // v142: la imagen guardada va SIEMPRE con los bounds con que se guardó (si el manifest corrigió la carta,
   // imagen vieja + bounds nuevos quedaría peor). Si hay una revisión nueva (m.rev) y hay red, se muestra la
   // versión en línea y se refresca la copia guardada en segundo plano.
@@ -11686,8 +11690,62 @@ async function cgMostrar(id, fly){
   cgOverlay.on('error', ()=>{ toast('⚠️ No se pudo cargar esta carta (¿sin conexión?)'); cgQuitarOverlay(); cgSyncPanel(); });
   cgOverlay.addTo(mapaVista);
   cgActivoId=id;
-  if(fly){ mapaVista.flyToBounds(bounds,{padding:[20,20],maxZoom:12,duration:.6}); cgColapsado=true; }
+  // elegida en el catálogo: el panel se cierra y la carta queda como una capa más del control de
+  // capas (arriba, con las satelitales), con su opacidad y su leyenda ahí mismo. Antes el panel
+  // quedaba plegado con Opacidad y «Ver leyenda» encima del mapa (pedido del usuario: vista limpia).
+  if(fly){ mapaVista.flyToBounds(bounds,{padding:[20,20],maxZoom:12,duration:.6}); cgCerrarPanel(); }
+  cgBtnEstado('🗺️ Cartas SG', true);
   cgSyncPanel();
+  cgCapasSync();
+}
+function cgCerrarPanel(){
+  cgOn=false;
+  if(cgCtrl&&mapaVista){ try{ mapaVista.removeControl(cgCtrl); }catch(e){} }
+  cgCtrl=null;
+  cgBtnEstado('🗺️ Cartas SG', !!cgActivoId);
+}
+// Cartas en el control de capas: una entrada por carta descargada (y la activa si se ve en línea).
+// Cada entrada es un layerGroup vacío que hace de interruptor; la imagen real sigue siendo cgOverlay
+// (una sola carta a la vez, como en el catálogo).
+let cgSinc=false;
+async function cgCapasSync(){
+  const map=mapaVista, ctl=map&&map._ctrlCapas; if(!ctl) return;
+  const locales=await all('cartageo');
+  if(map!==mapaVista) return;
+  const lista=locales.map(r=>({id:r.id,titulo:r.titulo||r.id}));
+  if(cgActivoId && !lista.some(x=>x.id===cgActivoId)){
+    const m=(cgData||[]).find(x=>x.id===cgActivoId); if(m) lista.unshift({id:m.id,titulo:m.titulo||m.id}); }
+  cgSinc=true;
+  try{
+    (map._cgCapas||[]).forEach(l=>{ ctl.removeLayer(l); if(map.hasLayer(l)) map.removeLayer(l); });
+    map._cgCapas=lista.map(x=>{ const g=L.layerGroup(); g._cgId=x.id;
+      ctl.addOverlay(g,'🗺️ '+cgEsc(x.titulo)); if(x.id===cgActivoId) g.addTo(map); return g; });
+  } finally{ cgSinc=false; }
+  if(!map._cgEventos){ map._cgEventos=true;
+    map.on('overlayadd',e=>{ const id=e.layer&&e.layer._cgId; if(!id||cgSinc) return;
+      cgSinc=true; try{ (map._cgCapas||[]).forEach(l=>{ if(l!==e.layer&&map.hasLayer(l)) map.removeLayer(l); }); } finally{ cgSinc=false; }
+      cgMostrar(id,false); });
+    map.on('overlayremove',e=>{ const id=e.layer&&e.layer._cgId; if(!id||cgSinc||id!==cgActivoId) return;
+      cgQuitarOverlay(); cgActivoId=null; cgCapasExtra(); cgSyncPanel(); cgBtnEstado('🗺️ Cartas SG',cgOn); });
+  }
+  cgCapasExtra();
+}
+// Opacidad y leyenda de la carta encendida, al pie del control de capas (solo si hay una carta).
+function cgCapasExtra(){
+  const ctl=mapaVista&&mapaVista._ctrlCapas, sec=ctl&&(ctl._section||ctl._form); if(!sec) return;
+  let x=sec.querySelector('.cg-capa-extra');
+  if(!cgActivoId){ if(x) x.remove(); return; }
+  if(!x){
+    x=L.DomUtil.create('div','cg-capa-extra',sec);
+    x.innerHTML='<div class="leaflet-control-layers-separator"></div>'
+      +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0">Opacidad'
+      +'<input type="range" min="0" max="100" style="flex:1;min-width:90px"></label>'
+      +'<button type="button" style="width:100%;padding:5px;border:none;border-radius:6px;background:#1f6feb;color:#fff;font-weight:600;font-size:12px;cursor:pointer">ⓘ Leyenda de la carta</button>';
+    L.DomEvent.disableClickPropagation(x);
+    x.querySelector('input').addEventListener('input',ev=>{ cgOpacidad=ev.target.value/100; if(cgOverlay) cgOverlay.setOpacity(cgOpacidad); });
+    x.querySelector('button').addEventListener('click',ev=>{ L.DomEvent.stop(ev); cgVerLeyenda(); });
+  }
+  x.querySelector('input').value=Math.round(cgOpacidad*100);
 }
 
 function cgFmtTam(b){ return b<1024*1024 ? Math.round(b/1024)+' KB' : (b/1024/1024).toFixed(1)+' MB'; }
@@ -11732,8 +11790,8 @@ async function cgDescargar(id){
       manifestVer:cgVer, fechaDescarga:new Date().toISOString(), tamB:overlayBlob.size+(leyendaBlob?leyendaBlob.size:0)};
     await put('cartageo', rec);
     await cgRefrescarDescargadas();
-    toast('✓ Descargada ('+cgFmtTam(rec.tamB)+') · lista para terreno');
-    cgSyncPanel();
+    toast('✓ Descargada ('+cgFmtTam(rec.tamB)+') · también en Capas, arriba a la derecha');
+    cgSyncPanel(); cgCapasSync();
   }catch(e){ console.warn('cgDescargar (guardar)',e);
     toast(e && e.name==='QuotaExceededError' ? '⚠️ Sin espacio en el dispositivo: borra cartas o fotos y reintenta'
                                              : '⚠️ No se pudo guardar la carta en el dispositivo'); }
@@ -11751,7 +11809,7 @@ async function cgBorrar(id){
   // puesta), y al reconstruirse el mapa el reenganche de initMapaVista la vuelve a pedir a la red.
   if(cgActivoId===id){ cgQuitarOverlay(); cgActivoId=null; }
   toast('Carta borrada del dispositivo');
-  cgSyncPanel();
+  cgSyncPanel(); cgCapasSync();
 }
 
 function cgBtnEstado(txt, activo){ const b=document.getElementById('btnCartasSG'); if(!b) return; b.textContent=txt; b.classList.toggle('active',!!activo); }
@@ -11812,11 +11870,8 @@ function cgCrearControl(abiertasPrevias){
     // una carta el panel se contrae solo (cgMostrar), y graduar la transparencia para ver el
     // satelital por debajo es lo que más se usa en terreno -- tenerla adentro obligaba a
     // desplegar el panel entero, que vuelve a tapar el mapa.
-    html+='<label style="display:flex;align-items:center;gap:6px;margin-top:6px;flex:0 0 auto;font-size:.72rem">Opacidad'
-      +`<input class="cg-rng" type="range" min="0" max="100" value="${Math.round(cgOpacidad*100)}" style="flex:1"></label>`;
-    // "Ver leyenda" también va FUERA del cuerpo plegable (v143): con el panel contraído tras elegir
-    // la carta, la leyenda debe seguir a mano junto a la opacidad, sin volver a desplegar la lista.
-    html+='<button class="cg-leg" type="button" style="width:100%;padding:6px;background:#1f6feb;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;margin-top:6px;flex:0 0 auto">ⓘ Ver leyenda</button>';
+    // (2026-11-06) Opacidad y «Ver leyenda» se mudaron al control de capas (cgCapasExtra): al elegir
+    // una carta este panel se cierra y la carta queda como capa, sin nada encima del mapa.
     html+=`<div class="cg-body" style="display:${cgColapsado?'none':'flex'};flex-direction:column;flex:1;min-height:0;margin-top:6px">`;
     const distDe = m => (cgCercaDeMi && cgGpsLatLon && m.bounds)
       ? cgDistanciaKm(cgGpsLatLon[0],cgGpsLatLon[1], ...cgCentroBounds(m.bounds)) : null;
@@ -11874,13 +11929,11 @@ function cgCrearControl(abiertasPrevias){
     html+=`<div class="cg-espacio" style="text-align:center;color:#9aa4ae;font-size:.68rem;flex:0 0 auto">`;
     html+='</div>';
     d.innerHTML=html;
-    const rng=d.querySelector('.cg-rng'), leg=d.querySelector('.cg-leg'), toggle=d.querySelector('.cg-toggle'), cerca=d.querySelector('.cg-cerca');
+    const toggle=d.querySelector('.cg-toggle'), cerca=d.querySelector('.cg-cerca');
     d.querySelectorAll('.cg-item').forEach(el2=>el2.addEventListener('click',()=>cgMostrar(el2.dataset.id,true)));
     d.querySelectorAll('.cg-dl').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();cgDescargar(b.dataset.id).then(cgRefrescarPanel);}));
     d.querySelectorAll('.cg-del').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();cgBorrar(b.dataset.id).then(cgRefrescarPanel);}));
     d.querySelectorAll('.cg-dl-region').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();cgDescargarRegion(b.dataset.region).then(cgRefrescarPanel);}));
-    rng.addEventListener('input',()=>{ cgOpacidad=rng.value/100; if(cgOverlay) cgOverlay.setOpacity(cgOpacidad); });
-    leg.addEventListener('click',cgVerLeyenda);
     toggle.addEventListener('click',()=>{ cgColapsado=!cgColapsado; cgSyncPanel(); });
     if(cerca) cerca.addEventListener('change',()=>{
       cgCercaDeMi=cerca.checked;
@@ -11978,19 +12031,15 @@ async function cgVerLeyenda(){
 }
 async function cgToggle(){
   if(!mapaVista) return;
-  if(cgOn){
-    cgOn=false; cgQuitarOverlay();
-    if(cgCtrl){ mapaVista.removeControl(cgCtrl); cgCtrl=null; }
-    cgBtnEstado('🗺️ Cartas SG', false);
-    return;
-  }
+  // el botón abre/cierra el CATÁLOGO; la carta encendida sigue (se apaga en Capas, arriba a la derecha)
+  if(cgOn){ cgCerrarPanel(); return; }
   cgOn=true; cgBtnEstado('⏳ Cartas SG', true);
   toast('Cargando Cartas Geológicas…');
   try{
     await cgRefrescarDescargadas();
     await cgCargarManifest();
     if(!cgData.length){ toast('No hay cartas disponibles'); cgOn=false; cgBtnEstado('🗺️ Cartas SG', false); return; }
-    cgActivoId=null; cgColapsado=false;
+    cgColapsado=false;
     cgCtrl=cgCrearControl(); cgCtrl.addTo(mapaVista);
     cgBtnEstado('🗺️ Cartas SG', true);
     const modo=cgFuenteManifest==='local'?' (sin conexión, solo descargadas)':'';
@@ -16915,8 +16964,10 @@ async function initMapaVista(puntos){
   // cgBtnEstado tambien: renderMapa crea el boton del FAB de cero en cada entrada al mapa, asi
   // que sin esto quedaba con aspecto de apagado mientras la capa seguia encendida -- y el
   // primer toque, que parecia encenderla, en realidad la apagaba.
-  if(cgOn){ cgCtrl=cgCrearControl(); cgCtrl.addTo(mapaVista); cgBtnEstado('🗺️ Cartas SG',true);
-            if(cgActivoId) cgMostrar(cgActivoId,false); }
+  if(cgOn){ cgCtrl=cgCrearControl(); cgCtrl.addTo(mapaVista); }
+  if(cgOn||cgActivoId) cgBtnEstado('🗺️ Cartas SG',true);
+  // la carta encendida (aunque el catálogo esté cerrado) y las descargadas vuelven al control de capas
+  if(cgActivoId) cgMostrar(cgActivoId,false); else cgCapasSync();
   mpReponer();   // el mapa raster propio se vuelve a colgar del mapa recién creado
   agReponer();   // ídem la capa de artículos de Andean Geology
   setTimeout(()=>mapaVista.invalidateSize(),160);
