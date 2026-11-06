@@ -11560,6 +11560,32 @@ function cgDistanciaKm(lat1,lon1,lat2,lon2){
   return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 function cgCentroBounds(b){ return [(b.n+b.s)/2, (b.e+b.w)/2]; }
+// Distancia del punto a la CARTA (al borde de su rectángulo; 0 si está adentro). Al centro, una hoja
+// grande que te cubre podía quedar "más lejos" que una chica vecina que no te sirve.
+function cgDistanciaACarta(lat,lon,b){
+  const la=Math.max(b.s,Math.min(b.n,lat)), lo=Math.max(b.w,Math.min(b.e,lon));
+  return (la===lat&&lo===lon)?0:cgDistanciaKm(lat,lon,la,lo);
+}
+// Desde dónde se mide «Más cercanas» (pedido del usuario: ver al tiro qué carta sirve, sin navegar):
+// el GPS si hay una posición de los últimos 10 min; si no, el centro del mapa (sigue al mover el mapa).
+function cgReferencia(){
+  const p=gpsVivo.ultimo&&Date.now()-gpsVivo.ultimo.timestamp<600000?[gpsVivo.ultimo.coords.latitude,gpsVivo.ultimo.coords.longitude]
+    :gpsUltimo?[gpsUltimo[0],gpsUltimo[1]]
+    :ultimaPosGPS&&Date.now()-ultimaPosGPS.t<600000?[ultimaPosGPS.lat,ultimaPosGPS.lon]:null;
+  if(p) return {lat:p[0],lon:p[1],gps:true};
+  if(mapaVista){ const c=mapaVista.getCenter(); return {lat:c.lat,lon:c.lng,gps:false}; }
+  return null;
+}
+const CG_CERCANAS=5;
+function cgCercanas(ref){
+  if(!ref) return [];
+  return (cgData||[]).filter(m=>m.bounds).map(m=>({m,d:cgDistanciaACarta(ref.lat,ref.lon,m.bounds)}))
+    .sort((a,b)=>a.d-b.d||((a.m.bounds.n-a.m.bounds.s)*(a.m.bounds.e-a.m.bounds.w))-((b.m.bounds.n-b.m.bounds.s)*(b.m.bounds.e-b.m.bounds.w)))   // empate (dentro de varias): la de más detalle primero
+    .slice(0,CG_CERCANAS);
+}
+// al mover el mapa (sin GPS) la sección de cercanas se recalcula, con un respiro para no rehacer el panel a cada paso
+let cgTMover=0;
+function cgAlMover(){ clearTimeout(cgTMover); cgTMover=setTimeout(()=>{ const r=cgReferencia(); if(cgOn&&cgCtrl&&r&&!r.gps&&!cgCercaDeMi) cgRefrescarPanel(); },700); }
 function cgFmtKm(km){ return km<1 ? Math.round(km*1000)+' m' : Math.round(km)+' km'; }
 function cgPedirGps(){
   if(!navigator.geolocation){ toast('Sin geolocalización en este dispositivo'); cgCercaDeMi=false; cgRefrescarPanel(); return; }
@@ -11733,7 +11759,9 @@ function cgRefrescarPanel(){
 }
 function cgCrearControl(abiertasPrevias){
   const ctrl=L.control({position:'bottomleft'});
-  ctrl.onAdd=function(){
+  ctrl.onRemove=map=>map.off('moveend',cgAlMover);
+  ctrl.onAdd=function(map){
+    map.on('moveend',cgAlMover);
     const d=L.DomUtil.create('div','cg-panel');
     d.style.cssText='background:rgba(20,24,31,.92);color:#e8edf2;padding:8px 10px;border-radius:10px;font-size:.78rem;box-shadow:0 2px 8px rgba(0,0,0,.4);max-width:250px;max-height:min(60vh,420px);display:flex;flex-direction:column;overflow:hidden';
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
@@ -11757,13 +11785,13 @@ function cgCrearControl(abiertasPrevias){
     html+=`<div class="cg-body" style="display:${cgColapsado?'none':'flex'};flex-direction:column;flex:1;min-height:0;margin-top:6px">`;
     const distDe = m => (cgCercaDeMi && cgGpsLatLon && m.bounds)
       ? cgDistanciaKm(cgGpsLatLon[0],cgGpsLatLon[1], ...cgCentroBounds(m.bounds)) : null;
-    const itemHtml = m => {
+    const itemHtml = (m,dCerca) => {
       const desc=cgDescargadasIds.has(m.id);
-      const d=distDe(m);
+      const d=dCerca!=null?dCerca:distDe(m);
       return `<div style="display:flex;align-items:center;gap:4px;margin:2px 0">`
         +`<div class="cg-item" data-id="${cgEsc(m.id)}" tabindex="0" role="button"
             style="flex:1;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:.74rem;line-height:1.3">${cgEsc(m.titulo||m.id)}`
-        +(d!=null?` <span style="opacity:.65;font-size:.68rem;white-space:nowrap">· 📍${cgFmtKm(d)}</span>`:'')
+        +(d!=null?` <span style="opacity:.75;font-size:.68rem;white-space:nowrap;${d===0?'color:#7ee0a1;font-weight:600':''}">· ${d===0?'📍 aquí':'📍'+cgFmtKm(d)}</span>`:'')
         +`</div>`
         +(desc
           ? `<button class="cg-del" type="button" data-id="${cgEsc(m.id)}" title="Borrar del dispositivo" style="flex:0 0 auto;background:none;border:none;color:#ff6b6b;font-size:.9rem;cursor:pointer;padding:2px 6px">🗑</button>`
@@ -11776,6 +11804,15 @@ function cgCrearControl(abiertasPrevias){
         +(cgGpsPidiendo?'📍 Ubicándote…':'📍 Ordenar por cercanía a mí')+'</label>';
     }
     html+='<div class="cg-lista" style="overflow-y:auto;flex:1;min-height:0">';
+    // «Más cercanas» arriba de todo (salvo en el modo de lista completa ordenada por distancia)
+    if(multi && !(cgCercaDeMi && cgGpsLatLon)){
+      const ref=cgReferencia(), cerca=cgCercanas(ref);
+      if(cerca.length){
+        html+=`<div class="cg-cercanas" style="margin:0 0 6px;padding:4px 0 6px;border-bottom:1px solid rgba(255,255,255,.14)">`
+          +`<div style="font-size:.66rem;color:#9cc4ff;text-transform:uppercase;letter-spacing:.4px;margin:0 2px 2px">Más cercanas · ${ref.gps?'a tu ubicación':'al centro del mapa'}</div>`
+          +cerca.map(x=>itemHtml(x.m,x.d)).join('')+'</div>';
+      }
+    }
     if(multi && cgCercaDeMi && cgGpsLatLon){
       // Modo "cerca de mí": lista plana ordenada por distancia ascendente, sin agrupar por región
       // (agrupar por región no ayuda cuando lo que importa es "qué tengo más cerca ahora mismo").
