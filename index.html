@@ -15207,7 +15207,9 @@ async function renderPuntoIconos(app){
       herr.append(el('button',{type:'button',title:'Foto o mapa de fondo','aria-label':'Foto o mapa de fondo',
         onclick:()=>raiz.classList.toggle('con-foto')},'🖼'));
     }
-    if(nuevo) pv.hoja={clave:'punto',idx:0};   // punto nuevo: lo primero es ubicarlo
+    // Al entrar a un punto se abre su formulario (pedido del usuario: antes un punto existente abría
+    // solo el mapa y había que tocar el icono). El mapa queda a un toque: «Ver en el mapa» en la hoja.
+    pv.hoja={clave:'punto',idx:0};
   }
   await refrescarDock();
   if(pv.hoja) await abrirHoja(pv.hoja.clave, pv.hoja.idx);
@@ -15325,6 +15327,8 @@ function crearHoja(titulo, clave){
   const enPunto=!!(pv&&document.querySelector('.pv .dock'));
   const cab=el('div',{class:'hoja-cab'},el('span',{class:'hoja-ic','data-c':colorIc(clave),html:iconoDe(clave)}),
     el('b',{},titulo),
+    enPunto?el('button',{type:'button',class:'hoja-cam',title:'Ver el punto en el mapa','aria-label':'Ver el punto en el mapa',
+      onclick:verPuntoEnMapa,html:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l8-3 10 3 8-3v17l-8 3-10-3-8 3z"/><path d="M11 6v17M21 9v17"/></svg>'}):null,
     enPunto&&clave!=='__ajustes'?el('button',{type:'button',class:'hoja-cam',title:'Foto para este punto','aria-label':'Tomar una foto para este punto',
       onclick:()=>fotoAlPunto(),html:iconoDe('foto')}):null,
     el('button',{type:'button',class:'hoja-x','aria-label':'Cerrar',onclick:()=>cerrarHojas()},'✕'));
@@ -15345,6 +15349,12 @@ function arrastreHoja(hoja, asas){
       hoja.style.transform=dy>0?'translateY('+dy+'px)':''; if(dy<-40) hoja.classList.add('alta'); });
     a.addEventListener('pointerup',soltar); a.addEventListener('pointercancel',soltar);
   }
+}
+// «Ver en el mapa»: cierra la hoja (lo escrito se guarda al perder el foco) y centra el mapa en el punto.
+// La barra de iconos sigue abajo para volver al formulario con un toque.
+function verPuntoEnMapa(){
+  cerrarHojas();
+  if(mapa&&marcador){ setTimeout(()=>{ try{ mapa.invalidateSize(); mapa.setView(marcador.getLatLng(),Math.max(mapa.getZoom(),GPS_ZOOM)); }catch(e){} },60); }
 }
 function cerrarHojas(){
   const hs=document.querySelectorAll('.hoja'); if(!hs.length) return;
