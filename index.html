@@ -447,9 +447,9 @@
   .ctx-gps{white-space:nowrap}
   .ctx-gps::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin:0 4px 0 1px;box-shadow:0 0 0 1.5px rgba(255,255,255,.8)}
   .gps-pill{position:absolute;top:42px;left:50%;transform:translateX(-50%);z-index:500;color:#fff;font-size:13px;font-weight:650;padding:5px 12px;border-radius:16px;box-shadow:0 4px 12px -4px rgba(0,0,0,.5);pointer-events:none;white-space:nowrap}
-  .cam-fab{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:500;width:58px;height:58px;border-radius:50%;border:none;background:var(--surface);color:var(--verde);box-shadow:0 6px 18px -6px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .cam-fab{position:absolute;right:12px;top:112px;z-index:500;width:58px;height:58px;border-radius:50%;border:none;background:var(--surface);color:var(--verde);box-shadow:0 6px 18px -6px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cam-fab svg{width:30px;height:30px}
-  .cam-fab:active{transform:translateY(-50%) scale(.94)}
+  .cam-fab:active{transform:scale(.94)}
   .gpsdlg-ov{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
   .gpsdlg{width:100%;max-width:520px;background:var(--surface);color:var(--txt);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;text-align:center}
   .gpsdlg>b{font-size:16px}
@@ -15327,7 +15327,7 @@ function crearHoja(titulo, clave){
   const enPunto=!!(pv&&document.querySelector('.pv .dock'));
   const cab=el('div',{class:'hoja-cab'},el('span',{class:'hoja-ic','data-c':colorIc(clave),html:iconoDe(clave)}),
     el('b',{},titulo),
-    enPunto?el('button',{type:'button',class:'hoja-cam',title:'Ver el punto en el mapa','aria-label':'Ver el punto en el mapa',
+    enPunto?el('button',{type:'button',class:'hoja-cam',title:'Ver en el mapa del proyecto','aria-label':'Ver en el mapa del proyecto',
       onclick:verPuntoEnMapa,html:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l8-3 10 3 8-3v17l-8 3-10-3-8 3z"/><path d="M11 6v17M21 9v17"/></svg>'}):null,
     enPunto&&clave!=='__ajustes'?el('button',{type:'button',class:'hoja-cam',title:'Foto para este punto','aria-label':'Tomar una foto para este punto',
       onclick:()=>fotoAlPunto(),html:iconoDe('foto')}):null,
@@ -15350,11 +15350,15 @@ function arrastreHoja(hoja, asas){
     a.addEventListener('pointerup',soltar); a.addEventListener('pointercancel',soltar);
   }
 }
-// «Ver en el mapa»: cierra la hoja (lo escrito se guarda al perder el foco) y centra el mapa en el punto.
-// La barra de iconos sigue abajo para volver al formulario con un toque.
+// «Ver en el mapa»: cierra la hoja (lo escrito se guarda al perder el foco) y va al mapa del PROYECTO,
+// con todos los puntos, centrado en este (pedido del usuario: el mapa de un solo punto no servía).
+let mapaFoco=null;   // {lat,lon}: initMapaVista centra ahí una vez, en vez de encuadrar todo
 function verPuntoEnMapa(){
+  const p=curPunto, lat=p&&parseFloat(p.LAT_DECIMAL), lon=p&&parseFloat(p.LONG_DECIMAL);
   cerrarHojas();
-  if(mapa&&marcador){ setTimeout(()=>{ try{ mapa.invalidateSize(); mapa.setView(marcador.getLatLng(),Math.max(mapa.getZoom(),GPS_ZOOM)); }catch(e){} },60); }
+  mapaFoco=(isFinite(lat)&&isFinite(lon))?{lat,lon}:null;
+  // deja que el blur guarde el último campo antes de salir de la vista del punto
+  setTimeout(()=>nav({n:'mapa',id:curProyecto.id}),120);
 }
 function cerrarHojas(){
   const hs=document.querySelectorAll('.hoja'); if(!hs.length) return;
@@ -16528,9 +16532,10 @@ async function renderMapa(app){
   const modo=toggleModo('mapa'); modo.id='modoBarMapa'; app.append(modo);
   const card=el('div',{class:'card mapcard'});
   card.append(el('div',{id:'projmap',class:'mapbig'}));
-  // v157: registro rápido con foto, a mano derecha sobre el mapa
-  card.append(el('button',{type:'button',class:'cam-fab',title:'Foto rápida: crea un punto con la foto y el GPS',
-    'aria-label':'Foto rápida: crea un punto con la foto y el GPS',onclick:fotoRapida,html:iconoDe('foto')}));
+  // v157: registro rápido con foto, a mano derecha sobre el mapa, bajo la brújula. Crea SIEMPRE un
+  // punto nuevo en la posición GPS; para sumar una foto a un punto existente se usa el 📷 de su hoja.
+  card.append(el('button',{type:'button',class:'cam-fab',title:'Foto rápida: crea un punto nuevo con la foto y el GPS',
+    'aria-label':'Foto rápida: crea un punto nuevo con la foto y el GPS',onclick:fotoRapida,html:iconoDe('foto')}));
   app.append(card);
   const puntos=await childrenOf(storeActivo(),curProyecto.id);
   const conC=puntos.filter(p=>!isNaN(parseFloat(p['LAT_DECIMAL']))&&!isNaN(parseFloat(p['LONG_DECIMAL'])));
@@ -16859,7 +16864,12 @@ async function initMapaVista(puntos){
     if(_tmpLine)_tmpLine.setLatLngs(_verts); else _tmpLine=L.polyline(_verts,{color:colVert,weight:3,dashArray:midiendo?'2,8':'5,5'}).addTo(mapaVista);
     _tmpMk.push(L.circleMarker(ev.latlng,{radius:4,color:colVert,fillColor:colVert,fillOpacity:1,weight:1}).addTo(mapaVista));
     if(midiendo)bannerMedir(); else bannerDibujo(); });
-  if(pts.length)mapaVista.fitBounds(pts,{padding:[46,46],maxZoom:17});
+  if(mapaFoco){ const ll=[mapaFoco.lat,mapaFoco.lon]; mapaFoco=null;
+    mapaVista.setView(ll,GPS_ZOOM);
+    // anillo que marca el punto de donde se vino; se apaga solo
+    const aro=L.circleMarker(ll,{radius:26,color:'#f59e0b',weight:3,fill:false,interactive:false}).addTo(mapaVista);
+    setTimeout(()=>{ try{ aro.remove(); }catch(e){} },4000); }
+  else if(pts.length)mapaVista.fitBounds(pts,{padding:[46,46],maxZoom:17});
   else if(extraFit.length)mapaVista.fitBounds(extraFit,{padding:[46,46],maxZoom:17});
   else mapaVista.setView([-33.45,-70.65],5);
   L.control.scale({position:'bottomleft',metric:true,imperial:false,maxWidth:120}).addTo(mapaVista);
@@ -17537,7 +17547,7 @@ function fotoRapida(){
     if(!r){ toast('Registro cancelado: la foto no se guardó'); return; }
     if(r.fuente==='manual') return ubicarFotoEnMapa(img);
     const p=await registrarPuntoRapido(img,r);
-    toast('📷 '+p.ID_PUNTO_CONTROL+' registrado · ±'+Math.round(r.acc)+' m'+(calidadGPS(r.acc)==='malo'?' (fuera del umbral)':''));
+    toast('📷 Punto nuevo '+p.ID_PUNTO_CONTROL+' con la foto · ±'+Math.round(r.acc)+' m'+(calidadGPS(r.acc)==='malo'?' (fuera del umbral)':''));
     if(vista.n==='mapa') render();
     otraFotoRapida(p,1);
   });

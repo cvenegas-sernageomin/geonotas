@@ -2614,10 +2614,9 @@ async function correr(){
         ok(doc.querySelector('.pv #map.leaflet-container'), 'el mapa de fondo no se inició');
         // al entrar a un punto YA EXISTENTE se abre su formulario, con «Ver en el mapa» a mano
         await esperar(() => doc.querySelector('.hoja[data-clave="punto"]'), 3000, 'el formulario del punto al entrar');
-        const verMapa = doc.querySelector('.hoja .hoja-cam[aria-label="Ver el punto en el mapa"]');
-        ok(verMapa, 'falta «Ver en el mapa» en la hoja');
-        verMapa.click();
-        ok(!doc.querySelector('.hoja'), '«Ver en el mapa» debe cerrar la hoja');
+        // (lleva al mapa del proyecto, así que no se pulsa aquí: saldría de la vista del punto)
+        ok(doc.querySelector('.hoja .hoja-cam[aria-label="Ver en el mapa del proyecto"]'), 'falta «Ver en el mapa» en la hoja');
+        w.cerrarHojas();
         // v158: 📷 en la vista del punto; la foto se cuelga de ESTE punto
         ok(doc.querySelector('.pv .cam-fab'), 'falta el 📷 en la vista del punto');
         const ft = await w.agregarFotoAlPunto('data:image/jpeg;base64,/9j/smoke-pv');
