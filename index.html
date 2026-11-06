@@ -9333,6 +9333,9 @@ function hideField(store,n){
   if(n==='ID_CONTACTO') return store==='contacto';                                                       // FK selector en estructural (v146); PK oculto en contacto
   if(n==='ID_ESTRUCTURA') return store!=='juego';                                                         // v163: FK selector en el juego de fracturas
   if(['ID_FOTOGRAFIA','ID_ESQUEMA'].includes(n)) return true;               // ids técnicos
+  // pedido del usuario (2026-11-06): fuera del formulario de Lito. La columna sigue en el modelo y
+  // en la exportación (vacía), y lo ya escrito se conserva y sigue entrando a la prosa.
+  if(store==='litologia' && n==='RELACION_LITOLOGIA_ESTRUCTURA') return true;
   return false;
 }
 
