@@ -450,6 +450,32 @@
   .cam-fab{position:absolute;right:12px;top:112px;z-index:500;width:58px;height:58px;border-radius:50%;border:none;background:var(--surface);color:var(--verde);box-shadow:0 6px 18px -6px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .cam-fab svg{width:30px;height:30px}
   .cam-fab:active{transform:scale(.94)}
+  /* panel lateral de capas (2026-11-08) */
+  .capas-btn a{display:flex!important;align-items:center;justify-content:center;width:40px!important;height:40px!important;position:relative;color:#333}
+  .capas-btn svg{width:24px;height:24px}
+  .capas-btn a.activo::after{content:'';position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:#2e9d5b;border:1.5px solid #fff}
+  .capas-ov{position:fixed;inset:0;z-index:1150;background:rgba(0,0,0,.35)}
+  .capas-panel{position:fixed;top:0;right:0;bottom:0;z-index:1151;width:min(380px,90vw);background:var(--surface);color:var(--txt);
+    box-shadow:-8px 0 28px -10px rgba(0,0,0,.55);display:flex;flex-direction:column;
+    padding:calc(12px + env(safe-area-inset-top)) 0 env(safe-area-inset-bottom);animation:capasEntra .18s ease-out}
+  @keyframes capasEntra{from{transform:translateX(100%)}to{transform:none}}
+  .capas-cab{display:flex;align-items:center;gap:8px;padding:0 14px 10px;border-bottom:1px solid var(--bd)}
+  .capas-cab b{flex:1;font-size:17px}
+  .capas-cab button{border:none;background:var(--surface2);color:var(--txt);width:36px;height:36px;border-radius:50%;font-size:17px;cursor:pointer}
+  .capas-cuerpo{overflow-y:auto;flex:1;padding:6px 14px 16px;-webkit-overflow-scrolling:touch}
+  .capas-sec{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+  .capas-fila{display:flex;align-items:center;gap:10px;padding:9px 4px;border-radius:10px;font-size:15px;cursor:pointer}
+  .capas-fila:active{background:var(--surface2)}
+  .capas-fila input{width:20px;height:20px;accent-color:var(--verde);flex:none;margin:0}
+  .capas-fila span{flex:1;min-width:0}
+  .capas-extra{display:flex;align-items:center;gap:8px;padding:0 4px 8px 34px;font-size:12px;color:var(--muted)}
+  .capas-extra input[type=range]{flex:1;min-width:80px;accent-color:var(--verde)}
+  .capas-extra button{border:none;border-radius:8px;background:var(--azul);color:#fff;font-size:12px;font-weight:600;padding:5px 9px;cursor:pointer}
+  .capas-acc{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--bd);background:var(--surface2);color:var(--txt);
+    border-radius:12px;padding:11px 12px;margin:6px 0;font-size:15px;cursor:pointer}
+  .capas-acc small{display:block;color:var(--muted);font-size:12px}
+  .capas-acc.on{border-color:var(--verde);box-shadow:inset 0 0 0 1px var(--verde)}
+  .capas-vacio{font-size:13px;color:var(--muted);padding:4px 4px 2px}
   .gpsdlg-ov{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
   .gpsdlg{width:100%;max-width:520px;background:var(--surface);color:var(--txt);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;text-align:center}
   .gpsdlg>b{font-size:16px}
@@ -7343,7 +7369,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v177';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v178';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -10439,19 +10465,119 @@ function capaSatelital(map){
   });
   map._capasBase=capas; map._baseActual=BASES[0].nombre;
   map._ctrlCapas=L.control.layers(capas,null,{position:'topright'}).addTo(map);
+  // 2026-11-08: el desplegable de Leaflet queda oculto (sigue siendo el registro de capas que usan
+  // grilla, relieve, zonas y cartas); lo que se ve es el botón que abre el panel lateral de capas.
+  map._ctrlCapas.getContainer().style.display='none';
+  capasBotonMontar(map);
   map.on('baselayerchange',e=>{ if(e.layer._nombreBase) map._baseActual=e.layer._nombreBase; });
   zonasMontarPropias(map);
   grillaUTMMontar(map);
   relieveMontar(map);
   // v132: el ⬇️/🗑️ de leaflet.offline se reemplazó por el panel de zonas (📦). La capa sigue
   // siendo L.tileLayer.offline para que las teselas bajadas antes de v132 se sigan viendo.
-  const Btn=L.Control.extend({options:{position:'topleft'},onAdd(){
-    const d=L.DomUtil.create('div','leaflet-bar leaflet-control-savetiles');
-    const a=L.DomUtil.create('a','',d); a.href='#'; a.title='Mapas offline'; a.textContent='📦';
-    L.DomEvent.on(a,'click',e=>{ L.DomEvent.stop(e); zonasPanel(); });
-    L.DomEvent.disableClickPropagation(d); return d; }});
-  new Btn().addTo(map);
+  // 2026-11-08: el 📦 de la columna de controles pasó al panel de capas («Mapas offline»).
   return null;
+}
+// ---- Panel lateral de capas (2026-11-08, pedido del usuario: «la barra de abajo está muy llena;
+// lo que es capa encima de la imagen va dentro del icono de capas, que abre un panel grande
+// lateral con todas las capas disponibles») ----
+// Abajo quedan solo las herramientas de cartografiar. El panel lee el registro del control de
+// capas de Leaflet (map._ctrlCapas._layers), así que toda capa que se sume ahí (grilla, relieve,
+// zonas, cartas descargadas) aparece sola. Al elegir un mapa base el panel se cierra; las capas de
+// encima se prenden/apagan sin cerrarlo, con su transparencia a mano.
+const ICONO_CAPAS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="m2.5 12 9.5 5 9.5-5"/><path d="m2.5 16 9.5 5 9.5-5"/></svg>';
+function capasBotonMontar(map){
+  const C=L.Control.extend({options:{position:'topright'},onAdd(){
+    const d=L.DomUtil.create('div','leaflet-bar capas-btn');
+    const a=L.DomUtil.create('a','',d); a.href='#'; a.title='Capas'; a.setAttribute('aria-label','Capas'); a.innerHTML=ICONO_CAPAS;
+    L.DomEvent.on(a,'click',e=>{ L.DomEvent.stop(e); capasPanelAbrir(map); });
+    L.DomEvent.disableClickPropagation(d); map._capasBtn=a; return d; }});
+  new C().addTo(map);
+  map.on('layeradd layerremove',()=>{ clearTimeout(map._capasT); map._capasT=setTimeout(()=>capasRefrescar(map),60); });
+}
+function capasEncendidas(map){
+  const ctl=map._ctrlCapas; if(!ctl) return 0;
+  let n=ctl._layers.filter(o=>o.overlay&&map.hasLayer(o.layer)).length;
+  if(map===mapaVista){ if(mpActivoId) n++; if(agOn) n++; }
+  return n;
+}
+let capasAbierto=null;   // {map, ov, panel, cuerpo}
+function capasRefrescar(map){
+  if(map._capasBtn) map._capasBtn.classList.toggle('activo',capasEncendidas(map)>0);
+  if(capasAbierto&&capasAbierto.map===map) capasPintar();
+}
+function capasCerrar(){ if(!capasAbierto) return; capasAbierto.ov.remove(); capasAbierto.panel.remove(); capasAbierto=null; }
+function capasPanelAbrir(map){
+  capasCerrar();
+  const ov=el('div',{class:'capas-ov',onclick:capasCerrar});
+  const cuerpo=el('div',{class:'capas-cuerpo'});
+  const panel=el('aside',{class:'capas-panel',role:'dialog','aria-label':'Capas'},
+    el('div',{class:'capas-cab'},el('b',{},'Capas'),el('button',{type:'button','aria-label':'Cerrar',onclick:capasCerrar},'✕')),cuerpo);
+  document.body.append(ov,panel);
+  capasAbierto={map,ov,panel,cuerpo};
+  capasPintar();
+}
+function capasDeslizador(valor,alCambiar){
+  const r=el('input',{type:'range',min:'0',max:'100','aria-label':'Opacidad'}); r.value=String(Math.round(valor*100));
+  r.addEventListener('input',()=>alCambiar(r.value/100));
+  return r;
+}
+function capasPintar(){
+  if(!capasAbierto) return;
+  const {map,cuerpo}=capasAbierto, ctl=map._ctrlCapas; if(!ctl) return;
+  const y=cuerpo.scrollTop; cuerpo.innerHTML='';
+  const fila=(tipo,marcado,nombreHtml,alCambiar)=>{
+    const i=el('input',{type:tipo}); if(tipo==='radio') i.name='capas-base'; i.checked=marcado;
+    i.addEventListener('change',()=>alCambiar(i.checked));
+    const s=el('span'); s.innerHTML=nombreHtml;
+    return el('label',{class:'capas-fila'},i,s);
+  };
+  // 1) mapa base
+  cuerpo.append(el('div',{class:'capas-sec'},'Mapa base'));
+  ctl._layers.filter(o=>!o.overlay).forEach(o=>{
+    cuerpo.append(fila('radio',map.hasLayer(o.layer),o.name,()=>{
+      const antes=ctl._layers.filter(x=>!x.overlay&&map.hasLayer(x.layer)&&x.layer!==o.layer);
+      map.addLayer(o.layer); antes.forEach(x=>map.removeLayer(x.layer));
+      capasCerrar();
+    }));
+  });
+  // 2) capas sobre la imagen (las del registro) + las propias del mapa del proyecto
+  cuerpo.append(el('div',{class:'capas-sec'},'Sobre la imagen'));
+  const encima=ctl._layers.filter(o=>o.overlay);
+  encima.forEach(o=>{
+    const on=map.hasLayer(o.layer);
+    cuerpo.append(fila('checkbox',on,o.name,v=>{ if(v) map.addLayer(o.layer); else map.removeLayer(o.layer); }));
+    if(!on) return;
+    if(o.layer._cgId){   // carta geológica: la imagen real es cgOverlay
+      cuerpo.append(el('div',{class:'capas-extra'},'Opacidad',
+        capasDeslizador(cgOpacidad,v=>{ cgOpacidad=v; if(cgOverlay) cgOverlay.setOpacity(v); }),
+        el('button',{type:'button',onclick:()=>{ capasCerrar(); cgVerLeyenda(); }},'ⓘ Leyenda')));
+    } else if(o.layer.setOpacity){
+      const op=o.layer.options&&o.layer.options.opacity!=null?o.layer.options.opacity:1;
+      cuerpo.append(el('div',{class:'capas-extra'},'Opacidad',capasDeslizador(op,v=>o.layer.setOpacity(v))));
+    }
+  });
+  const enProyecto=map===mapaVista;
+  if(enProyecto){
+    cuerpo.append(fila('checkbox',!!agOn,'📚 Artículos de Andean Geology',()=>{ agToggle(); setTimeout(capasPintar,400); }));
+    if(mpActivoId&&mpOverlay){
+      cuerpo.append(fila('checkbox',true,'🖼️ Mi mapa en pantalla',v=>{ if(!v){ mpQuitarOverlay(); mpActivoId=null; capasRefrescar(map); } }));
+      cuerpo.append(el('div',{class:'capas-extra'},'Opacidad',
+        capasDeslizador(mpOpacidad,v=>{ mpOpacidad=v; if(mpOverlay&&mpOverlay.setOpacity) mpOverlay.setOpacity(v); })));
+    }
+  }
+  if(!encima.length&&!enProyecto) cuerpo.append(el('div',{class:'capas-vacio'},'No hay capas sobre la imagen.'));
+  // 3) sumar capas
+  cuerpo.append(el('div',{class:'capas-sec'},'Agregar'));
+  const acc=(ico,txt,sub,fn,on)=>cuerpo.append(el('button',{type:'button',class:'capas-acc'+(on?' on':''),onclick:()=>{ capasCerrar(); fn(); }},
+    el('span',{style:'font-size:20px'},ico),el('span',{},txt,el('small',{},sub))));
+  if(enProyecto){
+    acc('🗺️','Cartas Geológicas SERNAGEOMIN','Catálogo: ver y descargar para terreno',()=>{ if(!cgOn) cgToggle(); },cgOn);
+    acc('🖼️','Mis mapas','GeoTIFF y KMZ propios',mpAbrir,!!mpActivoId);
+  }
+  acc('📦','Mapas offline','Bajar la imagen de una zona para usar sin señal',zonasPanel);
+  acc('ⓘ','Simbología de los puntos','Qué significa cada símbolo',legendaSimbologia);
+  cuerpo.scrollTop=y;
 }
 // ---- Grilla UTM (v135) ----
 // Capa activable en el selector de capas: líneas de Este/Norte UTM del huso del CENTRO de la
@@ -16702,17 +16828,13 @@ async function renderMapa(app){
     el('button',{class:'btn blue mini',onclick:iniciarDibujoLinea},'✏️ Línea'),
     el('button',{class:'btn orange mini',onclick:iniciarAgregarNota},'📝+ Nota'),
     el('button',{class:'btn sec mini',onclick:iniciarMedir},'📏 Medir'),
-    el('button',{class:'btn sec mini',onclick:legendaSimbologia},'ⓘ'),
+    // 2026-11-08: ⓘ, Offline, Cartas SG, Mis mapas y Artículos pasaron al panel de capas (icono de capas)
     el('span',{class:'muted',style:'flex:1;align-self:center;font-size:11px'},conC.length+'/'+puntos.length+' pts'),
-    el('button',{class:'btn sec mini',onclick:zonasPanel},'📦 Offline'),
-    el('button',{class:'btn sec mini',id:'btnCartasSG',onclick:cgToggle},'🗺️ Cartas SG'),
-    el('button',{class:'btn sec mini',id:'btnMisMapas',onclick:mpAbrir},'🖼️ Mis mapas'),
     // Sin v3dReponer() análogo a cgReponer/mpReponer/agReponer a propósito: la Vista 3D no es
     // una capa del mapa que haya que reenganchar cuando initMapaVista reconstruye el Leaflet,
     // es un overlay que se crea y se destruye entero en cada apertura.
     el('button',{class:'btn sec mini',id:'btnVista3D',onclick:v3dAbrir},'⛰️ 3D'),
     el('button',{class:'btn sec mini',id:'btnRA',title:'Dibujar líneas sobre la cámara, calzada con el relieve',onclick:raAbrir},'📷 RA'),
-    el('button',{class:'btn sec mini',id:'btnArticulos',onclick:agToggle},'📚 Artículos'),
     el('button',{class:'btn sec mini',onclick:()=>nav({n:'home'})},'⌂'));
   setTimeout(()=>initMapaVista(conC),80);
 }
