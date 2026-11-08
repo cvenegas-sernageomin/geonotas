@@ -476,6 +476,23 @@
   .capas-acc small{display:block;color:var(--muted);font-size:12px}
   .capas-acc.on{border-color:var(--verde);box-shadow:inset 0 0 0 1px var(--verde)}
   .capas-vacio{font-size:13px;color:var(--muted);padding:4px 4px 2px}
+  .capas-volver{border:none;background:none;color:var(--verde);font-size:15px;font-weight:600;padding:8px 0;cursor:pointer}
+  .capas-quitar{border:none;background:none;color:var(--rojo);font-size:13px;font-weight:600;padding:6px 4px;cursor:pointer}
+  .capas-panel .cg-panel{background:none!important;color:var(--txt)!important;max-width:none!important;max-height:none!important;
+    box-shadow:none!important;padding:0!important;font-size:15px!important;overflow:visible!important}
+  .capas-panel .cg-titulo-header,.capas-panel .cg-toggle{display:none}
+  .capas-panel .cg-panel>div:first-child{display:none!important}
+  .capas-panel .cg-body{margin-top:0!important}
+  .capas-panel .cg-lista{overflow:visible!important}
+  .capas-panel .cg-item{font-size:14px!important;padding:10px 8px!important;border-radius:10px!important}
+  .capas-panel .cg-item:not(.cg-item-activo):active{background:var(--surface2)!important}
+  .capas-panel .cg-item-activo::before{content:'✓ '}
+  .capas-panel .cg-region summary{color:var(--txt)!important;padding:8px 2px!important;font-size:14px}
+  .capas-panel .cg-panel label{color:var(--muted)!important;font-size:13px!important}
+  .capas-panel .cg-cercanas{border-bottom-color:var(--bd)!important}
+  .capas-panel .cg-cercanas>div:first-child{color:var(--azul)!important;font-size:11px!important}
+  .capas-panel .cg-item:not(.cg-item-activo) span[style*="7ee0a1"]{color:var(--verde)!important}
+  .capas-panel .cg-espacio{color:var(--muted)!important;font-size:12px!important;margin-top:10px}
   .gpsdlg-ov{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
   .gpsdlg{width:100%;max-width:520px;background:var(--surface);color:var(--txt);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;text-align:center}
   .gpsdlg>b{font-size:16px}
@@ -7369,7 +7386,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v178';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v179';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -10504,9 +10521,33 @@ function capasEncendidas(map){
 let capasAbierto=null;   // {map, ov, panel, cuerpo}
 function capasRefrescar(map){
   if(map._capasBtn) map._capasBtn.classList.toggle('activo',capasEncendidas(map)>0);
-  if(capasAbierto&&capasAbierto.map===map) capasPintar();
+  if(capasAbierto&&capasAbierto.map===map&&!capasAbierto.sub) capasPintar();
 }
-function capasCerrar(){ if(!capasAbierto) return; capasAbierto.ov.remove(); capasAbierto.panel.remove(); capasAbierto=null; }
+function capasCerrar(){
+  if(!capasAbierto) return;
+  const m=capasAbierto.map;
+  capasAbierto.ov.remove(); capasAbierto.panel.remove(); capasAbierto=null;
+  if(cgOn) cgCerrarPanel();
+  if(m) capasRefrescar(m);
+}
+// Abre el catálogo de cartas dentro del panel (subvista con «← Capas»).
+function capasVerCartas(){
+  if(!capasAbierto) return;
+  capasAbierto.sub='cartas'; capasPintar();
+  if(cgOn) cgRefrescarPanel();
+  else cgToggle().then(()=>{ const h=document.getElementById('cgHost');
+    if(h&&!cgOn) h.innerHTML='<div class="capas-vacio">No se pudieron cargar las cartas (¿sin conexión y nada descargado?).</div>'; });
+}
+function capasApagarTodo(map){
+  const ctl=map._ctrlCapas;
+  ctl._layers.filter(o=>o.overlay&&map.hasLayer(o.layer)).forEach(o=>map.removeLayer(o.layer));
+  if(map===mapaVista){
+    if(cgActivoId) cgApagar();
+    if(mpActivoId){ mpQuitarOverlay(); mpActivoId=null; }
+    if(agOn) agToggle();
+  }
+  capasRefrescar(map); capasPintar();
+}
 function capasPanelAbrir(map){
   capasCerrar();
   const ov=el('div',{class:'capas-ov',onclick:capasCerrar});
@@ -10526,6 +10567,15 @@ function capasPintar(){
   if(!capasAbierto) return;
   const {map,cuerpo}=capasAbierto, ctl=map._ctrlCapas; if(!ctl) return;
   const y=cuerpo.scrollTop; cuerpo.innerHTML='';
+  const tit=capasAbierto.panel.querySelector('.capas-cab b');
+  if(capasAbierto.sub==='cartas'){
+    tit.textContent='Cartas Geológicas';
+    cuerpo.append(el('button',{type:'button',class:'capas-volver',onclick:()=>{ cgCerrarPanel(); capasAbierto.sub=null; capasPintar(); }},'← Capas'),
+      el('div',{class:'capas-vacio',style:'margin-bottom:6px'},'Toca una carta para verla sobre la imagen; tócala de nuevo para quitarla. ⬇ la guarda para terreno sin señal.'),
+      el('div',{id:'cgHost'},el('div',{class:'capas-vacio'},'Cargando cartas…')));
+    return;
+  }
+  tit.textContent='Capas';
   const fila=(tipo,marcado,nombreHtml,alCambiar)=>{
     const i=el('input',{type:tipo}); if(tipo==='radio') i.name='capas-base'; i.checked=marcado;
     i.addEventListener('change',()=>alCambiar(i.checked));
@@ -10559,7 +10609,7 @@ function capasPintar(){
   });
   const enProyecto=map===mapaVista;
   if(enProyecto){
-    cuerpo.append(fila('checkbox',!!agOn,'📚 Artículos de Andean Geology',()=>{ agToggle(); setTimeout(capasPintar,400); }));
+    cuerpo.append(fila('checkbox',!!agOn,'📚 Artículos de Andean Geology',async()=>{ await agToggle(); capasRefrescar(map); }));
     if(mpActivoId&&mpOverlay){
       cuerpo.append(fila('checkbox',true,'🖼️ Mi mapa en pantalla',v=>{ if(!v){ mpQuitarOverlay(); mpActivoId=null; capasRefrescar(map); } }));
       cuerpo.append(el('div',{class:'capas-extra'},'Opacidad',
@@ -10567,12 +10617,15 @@ function capasPintar(){
     }
   }
   if(!encima.length&&!enProyecto) cuerpo.append(el('div',{class:'capas-vacio'},'No hay capas sobre la imagen.'));
+  if(capasEncendidas(map)>0) cuerpo.append(el('button',{type:'button',class:'capas-quitar',onclick:()=>capasApagarTodo(map)},'✕ Quitar todas las capas'));
   // 3) sumar capas
   cuerpo.append(el('div',{class:'capas-sec'},'Agregar'));
   const acc=(ico,txt,sub,fn,on)=>cuerpo.append(el('button',{type:'button',class:'capas-acc'+(on?' on':''),onclick:()=>{ capasCerrar(); fn(); }},
     el('span',{style:'font-size:20px'},ico),el('span',{},txt,el('small',{},sub))));
   if(enProyecto){
-    acc('🗺️','Cartas Geológicas SERNAGEOMIN','Catálogo: ver y descargar para terreno',()=>{ if(!cgOn) cgToggle(); },cgOn);
+    cuerpo.append(el('button',{type:'button',class:'capas-acc'+(cgActivoId?' on':''),onclick:capasVerCartas},
+      el('span',{style:'font-size:20px'},'🗺️'),el('span',{style:'flex:1'},'Cartas Geológicas SERNAGEOMIN',el('small',{},'Catálogo: ver y descargar para terreno')),
+      el('span',{style:'color:var(--muted);font-size:18px'},'›')));
     acc('🖼️','Mis mapas','GeoTIFF y KMZ propios',mpAbrir,!!mpActivoId);
   }
   acc('📦','Mapas offline','Bajar la imagen de una zona para usar sin señal',zonasPanel);
@@ -12001,6 +12054,17 @@ async function cgBorrar(id){
 
 function cgBtnEstado(txt, activo){ const b=document.getElementById('btnCartasSG'); if(!b) return; b.textContent=txt; b.classList.toggle('active',!!activo); }
 
+// Tocar una carta del catálogo: si ya está encendida, se apaga (y el catálogo sigue abierto); si
+// no, se muestra, el mapa vuela a ella y el panel se cierra para verla.
+async function cgElegir(id){
+  if(id===cgActivoId){ cgApagar(); return; }
+  await cgMostrar(id,true);
+  if(cgActivoId===id) capasCerrar();
+}
+function cgApagar(){
+  if(!cgActivoId) return;
+  cgQuitarOverlay(); cgActivoId=null; cgSyncPanel(); cgCapasSync(); cgBtnEstado('🗺️ Cartas SG',cgOn);
+}
 function cgSyncPanel(){
   if(!cgCtrl || !cgCtrl._panelEl) return;
   const d=cgCtrl._panelEl;
@@ -12008,7 +12072,7 @@ function cgSyncPanel(){
     const activo=el2.dataset.id===cgActivoId;
     el2.classList.toggle('cg-item-activo',activo);
     el2.style.background=activo?'#1f6feb':'transparent';
-    el2.style.color=activo?'#fff':'#e8edf2';
+    el2.style.color=activo?'#fff':'';
     el2.style.fontWeight=activo?'600':'400';
   });
   const rng=d.querySelector('.cg-rng'); if(rng) rng.value=Math.round(cgOpacidad*100);
@@ -12040,6 +12104,12 @@ function cgRefrescarPanel(){
 function cgCrearControl(abiertasPrevias){
   const ctrl=L.control({position:'bottomleft'});
   ctrl.onRemove=map=>map.off('moveend',cgAlMover);
+  // 2026-11-08 (pedido del usuario: «al tocar Cartas Geológicas queda una barra en el mapa que dice
+  // Elige una carta; eso no debe ocurrir»): el catálogo vive dentro del panel lateral de capas.
+  // addTo/remove propios: se cuelga del hueco del panel (#cgHost) en vez de una esquina del mapa.
+  ctrl.addTo=function(map){ this._map=map; const d=this.onAdd(map); this._container=d;
+    const host=document.getElementById('cgHost'); if(host){ host.innerHTML=''; host.append(d); } return this; };
+  ctrl.remove=function(){ if(this._container) this._container.remove(); if(this._map) this.onRemove(this._map); this._map=null; return this; };
   ctrl.onAdd=function(map){
     map.on('moveend',cgAlMover);
     const d=L.DomUtil.create('div','cg-panel');
@@ -12117,7 +12187,7 @@ function cgCrearControl(abiertasPrevias){
     html+='</div>';
     d.innerHTML=html;
     const toggle=d.querySelector('.cg-toggle'), cerca=d.querySelector('.cg-cerca');
-    d.querySelectorAll('.cg-item').forEach(el2=>el2.addEventListener('click',()=>cgMostrar(el2.dataset.id,true)));
+    d.querySelectorAll('.cg-item').forEach(el2=>el2.addEventListener('click',()=>cgElegir(el2.dataset.id)));
     d.querySelectorAll('.cg-dl').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();cgDescargar(b.dataset.id).then(cgRefrescarPanel);}));
     d.querySelectorAll('.cg-del').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();cgBorrar(b.dataset.id).then(cgRefrescarPanel);}));
     d.querySelectorAll('.cg-dl-region').forEach(b=>b.addEventListener('click',ev=>{ev.stopPropagation();cgDescargarRegion(b.dataset.region).then(cgRefrescarPanel);}));
@@ -14713,6 +14783,7 @@ async function render(){
   dibujando=false; agregandoPunto=false; agregandoNota=false; midiendo=false;
   if(vista.n!=='mapa') pararGPSLive();     // no seguir consumiendo GPS fuera de la vista mapa
   gpsTemplar();                            // GPS caliente solo en el punto y en el mapa
+  capasCerrar();                           // el panel lateral de capas no sobrevive al cambio de pantalla
   enEditor=false;
   cerrarHojas();          // la hoja de la vista iconos vive en <body>: no se va sola al cambiar de pantalla
   const app=$('#app'); app.innerHTML=''; $('#fab').innerHTML=''; $('#fab').className='fab';
@@ -19557,7 +19628,8 @@ const READONLY_EXENTOS = [
   // Gabinete protege lo que el geólogo levantó en terreno, no la transparencia de un mapa de
   // consulta. Sin esta excepción el slider de opacidad quedaba deshabilitado y atenuado al
   // bloquear la colección — mismo patrón que ya obligó a exentar el toggle de colección.
-  '.cg-panel input'
+  '.cg-panel input',
+  '.capas-panel input'
 ].join(',');
 
 // Actualiza el botón "Llevar a terreno"/"Desbloquear" del header (visible solo en
