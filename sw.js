@@ -1,5 +1,6 @@
 // Service worker offline-first (cache estatico)
-const CACHE='geonotas-v176';
+const CACHE='geonotas-v177';
+const HTML_PLAZO=3500;   // ms que se espera a la red por el HTML antes de usar la copia guardada
 // Caches que ESTA app puede purgar al activarse. NO se borra "todo lo que no sea CACHE":
 // la Cache API tiene alcance de ORIGEN, no de ruta, y las dos PWAs (completa y light) viven
 // en el mismo cvenegas-sernageomin.github.io. Con el filtro viejo, activar una borraba la
@@ -77,8 +78,17 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;
   if(esDoc){   // network-first para el HTML: siempre la última versión estando en línea
     // solo se cachea si resp.ok: un 404 (ej. deploy a medio subir) quedaba cacheado para
     // siempre y la app seguía rota offline hasta la próxima versión de CACHE.
-    e.respondWith(fetch(req).then(resp=>{if(resp.ok){const cp=resp.clone();caches.open(CACHE).then(c=>c.put(req,cp));}return resp;})
-      .catch(()=>caches.match(req).then(r=>r||caches.match('./index.html'))));
+    // 2026-11-08: con señal muy débil el fetch no falla, se queda colgado, y la app tardaba en abrir
+    // (o al volver de otra pantalla). Si la red no contesta en HTML_PLAZO se entrega la copia
+    // guardada; la red sigue y deja la versión nueva para la próxima vez.
+    const red=fetch(req).then(resp=>{if(resp.ok){const cp=resp.clone();caches.open(CACHE).then(c=>c.put(req,cp));}return resp;});
+    const guardada=()=>caches.match(req).then(r=>r||caches.match('./index.html'));
+    e.respondWith(new Promise(res=>{
+      let listo=false; const dar=r=>{ if(!listo&&r){ listo=true; res(r); } };
+      const t=setTimeout(()=>guardada().then(dar),HTML_PLAZO);
+      red.then(r=>{ clearTimeout(t); dar(r); }).catch(()=>{ clearTimeout(t); guardada().then(r=>dar(r||Response.error())); });
+    }));
+    e.waitUntil(red.catch(()=>{}));
     return;
   }
   if(esGdal(u)){

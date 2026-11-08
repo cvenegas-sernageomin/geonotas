@@ -7343,7 +7343,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v176';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v177';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -10907,8 +10907,10 @@ async function sobrezoomRed(tl,c){
   for(let dz=1;dz<=4&&c.z-dz>=0;dz++){
     const px=c.x>>dz, py=c.y>>dz, k=2**dz;
     const url=L.Util.template(tl._url,L.extend({},tl.options,{x:px,y:py,z:c.z-dz,s:tl._getSubdomain?tl._getSubdomain({x:px,y:py}):'a',r:''}));
-    let blob=null;
-    try{ const r=await fetch(url,{mode:'cors',cache:'force-cache'}); if(r.ok) blob=await r.blob(); }catch(e){}
+    let blob=await teselaGuardada(url);
+    if(!blob){ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),3000);
+      try{ const r=await fetch(url,{mode:'cors',cache:'force-cache',signal:ctl.signal}); if(r.ok) blob=await r.blob(); }catch(e){}
+      finally{ clearTimeout(t); } }
     if(!blob||!blob.size) continue;
     const im=await v3dBlobADibujable(blob), lado=im.width/k;
     const cv=document.createElement('canvas'); cv.width=cv.height=256;
@@ -10918,22 +10920,81 @@ async function sobrezoomRed(tl,c){
   }
   return null;
 }
-function zonasEnganchar(tl,base){
-  const orig=tl.createTile.bind(tl);
-  tl.createTile=function(c,done){
-    if(!zonasDeBase(base,c.z,c.x,c.y).length&&!zonasSobrezoomDeBase(base,c.z,c.x,c.y).length){
-      // la tesela de siempre; si falla, la antepasada ampliada en vez de un hueco gris
-      return orig(c,(err,im)=>{
-        if(!err) return done(null,im);
-        sobrezoomRed(tl,c).then(b=>{
-          if(!b) return done(err,im);
-          im.onload=im.onerror=null; im.removeAttribute('crossorigin');
-          zonasPintarBlob(im,b).then(()=>done(null,im),()=>done(err,im));
-        },()=>done(err,im));
-      });
+// ---- Teselas recientes + plazo + reintento (2026-11-08, pedido del usuario: «al pasar de libreta a
+// mapa muchas veces no se despliega la imagen satelital; con muy mala señal se cae») ----
+// Tres causas: (1) cada entrada al mapa reconstruye el Leaflet y vuelve a pedir TODAS las teselas a
+// la red, aunque se acabaran de ver (el sw.js no las guarda, a propósito, ver allí); (2) un <img>
+// con señal débil queda «cargando» minutos, sin plazo, y la tesela no se ve; (3) una tesela que
+// falló no se volvía a pedir nunca: quedaba el hueco aunque la señal volviera.
+// Ahora: las teselas base que se ven quedan en una caché ACOTADA (TESELAS_MAX, las más viejas salen
+// primero; no es la caché sin límite que se evitó en el sw.js) y se leen de ahí al tiro; la red
+// tiene plazo; si falla, la antepasada ampliada; y lo que falló se reintenta solo mientras la
+// tesela siga en pantalla (cada 10 s y apenas vuelve la red).
+const TESELAS_CACHE='geonotas-teselas-recientes', TESELAS_MAX=4000, TESELAS_PLAZO=9000;
+let teselasCachePromesa=null, teselasPuestas=0;
+function teselasCache(){ if(!self.caches) return Promise.resolve(null);
+  return teselasCachePromesa||(teselasCachePromesa=caches.open(TESELAS_CACHE).catch(()=>null)); }
+async function teselaGuardada(url){
+  try{ const c=await teselasCache(); const r=c&&await c.match(url); if(!r) return null;
+    const b=await r.blob(); return b&&b.size?b:null; }catch(e){ return null; }
+}
+async function teselaGuardar(url,blob){
+  try{ const c=await teselasCache(); if(!c) return;
+    await c.put(url,new Response(blob,{headers:{'Content-Type':blob.type||'image/jpeg'}}));
+    if(++teselasPuestas%100===0){   // recorte: keys() viene en orden de inserción
+      const ks=await c.keys(); const sobra=ks.length-TESELAS_MAX;
+      for(let i=0;i<sobra+Math.round(TESELAS_MAX*0.1)&&sobra>0;i++) await c.delete(ks[i]);
     }
+  }catch(e){}
+}
+async function teselaRed(url){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),TESELAS_PLAZO);
+  try{
+    const r=await fetch(urlSinBlanco(url),{mode:'cors',signal:ctl.signal});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const b=await r.blob(); if(!b.size) throw new Error('tesela vacía');
+    teselaGuardar(url,b);
+    return b;
+  } finally { clearTimeout(t); }
+}
+// Una tesela base sin zona: guardada de leaflet.offline (antes de v132) → recientes → red con
+// plazo → antepasada ampliada.
+async function teselaBaseCargar(tl,c,img){
+  const url=tl.getTileUrl(c);
+  if(tl.setDataUrl){ try{ const du=await tl.setDataUrl(c); if(du){ await zonasCargarImg(img,du); return; } }catch(e){} }
+  let b=await teselaGuardada(url);
+  if(!b&&navigator.onLine!==false){ try{ b=await teselaRed(url); }catch(e){} }
+  if(!b) b=await sobrezoomRed(tl,c);
+  if(!b) throw new Error('sin tesela');
+  await zonasPintarBlob(img,b);
+}
+const teselasFallidas=new Set();   // {img, cargar}
+let teselasTimer=0;
+function teselaReintentarLuego(img,cargar){
+  teselasFallidas.add({img,cargar});
+  if(!teselasTimer) teselasTimer=setInterval(teselasReintentar,10000);
+}
+let teselasReintentando=false;
+async function teselasReintentar(){
+  if(teselasReintentando||document.hidden) return;
+  teselasReintentando=true;
+  try{
+    for(const it of [...teselasFallidas]){
+      if(!it.img.isConnected){ teselasFallidas.delete(it); continue; }   // Leaflet ya la sacó
+      try{ await it.cargar(); teselasFallidas.delete(it); L.DomUtil.addClass(it.img,'leaflet-tile-loaded'); it.img.style.opacity=''; }
+      catch(e){}
+    }
+  } finally { teselasReintentando=false; }
+  if(!teselasFallidas.size){ clearInterval(teselasTimer); teselasTimer=0; }
+}
+window.addEventListener('online',()=>{ if(teselasFallidas.size) teselasReintentar(); });
+function zonasEnganchar(tl,base){
+  tl.createTile=function(c,done){
     const img=document.createElement('img'); img.alt=''; img.setAttribute('role','presentation');
-    zonasPintar.call(this,img,base,c,this.getTileUrl(c)).then(()=>done(null,img),e=>done(e,img));
+    const cargar=(!zonasDeBase(base,c.z,c.x,c.y).length&&!zonasSobrezoomDeBase(base,c.z,c.x,c.y).length)
+      ? ()=>teselaBaseCargar(tl,c,img)
+      : ()=>zonasPintar.call(tl,img,base,c,tl.getTileUrl(c));
+    cargar().then(()=>done(null,img),e=>{ done(e,img); teselaReintentarLuego(img,cargar); });
     return img;
   };
 }
@@ -14170,7 +14231,8 @@ function cotaSobreNivelMar(alt,lat,lon,ios=esIOS()){
 // Última posición conocida, para la declinación: la brújula se usa casi siempre justo después
 // de tomar el GPS del punto. Cualquier lectura de GPS de la app la actualiza.
 let ultimaPosGPS=null;
-function anotarPosGPS(p){ if(p&&p.coords) ultimaPosGPS={lat:p.coords.latitude, lon:p.coords.longitude, t:Date.now()}; }
+function anotarPosGPS(p){ if(p&&p.coords){ ultimaPosGPS={lat:p.coords.latitude, lon:p.coords.longitude, t:Date.now()};
+  if(!anotarPosGPS.ok){ anotarPosGPS.ok=true; try{ localStorage.setItem('gpsPermitido','1'); }catch(e){} } } }
 // Declinación a aplicar ahora: con la posición del GPS (cualquier fix de las últimas 12 h basta:
 // la declinación cambia ~0,1° cada 10 km); si no hay, la pide (máx. 8 s, acepta una de caché).
 async function declinacionActual(){
@@ -17500,14 +17562,25 @@ function textoErrorPunto(p){
 // el permiso de ubicación ya está dado: abrir un punto no debe disparar el diálogo del permiso.
 const GPS_FRESCO=10000;   // ms: un fix más viejo puede ser de otro lugar si el geólogo caminó
 const gpsVivo={id:null, ultimo:null, subs:new Set()};
-function gpsQuiereCalor(){ return !document.hidden && (vista.n==='punto'||vista.n==='mapa'); }
+// 2026-11-08 (pedido del usuario: «aún muy lento en capturar la ubicación, otra app sí se ubica»):
+// el GPS se enfriaba en la Libreta (vista 'proyecto') y en Muestras, que es justo desde donde se
+// crea el punto nuevo: el primer «Tomar GPS» partía de cero. Ahora queda caliente en todo el
+// proyecto. Y en iPhone permissions.query puede contestar 'prompt' aunque el permiso ya se haya
+// dado antes: si esta app ya recibió un fix alguna vez (marca en localStorage), se calienta igual.
+const GPS_VISTAS_CALOR=['punto','mapa','proyecto','muestras'];
+function gpsQuiereCalor(){ return !document.hidden && GPS_VISTAS_CALOR.includes(vista.n); }
+function gpsYaPermitido(){ try{ return localStorage.getItem('gpsPermitido')==='1'; }catch(e){ return false; } }
 async function gpsCalentar(){
   if(gpsVivo.id!=null||!navigator.geolocation) return;
-  try{ const st=await navigator.permissions.query({name:'geolocation'}); if(st.state!=='granted') return; }catch(e){ return; }
+  let st='';
+  try{ st=(await navigator.permissions.query({name:'geolocation'})).state; }catch(e){}
+  if(st==='denied') return;
+  if(st!=='granted' && !gpsYaPermitido()) return;
   if(gpsVivo.id!=null||!gpsQuiereCalor()) return;
   gpsVivo.id=navigator.geolocation.watchPosition(p=>{
     gpsVivo.ultimo=p; anotarPosGPS(p); gpsVivo.subs.forEach(f=>f(p));
-  },()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:60000});
+  },e=>{ if(e&&e.code===1){ try{ localStorage.removeItem('gpsPermitido'); }catch(_){} gpsEnfriar(); } },
+  {enableHighAccuracy:true,maximumAge:0,timeout:60000});
 }
 function gpsEnfriar(){ if(gpsVivo.id!=null){ navigator.geolocation.clearWatch(gpsVivo.id); gpsVivo.id=null; } }
 function gpsTemplar(){ if(gpsQuiereCalor()) gpsCalentar(); else gpsEnfriar(); }
