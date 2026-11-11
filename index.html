@@ -549,6 +549,7 @@
   .drawbanner .btn{padding:6px 10px}
   .modtoggle{display:flex;gap:8px;margin-bottom:8px}
   .modtoggle .btn{flex:1;font-size:13px;padding:8px}
+  .capas-sub{margin-left:22px;border-left:2px solid var(--bd);padding-left:6px}
   .sub-lib{display:flex;gap:0;margin:0 0 10px;border:1px solid var(--bd);border-radius:10px;overflow:hidden;background:var(--surface)}
   .sub-lib-b{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;padding:7px 8px;cursor:pointer}
   .sub-lib-b+.sub-lib-b{border-left:1px solid var(--bd)}
@@ -7398,7 +7399,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v180';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v181';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -10532,7 +10533,7 @@ function capasEncendidas(map){
 }
 let capasAbierto=null;   // {map, ov, panel, cuerpo}
 function capasRefrescar(map){
-  if(map._capasBtn) map._capasBtn.classList.toggle('activo',capasEncendidas(map)>0);
+  if(map._capasBtn) map._capasBtn.classList.toggle('activo',capasEncendidas(map)>0||(map===mapaVista&&mapaVerOcultos()>0));
   if(capasAbierto&&capasAbierto.map===map&&!capasAbierto.sub) capasPintar();
 }
 function capasCerrar(){
@@ -10594,6 +10595,8 @@ function capasPintar(){
     const s=el('span'); s.innerHTML=nombreHtml;
     return el('label',{class:'capas-fila'},i,s);
   };
+  // 0) qué mostrar del proyecto (puntos por tipo, rótulos, líneas, notas…)
+  if(map===mapaVista) mapaVerSeccion(cuerpo,fila);
   // 1) mapa base
   cuerpo.append(el('div',{class:'capas-sec'},'Mapa base'));
   ctl._layers.filter(o=>!o.overlay).forEach(o=>{
@@ -17199,6 +17202,67 @@ function legendaSimbologia(){
   box.append(el('div',{class:'btnbar'},el('button',{class:'btn',onclick:()=>ov.remove()},'Cerrar')));
   ov.append(box);document.body.append(ov);
 }
+// ---- Qué mostrar en el mapa del proyecto (v181) ----
+// Pedido: «en vista mapa debería poder desmarcar los puntos que muestran información, poder
+// filtrar qué ver». Se elige en el panel de Capas (sección «Qué mostrar»), se recuerda por
+// equipo (localStorage) y se aplica SIN rehacer el mapa: los marcadores ya creados se quitan o
+// se vuelven a poner, así la vista no salta. Un punto se ve si cae en alguno de los grupos
+// marcados (muestra / litología / estructura / solo fotos o vacío).
+const MAPA_VER_LS='geonotas-mapa-ver';
+const MAPA_VER_DEF={puntos:true,rotulos:true,simbEstr:true,gMus:true,gLito:true,gEstr:true,gOtros:true,
+  lineas:true,poligonos:true,notas:true,planos:true};
+let mapaVer=(()=>{ try{ return Object.assign({},MAPA_VER_DEF,JSON.parse(localStorage.getItem(MAPA_VER_LS)||'{}')); }catch(e){ return Object.assign({},MAPA_VER_DEF); } })();
+let _mapaElems={puntos:[],lineas:[],poligonos:[],notas:[],planos:[]};
+function mapaVerOcultos(){ return Object.keys(MAPA_VER_DEF).filter(k=>mapaVer[k]===false).length; }
+function mapaVerSet(k,v){
+  if(k==null) mapaVer=Object.assign({},MAPA_VER_DEF); else mapaVer[k]=v;
+  try{ localStorage.setItem(MAPA_VER_LS,JSON.stringify(mapaVer)); }catch(e){}
+  mapaVerAplicar();
+}
+function puntoGrupoVisible(d){
+  const g=[]; if(d.mus.length) g.push('gMus'); if(d.litos.length) g.push('gLito'); if(d.estr.length) g.push('gEstr');
+  if(!g.length) g.push('gOtros');
+  return g.some(k=>mapaVer[k]);
+}
+function mapaVerAplicar(){
+  const map=mapaVista; if(!map) return;
+  const poner=(capa,on)=>{ if(on){ if(!map.hasLayer(capa)) capa.addTo(map); } else if(map.hasLayer(capa)) map.removeLayer(capa); };
+  const b=map.getBearing?map.getBearing():0;
+  for(const k of _mapaElems.puntos){
+    const on=mapaVer.puntos&&puntoGrupoVisible(k.d);
+    const conEstr=mapaVer.simbEstr!==false;
+    if((k.dv===k.d)!==conEstr){ k.dv=conEstr?k.d:Object.assign({},k.d,{estr:[]}); k.m.setIcon(iconoPunto(k.dv,b)); }
+    if(k.rotulo){ const t=k.m.getTooltip();
+      if(mapaVer.rotulos&&!t) k.m.bindTooltip(k.rotulo,{permanent:true,direction:'bottom',offset:[0,18],className:'ptlabel'});
+      else if(!mapaVer.rotulos&&t) k.m.unbindTooltip(); }
+    poner(k.m,on);
+  }
+  for(const c of ['lineas','poligonos','notas','planos']) for(const capa of _mapaElems[c]) poner(capa,mapaVer[c]);
+  capasRefrescar(map);
+}
+function mapaVerSeccion(cuerpo,fila){
+  const n=_mapaElems.puntos.length;
+  const cuenta=g=>_mapaElems.puntos.filter(k=>{ const d=k.d;
+    return g==='gMus'?d.mus.length:g==='gLito'?d.litos.length:g==='gEstr'?d.estr.length:!(d.mus.length||d.litos.length||d.estr.length); }).length;
+  cuerpo.append(el('div',{class:'capas-sec'},'Qué mostrar'));
+  const chk=(k,txt)=>{ const f=fila('checkbox',mapaVer[k]!==false,txt,v=>{ mapaVerSet(k,v); capasPintar(); }); return f; };
+  cuerpo.append(chk('puntos','📍 Puntos de control <small style="color:var(--muted)">('+n+')</small>'));
+  if(mapaVer.puntos){
+    const sub=el('div',{class:'capas-sub'});
+    sub.append(chk('gMus','🧪 Con muestra <small style="color:var(--muted)">('+cuenta('gMus')+')</small>'),
+      chk('gLito','🪨 Con litología <small style="color:var(--muted)">('+cuenta('gLito')+')</small>'),
+      chk('gEstr','📐 Con estructuras <small style="color:var(--muted)">('+cuenta('gEstr')+')</small>'),
+      chk('gOtros','📷 Solo fotos o sin fichas <small style="color:var(--muted)">('+cuenta('gOtros')+')</small>'),
+      chk('rotulos','🏷️ Rótulos (ID del punto)'),
+      chk('simbEstr','↗ Rumbo/manteo sobre el punto'));
+    cuerpo.append(sub);
+  }
+  if(_mapaElems.lineas.length) cuerpo.append(chk('lineas','〰️ Líneas <small style="color:var(--muted)">('+_mapaElems.lineas.length+')</small>'));
+  if(_mapaElems.poligonos.length) cuerpo.append(chk('poligonos','⬠ Polígonos <small style="color:var(--muted)">('+_mapaElems.poligonos.length+')</small>'));
+  if(_mapaElems.notas.length) cuerpo.append(chk('notas','📝 Notas de campo <small style="color:var(--muted)">('+_mapaElems.notas.length+')</small>'));
+  if(_mapaElems.planos.length) cuerpo.append(chk('planos','⋯ Trazas de planos proyectados <small style="color:var(--muted)">('+_mapaElems.planos.length+')</small>'));
+  if(mapaVerOcultos()) cuerpo.append(el('button',{type:'button',class:'capas-quitar',onclick:()=>{ mapaVerSet(null); capasPintar(); }},'↺ Mostrar todo'));
+}
 async function initMapaVista(puntos){
   // initMapaVista destruye y reconstruye mapaVista (pasa al agregar/editar nota o línea) --
   // hay que soltar el object URL del overlay de Cartas Geológicas ANTES de perder la
@@ -17218,6 +17282,7 @@ async function initMapaVista(puntos){
   gpsMontar(mapaVista);
   giroMontar(mapaVista);
   const pts=[];
+  _mapaElems={puntos:[],lineas:[],poligonos:[],notas:[],planos:[]};
   // las fichas que deciden el símbolo, leídas UNA vez y agrupadas por punto (antes dos consultas por punto)
   const porPunto=async store=>{ const m=new Map(); for(const r of await all(store)){ if(!m.has(r._parent)) m.set(r._parent,[]); m.get(r._parent).push(r); } return m; };
   const [mEstr,mMus,mLito,mFoto]=await Promise.all(['estructural','muestreo','litologia','foto'].map(porPunto));
@@ -17227,7 +17292,9 @@ async function initMapaVista(puntos){
     const d={estr:mEstr.get(p.id)||[], mus:mMus.get(p.id)||[], litos:mLito.get(p.id)||[],
       nFotos:(mFoto.get(p.id)||[]).length, ck:p._estiloKml&&p._estiloKml.punto, cal:calidadDePunto(p)};
     const m=L.marker([lat,lon],{icon:iconoPunto(d,mapaVista.getBearing())}).addTo(mapaVista);
-    if(d.estr.length) giroMapa.marcas.push({m,d});   // se redibujan al girar el mapa
+    const reg={m,d,dv:d,rotulo:p.ID_PUNTO_CONTROL||''};
+    _mapaElems.puntos.push(reg);
+    if(d.estr.length) giroMapa.marcas.push(reg);   // se redibujan al girar el mapa (con lo que se muestra: reg.dv)
     if(p.ID_PUNTO_CONTROL)m.bindTooltip(p.ID_PUNTO_CONTROL,{permanent:true,direction:'bottom',offset:[0,18],className:'ptlabel'});
     m.on('click',()=>{if(editandoVertices)return;curPunto=null;vista={n:'punto',id:p.id};render();});
     pts.push([lat,lon]);
@@ -17238,7 +17305,7 @@ async function initMapaVista(puntos){
   for(const L2 of lineas){
     if(!L2.geom||L2.geom.length<2)continue;
     extraFit.push(...L2.geom);
-    const pl=L.polyline(L2.geom, estiloLinea(L2)).addTo(mapaVista);
+    const pl=L.polyline(L2.geom, estiloLinea(L2)).addTo(mapaVista); _mapaElems.lineas.push(pl);
     pl.on('click',ev=>{ if(dibujando||editandoVertices)return; L.DomEvent.stop(ev);
       formLinea(L2, async()=>{await put(storeLineaActivo(),L2);initMapaVista(_puntosMapa);},
                     async()=>{await del(storeLineaActivo(),L2.id);initMapaVista(_puntosMapa);}); });
@@ -17252,7 +17319,7 @@ async function initMapaVista(puntos){
   for(const pl of planosProy){
     if(!pl.traza||pl.traza.length<2)continue;
     const coords=pl.traza.map(p=>[p.lat,p.lon]);
-    const pline=L.polyline(coords,{color:'#7c3aed',weight:3,dashArray:'6,6',opacity:.9}).addTo(mapaVista);
+    const pline=L.polyline(coords,{color:'#7c3aed',weight:3,dashArray:'6,6',opacity:.9}).addTo(mapaVista); _mapaElems.planos.push(pline);
     pline.on('click',ev=>{ if(dibujando||editandoVertices)return; L.DomEvent.stop(ev);
       formPlanoProy(pl, async()=>{await put('planoproy',pl);initMapaVista(_puntosMapa);},
                         async()=>{await del('planoproy',pl.id);initMapaVista(_puntosMapa);}); });
@@ -17262,7 +17329,7 @@ async function initMapaVista(puntos){
     if(!pg.geom||pg.geom.length<3)continue;
     extraFit.push(...pg.geom);
     const c=poliColor(pg);
-    const poly=L.polygon(pg.geom,{color:c,weight:2,fillColor:c,fillOpacity:.22}).addTo(mapaVista);
+    const poly=L.polygon(pg.geom,{color:c,weight:2,fillColor:c,fillOpacity:.22}).addTo(mapaVista); _mapaElems.poligonos.push(poly);
     if(pg.NOMBRE) poly.bindTooltip(pg.NOMBRE,{sticky:true});
     poly.on('click',ev=>{ if(dibujando||midiendo||editandoVertices)return; L.DomEvent.stop(ev);
       formPoligono(pg, async()=>{await put('poligono',pg);initMapaVista(_puntosMapa);},
@@ -17273,7 +17340,7 @@ async function initMapaVista(puntos){
   for(const n of notas){
     const lat=parseFloat(n.LATITUD), lon=parseFloat(n.LONGITUD);
     if(isNaN(lat)||isNaN(lon))continue;
-    const m=L.marker([lat,lon],{icon:iconoNota(n.CATEGORIA_NOTA)}).addTo(mapaVista);
+    const m=L.marker([lat,lon],{icon:iconoNota(n.CATEGORIA_NOTA)}).addTo(mapaVista); _mapaElems.notas.push(m);
     m.on('click',()=>{
       if(editandoVertices)return;
       formNota(n, async()=>{await put('nota',n);initMapaVista(_puntosMapa);},
@@ -17281,6 +17348,7 @@ async function initMapaVista(puntos){
     });
   }
   _puntosMapa=puntos;
+  mapaVerAplicar();   // lo que el geólogo ocultó sigue oculto tras rehacer el mapa
   // click en el mapa: si está el modo dibujo activo, agrega vértice
   mapaVista.on('click',ev=>{
     if(agregandoNota){ agregandoNota=false;
@@ -17349,7 +17417,7 @@ function giroIconos(){
   if(giroMapa.rafIco)return;
   giroMapa.rafIco=requestAnimationFrame(()=>{ giroMapa.rafIco=0; if(!giroMapa.map)return;
     const g=giroMapa.map.getBearing();
-    for(const k of giroMapa.marcas){ k.m.options.icon=iconoPunto(k.d,g); if(k.m._icon) k.m._icon.innerHTML=svgPunto(k.d,g); } });
+    for(const k of giroMapa.marcas){ const dd=k.dv||k.d; k.m.options.icon=iconoPunto(dd,g); if(k.m._icon) k.m._icon.innerHTML=svgPunto(dd,g); } });
 }
 function giroMontar(map){
   giroMapa.marcas=[]; giroMapa.map=map;

@@ -1,5 +1,5 @@
 // Service worker offline-first (cache estatico)
-const CACHE='geonotas-v180';
+const CACHE='geonotas-v181';
 const HTML_PLAZO=3500;   // ms que se espera a la red por el HTML antes de usar la copia guardada
 // Caches que ESTA app puede purgar al activarse. NO se borra "todo lo que no sea CACHE":
 // la Cache API tiene alcance de ORIGEN, no de ruta, y las dos PWAs (completa y light) viven
