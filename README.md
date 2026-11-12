@@ -1,4 +1,4 @@
-# PWA Geonotas — Libreta geológica de campo
+# PWA GeoNotas — Libreta geológica de campo
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23196794.svg)](https://doi.org/10.5281/zenodo.23196794)
 

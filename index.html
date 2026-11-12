@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f6f4f">
-<title>PWA Geonotas — Libreta geológica de campo</title>
+<title>PWA GeoNotas — Libreta geológica de campo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="vendor/leaflet.css">
@@ -818,7 +818,7 @@
 <header>
   <button class="btn sec mini" id="btnBack" type="button" aria-label="Volver" title="Volver" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
   <div id="hdr-titulo">
-    <h1 id="ttl">PWA Geonotas</h1>
+    <h1 id="ttl">PWA GeoNotas</h1>
     <div class="ctx" id="ctx"></div>
   </div>
   <div id="hdr-acciones">
@@ -7581,7 +7581,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v187';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v188';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -11558,11 +11558,11 @@ async function zonasDescargar({nombre,base,bounds,minz,maxz,onProg,signal}){
     meta:{name:nombre,attribution:b.attr,geonotas:{base,fuente:b.url,fecha,app:APP_VER}}});
   return zonasAgregar(blob,{nombre,base,bounds,minz,maxz,n:tiles.length,fallas,origen:'descarga',fecha});
 }
-// .pmtiles de otro teléfono / del PC. Si lo exportó Geonotas y trae una capa base conocida,
+// .pmtiles de otro teléfono / del PC. Si lo exportó GeoNotas y trae una capa base conocida,
 // vuelve a quedar como zona de esa capa; si no, como capa propia.
 async function zonasImportarPmtiles(file){
   const arc=await pmAbrir(file);
-  if(!PM_MIME[arc.H.tipo]||arc.H.compTes>1) throw new Error('Ese PMTiles no es raster (png/jpg/webp): los mapas vectoriales no se pueden mostrar en Geonotas');
+  if(!PM_MIME[arc.H.tipo]||arc.H.compTes>1) throw new Error('Ese PMTiles no es raster (png/jpg/webp): los mapas vectoriales no se pueden mostrar en GeoNotas');
   const meta=await pmMetadata(arc), g=meta.geonotas||{};
   return zonasAgregar(file,{nombre:meta.name||file.name.replace(/\.pmtiles$/i,''),
     base:BASES.some(b=>b.nombre===g.base)?g.base:null,bounds:arc.H.bounds,minz:arc.H.minz,maxz:arc.H.maxz,n:arc.H.n,origen:'importada'});
@@ -12602,7 +12602,7 @@ async function cgToggle(){
 // Se lee SIEMPRE del archivo publicado, nunca de una copia congelada dentro de este repo: así,
 // cuando se corrige la georreferenciación de un artículo y se hace push a Andean-Geology, el
 // cambio llega solo a esta app la próxima vez que se enciende la capa con conexión, sin tener que
-// versionar ni republicar Geonotas.
+// versionar ni republicar GeoNotas.
 //
 // A DIFERENCIA de cg*, la copia offline NO va a IndexedDB sino a la Cache API, por dos razones:
 //   1. Las dos PWAs (completa y light) viven en el mismo ORIGEN y comparten la MISMA IndexedDB
@@ -13122,7 +13122,7 @@ function v3dImageryEsri(){
 }
 
 // ---- Relieve: DEM local a partir de teselas Terrarium ----
-// Geonotas no tenía ninguna noción de elevación salvo la COTA del GPS por punto. El relieve del
+// GeoNotas no tenía ninguna noción de elevación salvo la COTA del GPS por punto. El relieve del
 // 3D sale de las teselas Terrarium de AWS (SRTM ~30 m), las mismas que usa el Trazador, pero
 // decodificadas aquí con un canvas: la librería maplibre-contour que usa el Trazador solo aporta
 // eso y no vale un vendor nuevo.
@@ -13376,7 +13376,7 @@ async function v3dDEMdesdeGeoTIFF(file){
   catch(e){ throw new Error('No se pudo leer el GeoTIFF: '+(e.message||e)); }
   if(!isFinite(gr.xmin)||!isFinite(gr.ymax)||!gr.pixelWidth)
     throw new Error('Este TIFF no trae georreferenciación: no se puede ubicar');
-  // gr.projection es un NÚMERO EPSG. Sin proj4, lo que se soporta es lo que Geonotas sabe
+  // gr.projection es un NÚMERO EPSG. Sin proj4, lo que se soporta es lo que GeoNotas sabe
   // convertir por su cuenta: geográficas, Mercator y UTM SUR (utmALatLon tiene el hemisferio
   // sur fijo por diseño — aceptar un huso norte colocaría el DEM 10.000 km corrido en silencio).
   const epsg=gr.projection|0;
@@ -13441,7 +13441,7 @@ async function v3dRecuperarDEM(def){
 }
 
 // ---- Geometría de un plano geológico (rumbo/manteo) ----
-// Portada del Trazador, que trabaja en UTM; aquí se reusa la conversión propia de Geonotas
+// Portada del Trazador, que trabaja en UTM; aquí se reusa la conversión propia de GeoNotas
 // (latLonAUtm/utmALatLon, Snyder) en vez de sumar proj4. Regla de la mano derecha: la dirección
 // de buzamiento es rumbo + 90°.
 function v3dMod360(d){ return ((d%360)+360)%360; }
@@ -15275,7 +15275,7 @@ async function renderHome(app){
 function creditos(){
   const c=el('div',{class:'creditos'});
   c.append(el('div',{},'Desarrollador: ',el('b',{},'Carlos Venegas'),' · SERNAGEOMIN'));
-  const asunto=encodeURIComponent('Geonotas '+APP_VER+' — comentarios');
+  const asunto=encodeURIComponent('GeoNotas '+APP_VER+' — comentarios');
   c.append(el('div',{},'Comentarios y/o consultas a: ',
     el('a',{href:'mailto:carlos.venegas@sernageomin.cl?subject='+asunto},
       'carlos.venegas@sernageomin.cl')));
@@ -20233,7 +20233,7 @@ function observarReadonly(){
 // ============================ Init ============================
 function pantallaError(msg,detalle){
   const app=$('#app'); if(!app)return;
-  $('#ttl').textContent='PWA Geonotas';
+  $('#ttl').textContent='PWA GeoNotas';
   app.innerHTML='<div class="card"><h2>⚠️ '+esc(msg)+'</h2>'
     +'<div class="muted" style="margin:6px 0">'+esc(detalle||'')+'</div>'
     +'<div class="btnbar"><button class="btn" onclick="location.reload()">↻ Reintentar</button></div></div>';

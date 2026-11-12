@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PWA Geonotas — Prueba de humo</title>
+<title>PWA GeoNotas — Prueba de humo</title>
 <style>
   :root{--verde:#2f6b4f;--rojo:#c0463a;--bd:#d5dbce;--muted:#5f6b62;--surface:#f8f9f4}
   @media (prefers-color-scheme:dark){:root{--verde:#5cbd8c;--rojo:#e0796d;--bd:#33402f;--muted:#9aab9d;--surface:#1d251f}
@@ -21,7 +21,7 @@
 </style>
 </head>
 <body>
-<h1>Prueba de humo — PWA Geonotas</h1>
+<h1>Prueba de humo — PWA GeoNotas</h1>
 <div class="sub">Corre el ciclo completo (capturar → respaldar → borrar → restaurar → exportar) contra
 el <code>index.html</code> real, cargado en un iframe.
 <b>No toca tus datos:</b> todo lo que crea lleva el prefijo <code>smoke-</code> (los ids reales empiezan
@@ -209,7 +209,7 @@ async function correr(){
       ok(cache, 'no se pudo leer CACHE de sw.js');
       // Lo que importa es que el CACHE cambie junto con APP_VER: si no, el
       // service worker sigue sirviendo el HTML viejo. NO se compara contra un
-      // prefijo de marca fijo: al renombrar la app (GeoTerreno CDC → Geonotas)
+      // prefijo de marca fijo: al renombrar la app (GeoTerreno CDC → GeoNotas)
       // esta prueba falló sin que hubiera ningún desalineamiento real.
       ok(cache.endsWith('-' + appVer),
          'desalineados: index.html dice ' + appVer + ' y sw.js dice ' + cache + ' (el usuario verá la versión vieja)');
@@ -1842,7 +1842,7 @@ async function correr(){
         const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0);
         const px = cx.getImageData(128, 128, 1, 1).data;
         ok(px[0] > 180 && px[1] < 90 && px[2] < 90, 'el sobre-zoom no trae la imagen de la zona: ' + Array.from(px).join(','));
-        // Exportar → importar: el archivo de Geonotas vuelve como zona de su misma capa base.
+        // Exportar → importar: el archivo de GeoNotas vuelve como zona de su misma capa base.
         const archivo = await (await (await w.caches.open('geonotas-zonas')).match(w.zonasUrl(zn.id))).blob();
         zn2 = await w.zonasImportar(new w.File([archivo], P+'zona.pmtiles'));
         eq(zn2.base, base, 'al reimportar debe volver a su capa base'); eq(zn2.n, zn.n, 'teselas al reimportar');
