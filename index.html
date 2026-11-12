@@ -7446,7 +7446,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v182';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v183';   // se muestra en Proyectos; subir junto con el cache del SW
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
@@ -15900,7 +15900,6 @@ function hojaPunto(){
     el('div',{class:'btnbar'},
       el('button',{class:'btn mini',onclick:e=>tomarGPS(f,e.currentTarget)},'📡 Tomar GPS'),
       el('button',{class:'btn sec mini',onclick:()=>modoMoverPunto(true)},'📍 Mover en el mapa'),
-      el('button',{class:'btn sec mini',onclick:descargarTiles},'📦 Mapas offline'),
       el('button',{class:'btn sec mini',onclick:capturarSatelital},'📸 Capturar satelital')),
     pv.coord, pv.sat, pv.utm, f.node,
     el('div',{class:'btnbar',style:'margin-top:14px'},
@@ -16057,7 +16056,6 @@ async function renderPunto(app){
   cm.body.append(el('div',{id:'map',class:'mapbox'}));
   cm.body.append(el('div',{class:'btnbar'},
     el('button',{class:'btn mini',onclick:e=>tomarGPS(f,e.currentTarget)},'📡 GPS'),
-    el('button',{class:'btn sec mini',onclick:descargarTiles},'📦 Mapas offline'),
     el('button',{class:'btn sec mini',onclick:capturarSatelital},'📸 Capturar satelital')));
   cm.body.append(el('div',{class:'muted',id:'coordlbl'},''));
   const satThumb=el('div',{class:'thumbs',id:'satthumb'});
@@ -17519,8 +17517,10 @@ async function initMapaVista(puntos){
     extraFit.push(...L2.geom);
     const pl=L.polyline(L2.geom, estiloLinea(L2)).addTo(mapaVista); _mapaElems.lineas.push(pl);
     pl.on('click',ev=>{ if(dibujando||editandoVertices)return; L.DomEvent.stop(ev);
-      formLinea(L2, async()=>{await put(storeLineaActivo(),L2);initMapaVista(_puntosMapa);},
-                    async()=>{await del(storeLineaActivo(),L2.id);initMapaVista(_puntosMapa);}); });
+      // v183 (auditoría): el bloqueo de Gabinete también vale para las líneas del mapa 2D (la Vista 3D
+      // ya lo respetaba). Se rehace el mapa igual, para descartar lo que la ficha cambió en memoria.
+      formLinea(L2, async()=>{ if(!bloqueoGabineteActivo()) await put(storeLineaActivo(),L2); initMapaVista(_puntosMapa);},
+                    async()=>{ if(!bloqueoGabineteActivo()) await del(storeLineaActivo(),L2.id); initMapaVista(_puntosMapa);}); });
   }
   // --- trazas de planos proyectados: geometría independiente de la gdb (store 'planoproy'),
   // pensada para proyectar un estrato sobre las laderas sin tener que abrir la Vista 3D. Se
@@ -17850,7 +17850,7 @@ function salirModosMapa(){
   if(mapaVista)mapaVista.getContainer().style.cursor='';
 }
 function iniciarAgregarPunto(){
-  if(!mapaVista)return; salirModosMapa(); agregandoPunto=true;
+  if(!mapaVista||bloqueoGabineteActivo())return; salirModosMapa(); agregandoPunto=true;
   mapaVista.getContainer().style.cursor='crosshair';
   const cont=document.querySelector('.mapcard'); if(cont){
     let b=document.getElementById('drawbanner'); if(b)b.remove();
@@ -17871,14 +17871,14 @@ function iniciarAgregarNota(){
     cont.append(b); }
   toast('Toca el mapa para ubicar la nota');
 }
-function iniciarDibujoLinea(){ if(!mapaVista)return; salirModosMapa(); dibujando=true; mapaVista.getContainer().style.cursor='crosshair'; bannerDibujo(); toast('Modo dibujo: toca el mapa'); }
+function iniciarDibujoLinea(){ if(!mapaVista||bloqueoGabineteActivo())return; salirModosMapa(); dibujando=true; mapaVista.getContainer().style.cursor='crosshair'; bannerDibujo(); toast('Modo dibujo: toca el mapa'); }
 function cancelarDibujo(){ salirModosMapa(); }
 function terminarDibujo(){
   if(_verts.length<2){toast('Traza al menos 2 puntos');return;}
   const l={id:uid(),_parent:curProyecto.id,geom:_verts.slice(),CLASE_LINEA:'Contacto',TIPO_INFORMACION:'Observada',NOTA:''};
   const b=document.getElementById('drawbanner');if(b)b.remove();
   dibujando=false; limpiarTemp(); if(mapaVista)mapaVista.getContainer().style.cursor='';
-  formLinea(l, async()=>{await put(storeLineaActivo(),l);initMapaVista(_puntosMapa);toast('Línea guardada');}, null);
+  formLinea(l, async()=>{ if(bloqueoGabineteActivo()) return; await put(storeLineaActivo(),l);initMapaVista(_puntosMapa);toast('Línea guardada');}, null);
 }
 // ---- Medir distancia: mismo mecanismo de vertices/linea temporal que dibujando, pero no
 // persiste nada -- solo muestra la distancia acumulada (haversine via L.latLng.distanceTo). ----
@@ -18529,7 +18529,6 @@ async function exportKMZ(proyectoId){
     for(const p of pts){
       const lat=parseFloat(latF(p)),lon=parseFloat(lonF(p));if(isNaN(lat)||isNaN(lon))continue;
       n++;
-      const litos=await childrenOf('litologia',p.id);
       const ed=campos(store).filter(c=>p[c.nombre]&&!c.nombre.startsWith('_')).map(c=>'<Data name="'+esc(c.nombre)+'"><value>'+esc(p[c.nombre])+'</value></Data>').join('')
         +'<Data name="COLECCION"><value>'+esc(COLECCION_DE[store])+'</value></Data>';
       let satImg='';
@@ -19908,7 +19907,6 @@ async function paginaLibreta(pr,pt,coleccion){
   const lat=pt['LAT_DECIMAL']||pt.LAT||'';
   const lon=pt['LONG_DECIMAL']||pt.LONG||'';
   const litos=await childrenOf('litologia',pt.id);
-  const aflora=await childrenOf('aflora',pt.id);
   const estr=await childrenOf('estructural',pt.id);
   const cont=await childrenOf('contacto',pt.id);
   const geomorf=await childrenOf('geomorf',pt.id);
