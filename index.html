@@ -679,9 +679,142 @@
   }
   /* Créditos: pie discreto, sin tarjeta */
   .creditos{padding:10px 12px 0}
+  /* ================= Portada (v186) =================
+     Se ve al abrir la app: un corte geologico que se arma solo (estratos, falla normal que
+     desplaza el bloque colgante, volcan, punto de control que cae). Se va con un toque o sola a
+     los 6 s, para no frenar el trabajo en terreno. Los estados finales son el estilo base y las
+     animaciones solo definen el "desde": con prefers-reduced-motion queda la lamina quieta. */
+  #portada{position:fixed;inset:0;z-index:5000;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;color:#fff;
+    background:linear-gradient(180deg,#0f2e22 0%,#1d4a38 34%,#3f7a5c 58%,#e2b06a 84%,#f3d39a 100%);
+    padding:calc(26px + env(safe-area-inset-top)) 22px 0;-webkit-user-select:none;user-select:none;transition:opacity .4s ease,transform .4s ease}
+  #portada.sale{opacity:0;transform:scale(1.04);pointer-events:none}
+  .pt-arriba{position:relative;z-index:2;text-align:center;animation:ptEntra .7s ease-out backwards}
+  .pt-marca{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;opacity:.75}
+  .pt-nombre{margin:6px 0 2px;font-size:clamp(40px,13vw,64px);font-weight:800;letter-spacing:-.02em;line-height:1;text-shadow:0 3px 18px rgba(0,0,0,.35)}
+  .pt-nombre i{font-style:normal;color:#f3d39a}
+  .pt-lema{font-size:15px;font-weight:500;opacity:.92}
+  .pt-ver{display:inline-block;margin-top:10px;padding:3px 11px;border-radius:20px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22)}
+  .pt-dato{position:relative;z-index:2;max-width:420px;margin:18px auto 0;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.4;text-align:left;
+    background:rgba(8,26,19,.42);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:ptEntra .7s .5s ease-out backwards}
+  .pt-dato b{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#f3d39a;margin-bottom:2px}
+  .pt-escena{position:absolute;left:0;right:0;bottom:0;width:100%;height:62%;z-index:1;display:block;overflow:visible}
+  .pt-pie{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:3;display:flex;justify-content:center}
+  .pt-entrar{position:relative;overflow:hidden;min-width:190px;padding:14px 30px;border-radius:999px;font-size:16px;font-weight:750;letter-spacing:.02em;
+    background:#fbfcf8;color:#1d4a38;box-shadow:0 10px 26px -8px rgba(0,0,0,.55);animation:ptEntra .6s 1.1s ease-out backwards}
+  .pt-entrar::after{content:'';position:absolute;left:0;bottom:0;height:4px;width:100%;background:#2f7a58;transform-origin:0 50%;animation:ptCuenta 6s linear backwards}
+  @keyframes ptEntra{from{opacity:0;transform:translateY(14px)}}
+  @keyframes ptCuenta{from{transform:scaleX(0)}}
+  /* escena */
+  .pt-sol{animation:ptSol 2.4s ease-out backwards}
+  @keyframes ptSol{from{transform:translateY(46px);opacity:.2}}
+  .pt-cerro{animation:ptCerro 1s ease-out backwards} .pt-cerro.c2{animation-delay:.15s}
+  @keyframes ptCerro{from{transform:translateY(40px);opacity:0}}
+  .pt-capa{animation:ptCapa .55s ease-out backwards}
+  .pt-capa.k5{animation-delay:.25s} .pt-capa.k4{animation-delay:.42s} .pt-capa.k3{animation-delay:.59s} .pt-capa.k2{animation-delay:.76s} .pt-capa.k1{animation-delay:.93s}
+  @keyframes ptCapa{from{opacity:0;transform:translateY(22px)}}
+  .pt-falla{stroke-dasharray:170;animation:ptFalla .5s 1.5s ease-out backwards}
+  @keyframes ptFalla{from{stroke-dashoffset:170}}
+  .pt-colgante{transform:translateY(16px);animation:ptSalto .9s 2s cubic-bezier(.3,1.5,.5,1) backwards}
+  @keyframes ptSalto{from{transform:translateY(0)}}
+  .pt-flecha{animation:ptAparece .4s 2.7s ease-out backwards}
+  @keyframes ptAparece{from{opacity:0}}
+  .pt-pin{transform-box:fill-box;transform-origin:50% 100%;animation:ptPin .7s 2.9s cubic-bezier(.3,1.6,.5,1) backwards}
+  @keyframes ptPin{from{transform:translateY(-150px);opacity:0}}
+  .pt-onda{transform-box:fill-box;transform-origin:50% 50%;opacity:0;animation:ptOnda 1.8s 3.5s ease-out infinite}
+  @keyframes ptOnda{from{transform:scale(.3);opacity:.9}to{transform:scale(2.6);opacity:0}}
+  .pt-humo{transform-box:fill-box;transform-origin:50% 100%;opacity:0;animation:ptHumo 3.6s 1.4s ease-out infinite}
+  .pt-humo.h2{animation-delay:2.6s} .pt-humo.h3{animation-delay:3.8s}
+  @keyframes ptHumo{0%{transform:translate(0,0) scale(.4);opacity:0}15%{opacity:.75}100%{transform:translate(16px,-44px) scale(1.9);opacity:0}}
+  @media (prefers-reduced-motion:reduce){
+    #portada *,#portada{animation:none!important;transition:none!important}
+    .pt-entrar::after{display:none}
+  }
+  @media (min-width:760px){ .pt-escena{left:50%;right:auto;width:620px;margin-left:-310px;height:66%} .pt-dato{margin-top:22px} }
+  @media (max-height:520px){ .pt-dato{display:none} .pt-nombre{font-size:38px} }
 </style>
 </head>
 <body>
+<div id="portada" role="dialog" aria-label="Portada de Geonotas">
+  <div class="pt-arriba">
+    <div class="pt-marca">Libreta de terreno</div>
+    <div class="pt-nombre">Geo<i>notas</i></div>
+    <div class="pt-lema">Geología de campo, punto a punto</div>
+    <span class="pt-ver" id="portadaVer"></span>
+  </div>
+  <div class="pt-dato"><b>¿Sabías que…?</b><span id="portadaDato">Mantén apretado «Punto» en el mapa para crear el punto con tu GPS.</span></div>
+  <svg class="pt-escena" viewBox="0 0 300 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <!-- Lo importante cabe entre x=38 y x=262 (lo que se ve en un teléfono vertical); el suelo y los
+         estratos siguen hacia los lados para que en pantallas anchas la lámina no termine en un borde. -->
+    <defs>
+      <clipPath id="ptSuelo"><path d="M-700 158 H0 C40 150 80 162 130 157 S230 148 300 156 H1000 V300 H-700z"/></clipPath>
+      <clipPath id="ptYacente"><path d="M196 100 H1000 V300 H136z"/></clipPath>
+      <clipPath id="ptColgante"><path d="M-700 100 H196 L136 300 H-700z"/></clipPath>
+    </defs>
+    <circle class="pt-sol" cx="150" cy="120" r="27" fill="#ffe7b0"/>
+    <path class="pt-cerro" d="M30 160 L62 110 L82 132 L112 84 L142 138 L164 118 L196 160z" fill="#2c5f49"/>
+    <path class="pt-cerro" d="M112 84 L121 99 L112 103 L104 97z M62 110 L69 121 L61 124 L56 119z" fill="#f4f1e6"/>
+    <g class="pt-cerro c2">
+      <circle class="pt-humo" cx="236" cy="86" r="6" fill="#f4efe2"/>
+      <circle class="pt-humo h2" cx="236" cy="86" r="6" fill="#f4efe2"/>
+      <circle class="pt-humo h3" cx="236" cy="86" r="6" fill="#f4efe2"/>
+      <path d="M176 160 L226 92 Q236 86 246 92 L300 156 V160z" fill="#1f4a39"/>
+      <path d="M226 92 Q236 86 246 92 L253 100 L243 106 L236 99 L229 107 L220 100z" fill="#f4f1e6"/>
+    </g>
+    <g clip-path="url(#ptSuelo)">
+      <g clip-path="url(#ptYacente)">
+        <rect class="pt-capa k1" x="-700" y="100" width="1700" height="80" fill="#d9b44a"/>
+        <rect class="pt-capa k2" x="-700" y="180" width="1700" height="28" fill="#c78a4d"/>
+        <rect class="pt-capa k3" x="-700" y="208" width="1700" height="28" fill="#b5574a"/>
+        <rect class="pt-capa k4" x="-700" y="236" width="1700" height="28" fill="#8a6fb0"/>
+        <rect class="pt-capa k5" x="-700" y="264" width="1700" height="40" fill="#c9739a"/>
+      </g>
+      <g clip-path="url(#ptColgante)"><g class="pt-colgante">
+        <rect class="pt-capa k1" x="-700" y="60" width="1700" height="120" fill="#d9b44a"/>
+        <rect class="pt-capa k2" x="-700" y="180" width="1700" height="28" fill="#c78a4d"/>
+        <rect class="pt-capa k3" x="-700" y="208" width="1700" height="28" fill="#b5574a"/>
+        <rect class="pt-capa k4" x="-700" y="236" width="1700" height="28" fill="#8a6fb0"/>
+        <rect class="pt-capa k5" x="-700" y="264" width="1700" height="40" fill="#c9739a"/>
+      </g></g>
+      <path class="pt-falla" d="M181 150 L136 300" fill="none" stroke="#14261d" stroke-width="2.4" stroke-linecap="round"/>
+      <g class="pt-flecha" fill="none" stroke="#14261d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M150 196 L143 221 M143 221 l-4 -7.500 M143 221 l7 -4.500"/>
+        <path d="M177 233 L184 208 M184 208 l-7 4.500 M184 208 l4 7.500"/>
+      </g>
+    </g>
+    <path d="M-700 158 H0 C40 150 80 162 130 157 S230 148 300 156 H1000" fill="none" stroke="#1f4a39" stroke-width="3.5" stroke-linecap="round"/>
+    <circle class="pt-onda" cx="84" cy="157" r="8" fill="none" stroke="#fbfcf8" stroke-width="2"/>
+    <g class="pt-pin">
+      <path d="M84 157 C84 157 69 140 69 128 a15 15 0 0 1 30 0 C99 140 84 157 84 157z" fill="#fbfcf8" stroke="#14261d" stroke-width="2"/>
+      <circle cx="84" cy="128" r="5.500" fill="#2f7a58"/>
+    </g>
+  </svg>
+  <div class="pt-pie"><button type="button" class="pt-entrar" id="portadaEntrar">Entrar</button></div>
+</div>
+<script>
+// Portada (v186). Va antes que el resto para que se vea al instante. No aparece dentro de un iframe
+// (smoke.html carga la app asi) ni con ?rasim / ?sinportada (pruebas automaticas).
+(function(){
+  var p=document.getElementById('portada'); if(!p) return;
+  if(window.self!==window.top||/[?&](rasim|sinportada)\b/.test(location.search)){ p.remove(); return; }
+  var datos=[
+    'Mantén apretado «Punto» en el mapa para crear el punto con tu GPS.',
+    'El botón de capas del mapa trae las cartas geológicas, tus mapas y «Qué mostrar».',
+    'Antes de salir a terreno, baja la zona en Capas → Mapas offline: el mapa sigue funcionando sin señal.',
+    'En el menú ⋮ → «Archivar o cargar el día» guardas un respaldo de todo lo capturado.',
+    'Desde Exportar sale tu trabajo en CSV, KMZ, GeoPackage, GDB de Esri o PDF.',
+    'En la Vista 3D puedes dibujar líneas de control directamente sobre el relieve.',
+    'En la libreta, los puntos se agrupan por día y cada día se pliega con un toque.',
+    'Toca una foto para verla a pantalla completa: se acerca con un pellizco o con doble toque.'
+  ];
+  var n=0; try{ n=(parseInt(localStorage.getItem('gt-portada-dato'),10)||0)%datos.length; localStorage.setItem('gt-portada-dato',String(n+1)); }catch(e){ n=Math.floor(Math.random()*datos.length); }
+  var d=document.getElementById('portadaDato'); if(d) d.textContent=datos[n];
+  var fin=function(){ if(p._fin) return; p._fin=true; clearTimeout(p._t); removeEventListener('keydown',tecla);
+    p.classList.add('sale'); setTimeout(function(){ p.remove(); },450); };
+  var tecla=function(e){ if(e.key==='Enter'||e.key==='Escape'||e.key===' ') fin(); };
+  p.addEventListener('click',fin); addEventListener('keydown',tecla);
+  p._t=setTimeout(fin,6000);
+})();
+</script>
 <header>
   <button class="btn sec mini" id="btnBack" type="button" aria-label="Volver" title="Volver" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
   <div id="hdr-titulo">
@@ -7448,7 +7581,8 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v185';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v186';   // se muestra en Proyectos; subir junto con el cache del SW
+{ const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
 const el = (t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==='class')e.className=a[k];else if(k==='html')e.innerHTML=a[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}c.flat().forEach(x=>e.append(x&&x.nodeType?x:document.createTextNode(x==null?'':x)));return e;};
