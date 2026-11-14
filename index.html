@@ -7581,7 +7581,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v189';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v190';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -15103,7 +15103,9 @@ function cortinaPlegada(){
   try{ return localStorage.getItem('fabPlegado')==='1'; }catch(e){ return false; }
 }
 function topPlegado(){
-  try{ return localStorage.getItem('topPlegado')==='1'; }catch(e){ return false; }
+  // v190 (pedido del usuario): el mapa abre con el encabezado PLEGADO; Mapas y Libreta flotan sobre el
+  // mapa. Clave nueva ('topPlegado2') para que el valor guardado con la clave vieja no lo deje abierto.
+  try{ return localStorage.getItem('topPlegado2')!=='0'; }catch(e){ return true; }
 }
 // --headh solia ser solo el alto del header (que envuelve a dos filas en un telefono, asi que
 // no es constante) y el mapa restaba ademas un "27px" adivinado para las pestañas Mapa/Puntos/
@@ -15174,7 +15176,7 @@ function toggleCortina(){
   setTimeout(()=>{ try{ mapaVista && mapaVista.invalidateSize(); }catch(e){} }, 260);
 }
 function toggleTopCortina(){
-  try{ localStorage.setItem('topPlegado', topPlegado()?'0':'1'); }catch(e){}
+  try{ localStorage.setItem('topPlegado2', topPlegado()?'0':'1'); }catch(e){}
   ajustarCortina();
   setTimeout(()=>{ try{ mapaVista && mapaVista.invalidateSize(); }catch(e){} }, 260);
 }
