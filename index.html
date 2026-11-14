@@ -677,6 +677,15 @@
     body.vista-mapa .mapcard{border-radius:0;border-left:0;border-right:0;margin-bottom:0;box-shadow:none}
     body.vista-mapa .mapbig{border-radius:0}
   }
+  /* Revisión de integridad en «Exportar datos» (v191) */
+  .rev-ok{color:var(--verde);font-weight:600}
+  .rev-mal{color:#b3261e;font-weight:600}
+  .rev-av{font-weight:600}
+  .rev-grupo{margin-top:8px;border-top:1px solid var(--bd);padding-top:8px}
+  .rev-grupo summary{cursor:pointer;font-weight:600;font-size:14px}
+  .rev-grupo ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.45}
+  .rev-grupo li{margin:3px 0}
+  .rev-grupo a{color:inherit;text-decoration:underline}
   /* Créditos: pie discreto, sin tarjeta */
   .creditos{padding:10px 12px 0}
   /* ================= Portada (v186) =================
@@ -7581,7 +7590,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v190';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v191';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -18530,11 +18539,122 @@ async function registrarPuntoRapido(img, r){
 }
 
 // ============================ Exportación ============================
+// ============================ Verificador de integridad (v191) ============================
+// La integridad referencial vivía solo en la interfaz: un respaldo importado, un dato de la light o
+// una versión vieja podían dejar fichas sin punto, vínculos a fichas que ya no existen o códigos
+// repetidos, y nada lo detectaba hasta que el join fallaba en el SIG. Esto lo revisa al abrir
+// «Exportar datos». Solo LEE: no corrige ni borra nada, y no impide exportar.
+//   duplicado: ID_PUNTO_CONTROL repetido en el proyecto y colección; ID_MUESTRA repetido en el proyecto;
+//              un mismo punto en Terreno y Gabinete (comparten fichas).
+//   vinculo:   una FK (ID_LITOLOGIA, ID_CONTACTO, ID_ESTRUCTURA…, PUNTOS_APOYO) apunta a una ficha
+//              que no existe o que es de otro punto.
+//   huerfano:  fichas cuyo punto no existe; puntos, líneas y notas cuyo proyecto no existe.
+//   aviso:     puntos sin código o sin coordenadas (salen sin geometría).
+// De cada ficha se guarda solo id, padre y sus FK: las fotos no quedan en memoria.
+const FK_DESTINO={ID_LITOLOGIA:'litologia',ID_LITOLOGIA_TECHO:'litologia',ID_LITOLOGIA_BASE:'litologia',ID_ESTRUCTURA:'estructural',
+  ID_CONTACTO:'contacto',ID_GEOMORFOLOGIA:'geomorf',ID_COMPONENTE:'litocomp',ID_ALTERACION:'alteracion',ID_ESQUEMA:'esquema',
+  ID_FOTOGRAFIA_ASOCIADA:'foto',ID_MUESTRA:'muestreo'};
+const FK_NOMBRE={litologia:'una litología',estructural:'una medida estructural',contacto:'un contacto',geomorf:'una geomorfología',
+  litocomp:'un componente',alteracion:'una alteración',esquema:'un esquema',foto:'una fotografía',muestreo:'una muestra'};
+async function verificarIntegridad(proyectoId){
+  const out=[], add=(tipo,texto,punto)=>out.push({tipo,texto,punto:punto||null});
+  const tit=st=>((HIJAS.find(h=>h.store===st)||{}).titulo||st).toLowerCase();
+  const proyectos=new Map((await all('proyecto')).map(p=>[p.id,p]));
+  const nomPr=id=>{ const p=proyectos.get(id); return p?(p.NOMBRE_PROYECTO||p.ID_PROYECTO||'sin nombre'):'(proyecto inexistente)'; };
+  const puntos=new Map();   // id -> {id, store, _parent, cod, coords}
+  const sinProyecto={};
+  for(const st of ['punto','punto_gabinete']) for(const p of await all(st)){
+    const lat=parseFloat(p.LAT_DECIMAL), lon=parseFloat(p.LONG_DECIMAL);
+    const x={id:p.id, store:st, _parent:p._parent, cod:String(p.ID_PUNTO_CONTROL||'').trim(), coords:!isNaN(lat)&&!isNaN(lon)};
+    if(puntos.has(p.id)) add('duplicado','El punto '+(x.cod||'sin código')+' está en Terreno y en Gabinete con el mismo identificador interno: las dos copias comparten sus fichas.',x);
+    puntos.set(p.id,x);
+    if(!proyectos.has(p._parent)) sinProyecto['puntos de '+COLECCION_DE[st]]=(sinProyecto['puntos de '+COLECCION_DE[st]]||0)+1;
+  }
+  const enAlcance=x=>!!x&&(!proyectoId||x._parent===proyectoId);
+  const nomP=x=>'Punto '+(x.cod||'sin código')+' ('+COLECCION_DE[x.store]+(proyectoId?'':' · '+nomPr(x._parent))+')';
+  // códigos de punto: repetidos (por proyecto y colección), vacíos, y puntos sin coordenadas
+  const porCod=new Map();
+  for(const x of puntos.values()){ if(!enAlcance(x)||!proyectos.has(x._parent)) continue;
+    if(!x.cod) add('aviso',nomP(x)+': no tiene código.',x);
+    else { const k=x._parent+'|'+x.store+'|'+x.cod; (porCod.get(k)||porCod.set(k,[]).get(k)).push(x); }
+    if(!x.coords) add('aviso',nomP(x)+': no tiene coordenadas, sale sin geometría.',x);
+  }
+  for(const l of porCod.values()) if(l.length>1) add('duplicado','El código '+l[0].cod+' se repite en '+l.length+' puntos de '+COLECCION_DE[l[0].store]+(proyectoId?'':' · '+nomPr(l[0]._parent))+'.',l[0]);
+  // fichas del punto: una pasada por store, guardando solo id, padre y FK
+  const idx={}, fichas=[], huerf={}; let nFichas=0;
+  for(const h of HIJAS){
+    const m=idx[h.store]=new Map(), pk=pkDe(h.store);
+    for(const r of await all(h.store)){
+      m.set(r.id,r._parent);
+      const x=puntos.get(r._parent);
+      if(!x){ huerf[h.store]=(huerf[h.store]||0)+1; continue; }
+      if(!enAlcance(x)) continue;
+      nFichas++;
+      const fks=[]; for(const k in FK_DESTINO){ const v=r[k]; if(k!==pk&&typeof v==='string'&&v) fks.push([k,v]); }
+      const cod=h.store==='muestreo'?String(r.ID_MUESTRA||'').trim():'';
+      if(fks.length||cod) fichas.push({store:h.store,_parent:r._parent,fks,cod});
+    }
+  }
+  const muestrasDe=new Map(), porMuestra=new Map();   // punto -> códigos de sus muestras; proyecto|código -> puntos
+  for(const fi of fichas) if(fi.cod){
+    (muestrasDe.get(fi._parent)||muestrasDe.set(fi._parent,new Set()).get(fi._parent)).add(fi.cod);
+    const x=puntos.get(fi._parent), k=x._parent+'|'+fi.cod; (porMuestra.get(k)||porMuestra.set(k,[]).get(k)).push(x);
+  }
+  for(const [k,l] of porMuestra) if(l.length>1) add('duplicado','La muestra '+k.slice(k.indexOf('|')+1)+' se repite '+l.length+' veces'+(proyectoId?'':' en '+nomPr(l[0]._parent))+': punto'+(new Set(l.map(x=>x.id)).size===1?' ':'s ')+[...new Set(l.map(x=>x.cod||'sin código'))].join(', ')+'.',l[0]);
+  for(const fi of fichas) for(const [k,v] of fi.fks){
+    const dst=FK_DESTINO[k], m=idx[dst]; if(!m) continue;
+    if(m.get(v)===fi._parent) continue;
+    // fotos y esquemas viejos guardaban el CÓDIGO de la muestra en vez de su id interno
+    if(k==='ID_MUESTRA'&&(muestrasDe.get(fi._parent)||new Set()).has(v)) continue;
+    const x=puntos.get(fi._parent);
+    add('vinculo',nomP(x)+': '+tit(fi.store)+' con un vínculo a '+FK_NOMBRE[dst]+(m.has(v)?' de otro punto':' que ya no existe')+'.',x);
+  }
+  for(const st of Object.keys(huerf)) add('huerfano',huerf[st]+' ficha'+(huerf[st]===1?'':'s')+' de '+tit(st)+' cuyo punto ya no existe (no sale'+(huerf[st]===1?'':'n')+' al exportar un proyecto).');
+  // líneas y notas: proyecto inexistente; puntos de apoyo de las líneas
+  for(const st of ['linea','linea_gabinete','nota']) for(const r of await all(st)){
+    if(!proyectos.has(r._parent)){ const k=st==='nota'?'notas':'líneas de '+COLECCION_DE[st]; sinProyecto[k]=(sinProyecto[k]||0)+1; continue; }
+    if(st==='nota'||(proyectoId&&r._parent!==proyectoId)) continue;
+    const rotos=String(r.PUNTOS_APOYO||'').split(/\s*;\s*/).filter(Boolean).filter(id=>!puntos.has(id)).length;
+    if(rotos) add('vinculo','Línea de '+COLECCION_DE[st]+(r.CLASE_LINEA?' ('+r.CLASE_LINEA+')':'')+(proyectoId?'':' · '+nomPr(r._parent))+': '+rotos+' punto'+(rotos===1?'':'s')+' de apoyo que ya no existe'+(rotos===1?'':'n')+'.');
+  }
+  for(const k of Object.keys(sinProyecto)){ const n=sinProyecto[k];   // «puntos de Terreno» -> «punto de Terreno», «líneas» -> «línea», «notas» -> «nota»
+    add('huerfano',n+' '+(n===1?k.replace(/s( |$)/,'$1'):k)+' cuyo proyecto ya no existe.'); }
+  return {problemas:out, puntos:[...puntos.values()].filter(x=>enAlcance(x)&&proyectos.has(x._parent)).length, fichas:nFichas};
+}
+const REV_GRUPOS=[['duplicado','Códigos repetidos'],['vinculo','Vínculos rotos'],['huerfano','Registros sin dueño'],['aviso','Avisos']];
+function pintarRevision(caja,r){
+  caja.innerHTML='';
+  const graves=r.problemas.filter(p=>p.tipo!=='aviso').length, avisos=r.problemas.length-graves;
+  const alcance=r.puntos+' punto'+(r.puntos===1?'':'s')+' y '+r.fichas+' ficha'+(r.fichas===1?'':'s')+' revisados';
+  if(!r.problemas.length){ caja.append(el('div',{class:'rev-ok'},'✓ Sin problemas: '+alcance+'.')); return; }
+  const partes=[]; if(graves) partes.push(graves+' problema'+(graves===1?'':'s')); if(avisos) partes.push(avisos+' aviso'+(avisos===1?'':'s'));
+  caja.append(el('div',{class:graves?'rev-mal':'rev-av'},(graves?'⚠ ':'')+partes.join(' y ')+' · '+alcance+'.'));
+  for(const [tipo,titulo] of REV_GRUPOS){
+    const l=r.problemas.filter(p=>p.tipo===tipo); if(!l.length) continue;
+    const d=el('details',{class:'rev-grupo'}); if(tipo!=='aviso'&&l.length<=8) d.open=true;
+    d.append(el('summary',{},titulo+' ('+l.length+')'));
+    const ul=el('ul',{});
+    l.slice(0,60).forEach(p=>{
+      // se puede abrir el punto si está en la colección que se ve ahora
+      const abre=p.punto&&p.punto.store===storeActivo();
+      ul.append(el('li',{},abre?el('a',{href:'#',onclick:async e=>{ e.preventDefault(); const pr=await get('proyecto',p.punto._parent); if(!pr) return; curProyecto=pr; nav({n:'punto',id:p.punto.id}); }},p.texto):p.texto));
+    });
+    if(l.length>60) ul.append(el('li',{class:'muted'},'… y '+(l.length-60)+' más.'));
+    d.append(ul); caja.append(d);
+  }
+  caja.append(el('div',{class:'muted',style:'margin-top:8px;font-size:12px'},'La revisión solo informa: no cambia ningún dato y puedes exportar igual.'));
+}
 async function exportMenu(proyectoId){
   enEditor=true; armarAtras();   // pantalla fuera de `vista`: el atrás repinta la vista (ver volverVista)
   const app=$('#app');app.innerHTML='';$('#fab').innerHTML='';$('#btnBack').style.display='';
   const pr = proyectoId ? await get('proyecto',proyectoId) : null;
   $('#ttl').textContent='Exportar datos';$('#ctx').textContent=pr?('Solo: '+(pr.NOMBRE_PROYECTO||pr.id)):'';
+  // v191: revisión de integridad antes de exportar (ver verificarIntegridad)
+  const rev=el('div',{class:'card',id:'revDatos'}), revCaja=el('div',{id:'revEstado'},el('div',{class:'muted'},'Revisando los datos…'));
+  rev.append(el('h2',{},'Revisión de los datos'),revCaja);
+  app.append(rev);
+  verificarIntegridad(proyectoId).then(r=>pintarRevision(revCaja,r))
+    .catch(e=>{ revCaja.innerHTML=''; revCaja.append(el('div',{class:'muted'},'No se pudo revisar: '+((e&&e.message)||e))); });
   const card=el('div',{class:'card'});
   card.append(el('h2',{},'Salidas'));
   card.append(el('div',{class:'muted',html: pr
