@@ -451,8 +451,8 @@
   .cam-fab svg{width:30px;height:30px}
   .cam-fab:active{transform:scale(.94)}
   /* panel lateral de capas (2026-11-08) */
-  .capas-btn a{display:flex!important;align-items:center;justify-content:center;width:40px!important;height:40px!important;position:relative;color:#333}
-  .capas-btn svg{width:24px;height:24px}
+  .capas-btn a{display:flex!important;align-items:center;justify-content:center;width:46px!important;height:46px!important;position:relative;color:#333}
+  .capas-btn svg{width:27px;height:27px}
   .capas-btn a.activo::after{content:'';position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:#2e9d5b;border:1.5px solid #fff}
   .capas-ov{position:fixed;inset:0;z-index:1150;background:rgba(0,0,0,.35)}
   .capas-panel{position:fixed;top:0;right:0;bottom:0;z-index:1151;width:min(380px,90vw);background:var(--surface);color:var(--txt);
@@ -812,7 +812,7 @@
     p.classList.add('sale'); setTimeout(function(){ p.remove(); },450); };
   var tecla=function(e){ if(e.key==='Enter'||e.key==='Escape'||e.key===' ') fin(); };
   p.addEventListener('click',fin); addEventListener('keydown',tecla);
-  p._t=setTimeout(fin,6000);
+  p._t=setTimeout(fin,10000);
 })();
 </script>
 <header>
@@ -7581,7 +7581,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v188';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v189';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -10784,14 +10784,23 @@ function capaSatelital(map){
 // capas de Leaflet (map._ctrlCapas._layers), así que toda capa que se sume ahí (grilla, relieve,
 // zonas, cartas descargadas) aparece sola. Al elegir un mapa base el panel se cierra; las capas de
 // encima se prenden/apagan sin cerrarlo, con su transparencia a mano.
-const ICONO_CAPAS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="m2.5 12 9.5 5 9.5-5"/><path d="m2.5 16 9.5 5 9.5-5"/></svg>';
 function capasBotonMontar(map){
   const C=L.Control.extend({options:{position:'topright'},onAdd(){
     const d=L.DomUtil.create('div','leaflet-bar capas-btn');
-    const a=L.DomUtil.create('a','',d); a.href='#'; a.title='Capas'; a.setAttribute('aria-label','Capas'); a.innerHTML=ICONO_CAPAS;
+    const a=L.DomUtil.create('a','',d); a.href='#'; a.title='Mapas y capas'; a.setAttribute('aria-label','Mapas y capas'); a.innerHTML=iconoDe('__mapa');   // v189: icono de mapa (antes, capas apiladas)
     L.DomEvent.on(a,'click',e=>{ L.DomEvent.stop(e); capasPanelAbrir(map); });
     L.DomEvent.disableClickPropagation(d); map._capasBtn=a; return d; }});
   new C().addTo(map);
+  // v189 (pedido del usuario): en el mapa del proyecto, «Libreta» flota bajo el botón de mapas en vez
+  // de ir en la barra de abajo; así los dos quedan a mano aunque el panel superior esté plegado.
+  if(vista.n==='mapa'){
+    const B=L.Control.extend({options:{position:'topright'},onAdd(){
+      const d=L.DomUtil.create('div','leaflet-bar capas-btn');
+      const a=L.DomUtil.create('a','',d); a.href='#'; a.id='btnLibretaMapa'; a.title='Ir a la libreta del proyecto'; a.setAttribute('aria-label','Libreta'); a.innerHTML=iconoDe('__libreta');
+      L.DomEvent.on(a,'click',e=>{ L.DomEvent.stop(e); if(curProyecto) nav({n:'proyecto',id:curProyecto.id}); });
+      L.DomEvent.disableClickPropagation(d); return d; }});
+    new B().addTo(map);
+  }
   map.on('layeradd layerremove',()=>{ clearTimeout(map._capasT); map._capasT=setTimeout(()=>capasRefrescar(map),60); });
 }
 function capasEncendidas(map){
@@ -17304,7 +17313,7 @@ async function renderMapa(app){
   curProyecto=await get('proyecto',vista.id); if(!curProyecto)return nav({n:'home'});
   $('#btnBack').style.display='';
   $('#ttl').textContent=curProyecto.NOMBRE_PROYECTO||'Mapa'; $('#ctx').textContent='Mapa del proyecto';
-  const modo=toggleModo('mapa'); modo.id='modoBarMapa'; app.append(modo);
+  // v189: sin la fila de pestañas Mapa | Libreta: la reemplaza el botón «Libreta» que flota sobre el mapa.
   const card=el('div',{class:'card mapcard'});
   card.append(el('div',{id:'projmap',class:'mapbig'}));
   // v184: sin 📷 de foto rápida sobre el mapa del proyecto (pedido del usuario); la foto se toma desde el punto.
@@ -17332,8 +17341,7 @@ async function renderMapa(app){
     // una capa del mapa que haya que reenganchar cuando initMapaVista reconstruye el Leaflet,
     // es un overlay que se crea y se destruye entero en cada apertura.
     herr('__3d','3D',v3dAbrir,{id:'btnVista3D',title:'Vista 3D del relieve'}),
-    herr('__ra','RA',raAbrir,{id:'btnRA',title:'Dibujar líneas sobre la cámara, calzada con el relieve'}),
-    herr('__libreta','Libreta',()=>nav({n:'proyecto',id:curProyecto.id}),{title:'Ir a la libreta del proyecto'}));
+    herr('__ra','RA',raAbrir,{id:'btnRA',title:'Dibujar líneas sobre la cámara, calzada con el relieve'}));
   setTimeout(()=>initMapaVista(conC),80);
 }
 // ============================ Muestras del proyecto (inventario + chequeo) ============================
