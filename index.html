@@ -7590,7 +7590,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v192';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v193';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -18720,7 +18720,7 @@ async function mapasFKCodigos(){
   for(const mu of await all('muestreo')) if(mu.ID_MUESTRA) muestraPorId[mu.id]=mu.ID_MUESTRA;
   return {porPunto,porProyecto,muestraPorId};   // v166: sin ID_AFLORAMIENTO (el afloramiento está en el punto)
 }
-// Devuelve una copia de r con las FK rellenas (si estaban vacías) desde su _parent.
+// Devuelve una copia de r con las FK de negocio derivadas de su _parent (ver v193 más abajo).
 // Con store: además rellena la PK técnica oculta (ID_LITOLOGIA, ID_CONTACTO, ID_ESTRUCTURA…) con
 // el id interno. La ficha nunca la muestra ni la llena, pero las FK que apuntan a ella
 // (estructural.ID_LITOLOGIA, estructural.ID_CONTACTO, las hijas LITO_*) guardan ese mismo id
@@ -18729,9 +18729,15 @@ function enriquecerFK(r,fks,store){
   const o=Object.assign({},r);
   const pk=store&&pkDe(store);
   if(pk && !o[pk] && !NOMBRABLES.has(pk)) o[pk]=o.id;
-  if(!o.ID_PUNTO_CONTROL && fks.porPunto[o._parent]) o.ID_PUNTO_CONTROL=fks.porPunto[o._parent];
+  // v193: una sola regla para las claves de negocio. En la base manda el id interno (_parent); el
+  // código visible del padre (ID_PUNTO_CONTROL, ID_PROYECTO) se DERIVA siempre al exportar. Antes solo
+  // se rellenaba si estaba vacío: un registro con una copia guardada (puntos, que copian ID_PROYECTO;
+  // fichas de versiones viejas o respaldos) salía con el código antiguo si el padre se renombraba.
+  if(fks.porPunto[o._parent]) o.ID_PUNTO_CONTROL=fks.porPunto[o._parent];
+  // puntos de apoyo de una línea: se guardan ids internos; salen los códigos de esos puntos
+  if(o.PUNTOS_APOYO) o.PUNTOS_APOYO=String(o.PUNTOS_APOYO).split(/\s*;\s*/).filter(Boolean).map(id=>fks.porPunto[id]||id).join('; ');
   if((store==='foto'||store==='esquema') && o.ID_MUESTRA && fks.muestraPorId && fks.muestraPorId[o.ID_MUESTRA]) o.ID_MUESTRA=fks.muestraPorId[o.ID_MUESTRA];
-  if(!o.ID_PROYECTO && fks.porProyecto[o._parent]) o.ID_PROYECTO=fks.porProyecto[o._parent];
+  if(fks.porProyecto[o._parent]) o.ID_PROYECTO=fks.porProyecto[o._parent];
   return o;
 }
 
@@ -19041,8 +19047,9 @@ async function construirGPKG(proyectoId,{poligonos=true}={}){
    const st=crear('LINEA_CONTROL',csL,extrasL,true);
    const env={x0:1/0,y0:1/0,x1:-1/0,y1:-1/0};
    for(const store of ['linea','linea_gabinete'])
-   for(const l of (await conColeccion(store)).filter(l=>!proyectoId||l._parent===proyectoId)){
+   for(let l of (await conColeccion(store)).filter(l=>!proyectoId||l._parent===proyectoId)){
      if(!l.geom||l.geom.length<2)continue;nL++;
+     l=enriquecerFK(l,fks);   // v193: PUNTOS_APOYO con los códigos de los puntos
      l.geom.forEach(c=>{env.x0=Math.min(env.x0,c[1]);env.x1=Math.max(env.x1,c[1]);env.y0=Math.min(env.y0,c[0]);env.y1=Math.max(env.y1,c[0]);});
      st.run([gpkgGeom(wkbLine(l.geom)),txt(l.id),txt(l._parent)].concat(csL.map(n=>txt(l[n])),extrasL.map(e=>e[1](l))));
    }
