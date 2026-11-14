@@ -7590,7 +7590,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v191';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v192';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -15693,11 +15693,32 @@ function tarjetaColapsable(titulo, opts){
 }
 
 // ---- Guardar el punto y crear fichas hijas (los usan la lista y la vista iconos) ----
+// v192: unicidad de los códigos que nombra el usuario. Punto: único entre los puntos del proyecto en
+// la colección activa (Terreno y Gabinete pueden repetir código: son copias del mismo punto).
+// Muestra: única en todo el proyecto, las dos colecciones.
+async function codigoPuntoRepetido(cod,idPropio){
+  cod=String(cod||'').trim(); if(!cod||!curProyecto) return false;
+  return (await childrenOf(storeActivo(),curProyecto.id)).some(p=>p.id!==idPropio&&String(p.ID_PUNTO_CONTROL||'').trim()===cod);
+}
+async function codigoMuestraRepetido(cod,idPropio){
+  cod=String(cod||'').trim(); if(!cod||!curProyecto) return false;
+  const ids=new Set([...await childrenOf(RM_STORE,curProyecto.id),...await childrenOf(RM_GAB_STORE,curProyecto.id)].map(p=>p.id));
+  return (await all('muestreo')).some(m=>m.id!==idPropio&&ids.has(m._parent)&&String(m.ID_MUESTRA||'').trim()===cod);
+}
 async function guardarPuntoForm(f){
   // en Gabinete bloqueado los campos ya estan desactivados, pero el boton "✓ Guardar punto"
   // y los "+ Agregar ..." (que guardan el punto antes de crear la ficha hija) no lo estaban.
   if(bloqueoGabineteActivo())return null;
-  const d=f.getData();Object.assign(curPunto,d);curPunto._parent=curProyecto.id;
+  const d=f.getData(); let codRepetido=false;
+  // v192: el código del punto es único en el proyecto y la colección. Solo se revisa cuando CAMBIA
+  // (un repetido que ya venía en los datos no impide seguir editando el punto; lo muestra el verificador).
+  { const cod=String(d.ID_PUNTO_CONTROL||'').trim(), antes=curPunto._idDone?String(curPunto.ID_PUNTO_CONTROL||'').trim():'';
+    if(cod && cod!==antes && cod!==curPunto._idPreview && await codigoPuntoRepetido(cod,curPunto.id)){
+      toast('Ya existe el punto '+cod+' en este proyecto: el código no se cambió');
+      d.ID_PUNTO_CONTROL=antes||curPunto._idPreview||''; codRepetido=true;
+      const inp=f.node.querySelector('[name="ID_PUNTO_CONTROL"]'); if(inp) inp.value=d.ID_PUNTO_CONTROL;
+    } }
+  Object.assign(curPunto,d);curPunto._parent=curProyecto.id;
   curPunto.ID_PROYECTO=curProyecto.ID_PROYECTO||curProyecto.id;
   // autonumeración del ID de punto: al primer guardado, si el usuario no lo cambió, asigna y avanza el correlativo
   if(!curPunto._idDone && (!curPunto.ID_PUNTO_CONTROL || curPunto.ID_PUNTO_CONTROL===curPunto._idPreview)){
@@ -15713,6 +15734,8 @@ async function guardarPuntoForm(f){
   await put(storeActivo(),curPunto);
   stickySet(curPunto);  // recuerda colector/proyección/etc. para el próximo punto
   if(vista.id==='__new__')vista={n:'punto',id:curPunto.id};  // fija id real: evita re-crear punto vacío al re-render
+  // no enumerable: avisa al llamador sin quedar guardado en el registro
+  Object.defineProperty(curPunto,'_codRepetido',{value:codRepetido,enumerable:false,configurable:true});
   return curPunto;
 }
 // Ficha hija nueva del punto actual. litosRama: las litologías de la rama de h (clastos y
@@ -16273,7 +16296,8 @@ async function renderPunto(app){
   }
 
   $('#fab').append(
-    el('button',{class:'btn',onclick:async()=>{await guardarPunto();toast('Punto guardado');nav({n:'proyecto',id:curProyecto.id});}},'✓ Guardar punto'),
+    el('button',{class:'btn',onclick:async()=>{const p=await guardarPunto();if(p&&p._codRepetido)return;   // v192: código repetido: se queda en el punto, con el aviso a la vista
+      toast('Punto guardado');nav({n:'proyecto',id:curProyecto.id});}},'✓ Guardar punto'),
     el('button',{class:'btn sec',onclick:async()=>{if(bloqueoGabineteActivo())return;await guardarPunto();const np=await duplicarPunto(curPunto.id);if(!np){toast('No se pudo duplicar el punto');return;}toast('Duplicado'+(np.ID_PUNTO_CONTROL?' como '+np.ID_PUNTO_CONTROL:'')+' — asigna las coordenadas'+(np.ID_PUNTO_CONTROL?'':' y el ID'));nav({n:'punto',id:np.id});}},'⧉ Duplicar'),
     el('button',{class:'btn sec',onclick:()=>guardarPunto().then(()=>nav({n:'proyecto',id:curProyecto.id}))},'Volver'),
     el('button',{class:'btn sec',title:'Ver el punto sobre el mapa, con iconos',onclick:async()=>{await guardarPunto();fijarModoVistaPunto('iconos');}},'◉ Iconos'),
@@ -16421,8 +16445,16 @@ function bloqueHijo(h,reg,i,litos,conts,fracs){
       else b.append(barra);
     }
     b._save=async()=>{
-      const antes=reg.ID_CONTACTO;
+      const antes=reg.ID_CONTACTO, codM=String(reg.ID_MUESTRA||'').trim();
       Object.assign(reg,f.getData());
+      if(h.store==='muestreo'){   // v192: el código de muestra no se repite en el proyecto
+        const cod=String(reg.ID_MUESTRA||'').trim();
+        if(cod && cod!==codM && await codigoMuestraRepetido(cod,reg.id)){
+          toast('Ya existe la muestra '+cod+' en este proyecto: el código no se cambió');
+          reg.ID_MUESTRA=codM;
+          const inp=f.node.querySelector('[name="ID_MUESTRA"]'); if(inp) inp.value=codM;
+        }
+      }
       let medidaEscrita=false, teniaMedida=false;
       if(h.store==='contacto'){   // el vínculo vive en disco; lo anotado aquí pasa a la medida
         const cur=await get('contacto',reg.id);
