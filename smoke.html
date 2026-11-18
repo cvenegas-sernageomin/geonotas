@@ -1795,6 +1795,64 @@ async function correr(){
       return 'z18 al inicio y al recentrar, zoom del usuario respetado entre fixes, pausa al arrastrar';
     });
 
+    await prueba('v194 GPS: el 📡 sobrevive a la Libreta; vigilante reabre el watch mudo o pegado', async () => {
+      const div = w.document.createElement('div');
+      div.style.cssText = 'position:fixed;left:0;top:0;width:400px;height:300px';
+      w.document.body.append(div);
+      const geoOrig = Object.getOwnPropertyDescriptor(w.navigator, 'geolocation');
+      let cb = null, abiertos = 0, cerrados = 0;
+      Object.defineProperty(w.navigator, 'geolocation', {configurable:true,
+        value:{watchPosition:(ok)=>{cb=ok;abiertos++;return 90+abiertos;}, clearWatch:()=>{cerrados++;}}});
+      const mapaPrevio = w.eval('mapaVista'), gv = w.eval('gpsVivo');
+      w.eval('gpsEnfriar()');
+      const nuevoMapa = () => { w.__div = div; w.eval('mapaVista = L.map(window.__div, {zoomAnimation:false, fadeAnimation:false}).setView([-33,-70],8)'); return w.eval('mapaVista'); };
+      let ts = 1000;
+      const fix = (la, acc) => cb({timestamp: ++ts, coords:{latitude:la, longitude:-70.6, accuracy:acc}});
+      try {
+        w.eval('curProyecto = null');   // umbral 10 m
+        let m = nuevoMapa();
+        w.toggleGPSLive(null);
+        eq(abiertos, 1, 'tocar 📡 debía abrir un watch (el compartido)');
+        fix(-33.4, 6);
+        ok(w.eval('gpsDot') && m.hasLayer(w.eval('gpsDot')), 'falta el punto azul');
+        // ir a la Libreta: el mapa se descuelga pero la intención queda y el watch sigue vivo
+        w.gpsMapaSoltar(); try { m.remove(); } catch(e) {}
+        eq(w.eval('gpsMapaOn'), true, 'salir del mapa apagó el seguimiento');
+        ok(gv.id != null, 'salir del mapa cerró el GPS compartido');
+        // volver al mapa: el punto azul aparece al tiro con el último fix, sin lectura nueva
+        m = nuevoMapa(); w.gpsMontar(m);
+        ok(w.eval('gpsDot') && m.hasLayer(w.eval('gpsDot')), 'al volver al mapa no reapareció el punto azul');
+        ok(Math.abs(m.getCenter().lat + 33.4) < 1e-3, 'al volver debía centrar en la última posición');
+        fix(-33.5, 6);
+        ok(Math.abs(m.getCenter().lat + 33.5) < 1e-3, 'al volver debía seguir recentrando');
+        // lectura repetida (misma marca de tiempo): no cuenta como nueva
+        const tf = gv.tFix; gv.tFix = 1; cb({timestamp: ts, coords:{latitude:-33.9, longitude:-70.6, accuracy:6}});
+        eq(gv.tFix, 1, 'una lectura repetida contó como nueva'); gv.tFix = tf;
+        // mudo: 25 s sin lecturas → el vigilante reabre
+        const a0 = abiertos;
+        gv.t0 = gv.tFix = Date.now() - 25000; w.gpsPerro();
+        eq(abiertos, a0 + 1, 'el vigilante no reabrió un watch mudo');
+        // pegado: error alto sin mejorar 50 s → reabre, y como máximo 2 veces seguidas
+        fix(-33.5, 40); gv.tMejora = Date.now() - 50000; w.gpsPerro();
+        eq(abiertos, a0 + 2, 'el vigilante no reabrió un watch pegado en ±40 m');
+        fix(-33.5, 40); gv.tMejora = Date.now() - 50000; w.gpsPerro();
+        fix(-33.5, 40); gv.tMejora = Date.now() - 50000; w.gpsPerro();
+        eq(abiertos, a0 + 3, 'con señal mala de verdad no debe reabrir sin fin');
+        fix(-33.5, 5); eq(gv.reab, 0, 'un fix bueno debía rehabilitar el vigilante');
+        // tocar 📡 apaga de verdad
+        w.toggleGPSLive(null);
+        eq(w.eval('gpsMapaOn'), false, 'tocar 📡 no apagó el seguimiento');
+        ok(!w.eval('gpsDot'), 'apagado, el punto azul debía irse');
+      } finally {
+        w.pararGPSLive(); w.eval('gpsEnfriar()'); gv.ultimo = null; gv.tFix = 0;
+        try { w.eval('mapaVista').remove(); } catch(e) {}
+        w.__mp = mapaPrevio; w.eval('mapaVista = window.__mp'); delete w.__mp; delete w.__div;
+        if (geoOrig) Object.defineProperty(w.navigator, 'geolocation', geoOrig); else delete w.navigator.geolocation;
+        div.remove();
+      }
+      return 'seguimiento sobrevive a la Libreta y se repinta al volver · caché repetida ignorada · reapertura por mudo y por pegado (máx. 2)';
+    });
+
 
     // ---- v132: mapas offline por zonas (PMTiles) ----
     // PNG real (rojo) para que el sobre-zoom pueda decodificarlo y recortarlo.

@@ -7590,7 +7590,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v193';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v194';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -15087,8 +15087,11 @@ async function render(){
   // corta TODOS los modos del mapa al navegar: agregandoNota se quedaba armado y, al volver
   // a la vista mapa, el primer toque abria la ficha de nota sin que nadie la pidiera.
   dibujando=false; agregandoPunto=false; agregandoNota=false; midiendo=false;
-  if(vista.n!=='mapa') pararGPSLive();     // no seguir consumiendo GPS fuera de la vista mapa
-  gpsTemplar();                            // GPS caliente solo en el punto y en el mapa
+  // v194: fuera del mapa se descuelga el punto azul, pero el seguimiento pedido con 📡 sigue armado
+  // y se reanuda solo al volver (antes se apagaba y al volver «el GPS no funcionaba»). Al salir del
+  // proyecto (inicio) sí se apaga.
+  if(vista.n==='home') pararGPSLive(); else if(vista.n!=='mapa') gpsMapaSoltar();
+  gpsTemplar();                            // GPS caliente en todo el proyecto (GPS_VISTAS_CALOR)
   capasCerrar();                           // el panel lateral de capas no sobrevive al cambio de pantalla
   enEditor=false;
   cerrarHojas();          // la hoja de la vista iconos vive en <body>: no se va sola al cambiar de pantalla
@@ -17933,13 +17936,19 @@ let midiendo=false;   // modo medir distancia: reusa _verts/_tmpLine/_tmpMk de d
 // hasta el siguiente fix (~1 s). Arrastrar el mapa pausa el recentrado (el punto azul se sigue
 // moviendo); tocar 📡 con el seguimiento pausado recentra en vez de apagar.
 const GPS_ZOOM=18;   // zoom al que acerca el 📡 (mapa del proyecto) y el ⌖ del punto
-let gpsWatchId=null, gpsDot=null, gpsAcc=null, gpsSiguiendo=true, gpsPrimerFix=true, gpsUltimo=null, gpsBtn=null;
+// v194 (pedido del usuario: «paso a la Libreta, vuelvo al mapa y el GPS no funciona»): el 📡 abría
+// su PROPIO watchPosition y render() lo cortaba al salir del mapa, sin avisar; al volver había que
+// tocarlo de nuevo y partía de cero (primer fix grueso). Ahora el seguimiento es una INTENCIÓN
+// (gpsMapaOn) que sobrevive a la Libreta, a Muestras y a la ficha del punto: el mapa se cuelga del
+// GPS caliente compartido (gpsVivo, un solo watch para toda la app) y al volver pinta al tiro el
+// último fix y sigue. Solo el geólogo lo apaga (tocar 📡) o salir del proyecto.
+let gpsMapaOn=false, gpsDot=null, gpsAcc=null, gpsSiguiendo=true, gpsPrimerFix=true, gpsUltimo=null, gpsBtn=null, gpsPillTic=null;
 function gpsPintarBtn(){
   if(!gpsBtn) return;
   // v175: el botón es un icono en la columna de controles del mapa (gpsMontar); el estado va por clase
-  gpsBtn.classList.toggle('on',gpsWatchId!=null&&gpsSiguiendo);
-  gpsBtn.classList.toggle('pausa',gpsWatchId!=null&&!gpsSiguiendo);
-  gpsBtn.title=gpsWatchId==null?'Seguir mi posición GPS':gpsSiguiendo?'Siguiendo GPS (toca para apagar)':'GPS en pausa (toca para centrar)';
+  gpsBtn.classList.toggle('on',gpsMapaOn&&gpsSiguiendo);
+  gpsBtn.classList.toggle('pausa',gpsMapaOn&&!gpsSiguiendo);
+  gpsBtn.title=!gpsMapaOn?'Seguir mi posición GPS':gpsSiguiendo?'Siguiendo GPS (toca para apagar)':'GPS en pausa (toca para centrar)';
 }
 // Icono 📡 bajo el 📦, a la izquierda. initMapaVista rehace el mapa tras cada guardado: el control
 // nuevo toma el lugar de gpsBtn y se pinta con el estado del seguimiento, que sigue vivo.
@@ -17951,60 +17960,92 @@ function gpsMontar(map){
     L.DomEvent.on(a,'click',e=>{ L.DomEvent.stop(e); toggleGPSLive(a); });
     L.DomEvent.disableClickPropagation(d); gpsBtn=a; return d; }});
   new Gps().addTo(map); gpsPintarBtn();
+  // volvió de la Libreta / Muestras / el punto, o se rehízo el mapa. Recién cuando el mapa tiene
+  // vista: antes, panTo lanza y las capas no se dibujan (memoria «Leaflet: capas antes de vista»).
+  if(gpsMapaOn) map.whenReady(()=>{ if(map===mapaVista&&gpsMapaOn) gpsMapaEnganchar(); });
 }
-function gpsPausar(){ if(gpsWatchId!=null && gpsSiguiendo){ gpsSiguiendo=false; gpsPintarBtn(); } }
+function gpsPausar(){ if(gpsMapaOn && gpsSiguiendo){ gpsSiguiendo=false; gpsPintarBtn(); } }
 function toggleGPSLive(btn){
   if(btn) gpsBtn=btn;
-  if(gpsWatchId!=null && !gpsSiguiendo){
+  if(gpsMapaOn && !gpsSiguiendo){
     gpsSiguiendo=true; gpsPintarBtn();
     // tocar 📡 en pausa: vuelve a la posición Y se acerca (si el usuario estaba más cerca, se respeta)
     if(gpsUltimo && mapaVista) mapaVista.setView(gpsUltimo,Math.max(mapaVista.getZoom(),GPS_ZOOM),{animate:false});
     return;
   }
-  if(gpsWatchId!=null){ pararGPSLive(); gpsPintarBtn(); return; }
+  if(gpsMapaOn){ pararGPSLive(); gpsPintarBtn(); return; }
   if(!navigator.geolocation){toast('Sin geolocalización');return;}
   toast('Siguiendo GPS… (arrastra el mapa para pausar)');
-  gpsSiguiendo=true; gpsPrimerFix=true;
-  if(mapaVista){ mapaVista.off('dragstart',gpsPausar); mapaVista.on('dragstart',gpsPausar); }
-  gpsWatchId=navigator.geolocation.watchPosition(p=>{
-    anotarPosGPS(p);
-    if(!mapaVista)return;
-    const ll=[p.coords.latitude,p.coords.longitude];
-    gpsUltimo=ll;
-    if(!gpsDot||!mapaVista.hasLayer(gpsDot)){
-      gpsAcc=L.circle(ll,{radius:p.coords.accuracy,color:'#12a4ff',weight:1,fillOpacity:.12}).addTo(mapaVista);
-      gpsDot=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#12a4ff',fillOpacity:1}).addTo(mapaVista);
-      // initMapaVista() rehace el mapa al editar una línea o nota: re-engancha la pausa al nuevo
-      mapaVista.off('dragstart',gpsPausar); mapaVista.on('dragstart',gpsPausar);
-    } else {
-      gpsDot.setLatLng(ll); gpsAcc.setLatLng(ll).setRadius(p.coords.accuracy);
-    }
-    pillGPS(p.coords.accuracy);
-    // pedido del usuario: al encender el GPS el mapa se acerca de verdad a donde está (z18, ~0,6 m/px);
-    // antes z17 solo si venía de más lejos que z15, y entre z15 y z17 quedaba «muy lejos»
-    if(gpsPrimerFix){ gpsPrimerFix=false; mapaVista.setView(ll, Math.max(mapaVista.getZoom(),GPS_ZOOM)); }
-    else if(gpsSiguiendo) mapaVista.panTo(ll,{animate:false});
-  }, e=>toast('GPS: '+e.message), {enableHighAccuracy:true, maximumAge:0, timeout:20000});
+  gpsMapaOn=true; gpsSiguiendo=true; gpsPrimerFix=true;
+  gpsCalentar(true);      // el geólogo lo pidió: se abre aunque el permiso aún no conste
+  gpsMapaEnganchar();
   gpsPintarBtn();
+}
+// Cuelga el mapa actual del GPS caliente. Si ya hay un fix reciente se pinta al tiro: al volver de
+// la Libreta el punto azul aparece de inmediato en vez de esperar una lectura nueva.
+function gpsMapaEnganchar(){
+  if(!mapaVista) return;
+  mapaVista.off('dragstart',gpsPausar); mapaVista.on('dragstart',gpsPausar);
+  gpsVivo.subs.add(gpsMapaRecibir);
+  if(!gpsPillTic) gpsPillTic=setInterval(gpsPillRefrescar,2000);
+  // al volver de la Libreta el mapa se rehace con la vista del proyecto: si quedó lejos (< z15),
+  // se acerca a la posición como al encender el 📡; si el geólogo estaba cerca, solo se centra
+  if(gpsSiguiendo && mapaVista.getZoom()<15) gpsPrimerFix=true;
+  const u=gpsVivo.ultimo;
+  if(u && Date.now()-gpsVivo.tFix<60000) gpsMapaRecibir(u); else gpsPillRefrescar();
+}
+function gpsMapaRecibir(p){
+  if(!gpsMapaOn||!mapaVista) return;
+  const ll=[p.coords.latitude,p.coords.longitude];
+  gpsUltimo=ll;
+  if(!gpsDot||!mapaVista.hasLayer(gpsDot)){
+    gpsAcc=L.circle(ll,{radius:p.coords.accuracy,color:'#12a4ff',weight:1,fillOpacity:.12}).addTo(mapaVista);
+    gpsDot=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#12a4ff',fillOpacity:1}).addTo(mapaVista);
+    // initMapaVista() rehace el mapa al editar una línea o nota: re-engancha la pausa al nuevo
+    mapaVista.off('dragstart',gpsPausar); mapaVista.on('dragstart',gpsPausar);
+  } else {
+    gpsDot.setLatLng(ll); gpsAcc.setLatLng(ll).setRadius(p.coords.accuracy);
+  }
+  gpsPillRefrescar();
+  // pedido del usuario: al encender el GPS el mapa se acerca de verdad a donde está (z18, ~0,6 m/px);
+  // antes z17 solo si venía de más lejos que z15, y entre z15 y z17 quedaba «muy lejos»
+  if(gpsPrimerFix){ gpsPrimerFix=false; mapaVista.setView(ll, Math.max(mapaVista.getZoom(),GPS_ZOOM)); }
+  else if(gpsSiguiendo) mapaVista.panTo(ll,{animate:false});
 }
 // v157: mientras se sigue el GPS, una pastilla sobre el mapa dice el error actual con el color del
 // semáforo del umbral del proyecto: se sabe si conviene registrar ahí sin mirar el círculo azul.
-function pillGPS(acc){
+// v194: también dice cuando NO llegan lecturas (gris), para que un GPS mudo no pase por bueno.
+function pillGPS(acc, viejoS){
   let p=document.getElementById('gpsPill');
-  if(acc==null){ if(p) p.remove(); return; }
+  if(acc===null){ if(p) p.remove(); return; }
   const cont=document.querySelector('.mapcard'); if(!cont) return;
   if(!p){ p=el('div',{id:'gpsPill',class:'gps-pill',role:'status'}); cont.append(p); }
+  if(acc===undefined){ p.style.background=COLOR_CALIDAD['']; p.textContent='📡 Buscando señal GPS…'; return; }
+  if(viejoS>=15){ p.style.background=COLOR_CALIDAD[''];
+    p.textContent='📡 ±'+Math.round(acc)+' m · sin lectura nueva hace '+viejoS+' s'; return; }
   const c=calidadGPS(acc);
   p.style.background=COLOR_CALIDAD[c];
-  p.textContent='📡 ±'+Math.round(acc)+' m'+(c==='malo'?' · sobre ±'+umbralGPS()+' m':'');
+  p.textContent='📡 ±'+Math.round(acc)+' m'+(c==='malo'?' · sobre ±'+umbralGPS()+' m':'')
+    +(acc>=GPS_APROX?' · ¿ubicación aproximada?':'');
 }
+function gpsPillRefrescar(){
+  if(!gpsMapaOn){ pillGPS(null); return; }
+  const u=gpsVivo.ultimo;
+  if(!u||!gpsVivo.tFix) pillGPS(undefined);
+  else pillGPS(u.coords.accuracy, Math.round((Date.now()-gpsVivo.tFix)/1000));
+}
+// Salir de la vista mapa: el mapa se descuelga, pero la intención de seguir queda (gpsMapaOn).
+function gpsMapaSoltar(){
+  gpsVivo.subs.delete(gpsMapaRecibir);
+  clearInterval(gpsPillTic); gpsPillTic=null; pillGPS(null);
+  if(mapaVista){ mapaVista.off('dragstart',gpsPausar);
+    if(gpsDot)try{mapaVista.removeLayer(gpsDot);}catch(e){} if(gpsAcc)try{mapaVista.removeLayer(gpsAcc);}catch(e){} }
+  gpsDot=null; gpsAcc=null; gpsSiguiendo=true;
+}
+// Apagar el seguimiento (tocar 📡 o salir del proyecto).
 function pararGPSLive(){
-  pillGPS(null);
-  if(mapaVista) mapaVista.off('dragstart',gpsPausar);
-  gpsSiguiendo=true; gpsUltimo=null;
-  if(gpsWatchId!=null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
-  if(mapaVista){ if(gpsDot)try{mapaVista.removeLayer(gpsDot);}catch(e){} if(gpsAcc)try{mapaVista.removeLayer(gpsAcc);}catch(e){} }
-  gpsDot=null; gpsAcc=null;
+  gpsMapaSoltar(); gpsMapaOn=false; gpsUltimo=null;
+  gpsTemplar();
 }
 function limpiarTemp(){ if(mapaVista){ if(_tmpLine)mapaVista.removeLayer(_tmpLine); _tmpMk.forEach(m=>mapaVista.removeLayer(m)); } _tmpLine=null;_tmpMk=[];_verts=[]; }
 function bannerDibujo(){
@@ -18333,7 +18374,50 @@ function textoErrorPunto(p){
 // Se apaga al salir de esas pantallas y con la app en segundo plano (batería). Solo se enciende si
 // el permiso de ubicación ya está dado: abrir un punto no debe disparar el diálogo del permiso.
 const GPS_FRESCO=10000;   // ms: un fix más viejo puede ser de otro lugar si el geólogo caminó
-const gpsVivo={id:null, ultimo:null, subs:new Set()};
+// v194 (pedido del usuario: «el GPS se queda con un error grande y se demora mucho, y otra app ya
+// tiene satélites suficientes»). El navegador no ve satélites: recibe la posición del proveedor
+// fusionado del sistema (Google Play en Android), y su watchPosition a veces se queda MUDO (sin
+// lecturas, sobre todo al volver de la cámara o de otra app) o PEGADO en el primer fix grueso.
+// Arreglos:
+//  · un vigilante (gpsPerro, cada 5 s) reabre el watch si pasan GPS_MUDO sin lecturas nuevas, y
+//    si el error sigue sobre el umbral sin mejorar durante GPS_PEGADO (hasta 2 veces seguidas;
+//    vuelve a habilitarse con un fix bueno);
+//  · en segundo plano el watch se suelta recién tras GPS_GRACIA: sacar una foto o mirar otra app
+//    ya no obliga a partir de cero (antes se cortaba al instante y volvía con el fix grueso);
+//  · al volver al primer plano, si en 4 s no llega nada, se reabre sin esperar al vigilante;
+//  · una lectura repetida (mismo timestamp: el navegador re-entrega su caché) no cuenta como nueva;
+//  · error ≥ GPS_APROX (500 m) = casi seguro el permiso de ubicación «aproximada» de Android 12+:
+//    se avisa cómo activar la precisa.
+const GPS_MUDO=20000, GPS_PEGADO=45000, GPS_GRACIA=90000, GPS_APROX=500;
+const gpsVivo={id:null, ultimo:null, subs:new Set(), t0:0, tFix:0, tMejora:0, mejor:Infinity, reab:0, perro:null, tSoltar:null};
+function gpsAbrirWatch(){
+  const g=navigator.geolocation;
+  if(gpsVivo.id!=null){ try{ g.clearWatch(gpsVivo.id); }catch(e){} }
+  gpsVivo.t0=gpsVivo.tMejora=Date.now(); gpsVivo.mejor=Infinity;
+  gpsVivo.id=g.watchPosition(gpsRecibirVivo,gpsErrorVivo,{enableHighAccuracy:true,maximumAge:0,timeout:30000});
+  if(!gpsVivo.perro) gpsVivo.perro=setInterval(gpsPerro,5000);
+}
+function gpsRecibirVivo(p){
+  if(!p||!p.coords) return;
+  const prev=gpsVivo.ultimo, ahora=Date.now();
+  if(prev&&p.timestamp&&prev.timestamp===p.timestamp) return;   // caché re-entregada
+  gpsVivo.ultimo=p; gpsVivo.tFix=ahora; anotarPosGPS(p);
+  const a=p.coords.accuracy;
+  if(a<=umbralGPS()){ gpsVivo.reab=0; gpsVivo.mejor=a; gpsVivo.tMejora=ahora; }
+  else if(a<gpsVivo.mejor*0.8){ gpsVivo.mejor=a; gpsVivo.tMejora=ahora; }
+  gpsVivo.subs.forEach(f=>{ try{ f(p); }catch(e){ console.warn('GPS sub',e); } });
+}
+function gpsErrorVivo(e){
+  if(e&&e.code===1){ try{ localStorage.removeItem('gpsPermitido'); }catch(_){} gpsEnfriar(); return; }
+  // 2 (sin posición) / 3 (plazo): el watch sigue abierto; si queda mudo, el vigilante lo reabre
+}
+function gpsPerro(){
+  if(gpsVivo.id==null||document.hidden) return;
+  const ahora=Date.now();
+  if(ahora-Math.max(gpsVivo.t0,gpsVivo.tFix)>GPS_MUDO){ gpsAbrirWatch(); return; }
+  const u=gpsVivo.ultimo;
+  if(u&&u.coords.accuracy>umbralGPS()&&ahora-gpsVivo.tMejora>GPS_PEGADO&&gpsVivo.reab<2){ gpsVivo.reab++; gpsAbrirWatch(); }
+}
 // 2026-11-08 (pedido del usuario: «aún muy lento en capturar la ubicación, otra app sí se ubica»):
 // el GPS se enfriaba en la Libreta (vista 'proyecto') y en Muestras, que es justo desde donde se
 // crea el punto nuevo: el primer «Tomar GPS» partía de cero. Ahora queda caliente en todo el
@@ -18342,20 +18426,37 @@ const gpsVivo={id:null, ultimo:null, subs:new Set()};
 const GPS_VISTAS_CALOR=['punto','mapa','proyecto','muestras'];
 function gpsQuiereCalor(){ return !document.hidden && GPS_VISTAS_CALOR.includes(vista.n); }
 function gpsYaPermitido(){ try{ return localStorage.getItem('gpsPermitido')==='1'; }catch(e){ return false; } }
-async function gpsCalentar(){
+// forzar: lo pidió el geólogo (📡), se abre sin mirar el permiso ni la vista
+async function gpsCalentar(forzar){
+  clearTimeout(gpsVivo.tSoltar); gpsVivo.tSoltar=null;
   if(gpsVivo.id!=null||!navigator.geolocation) return;
-  let st='';
-  try{ st=(await navigator.permissions.query({name:'geolocation'})).state; }catch(e){}
-  if(st==='denied') return;
-  if(st!=='granted' && !gpsYaPermitido()) return;
-  if(gpsVivo.id!=null||!gpsQuiereCalor()) return;
-  gpsVivo.id=navigator.geolocation.watchPosition(p=>{
-    gpsVivo.ultimo=p; anotarPosGPS(p); gpsVivo.subs.forEach(f=>f(p));
-  },e=>{ if(e&&e.code===1){ try{ localStorage.removeItem('gpsPermitido'); }catch(_){} gpsEnfriar(); } },
-  {enableHighAccuracy:true,maximumAge:0,timeout:60000});
+  if(!forzar){
+    let st='';
+    try{ st=(await navigator.permissions.query({name:'geolocation'})).state; }catch(e){}
+    if(st==='denied') return;
+    if(st!=='granted' && !gpsYaPermitido()) return;
+    if(gpsVivo.id!=null||!gpsQuiereCalor()) return;
+  }
+  gpsAbrirWatch();
 }
-function gpsEnfriar(){ if(gpsVivo.id!=null){ navigator.geolocation.clearWatch(gpsVivo.id); gpsVivo.id=null; } }
-function gpsTemplar(){ if(gpsQuiereCalor()) gpsCalentar(); else gpsEnfriar(); }
+function gpsEnfriar(){
+  clearTimeout(gpsVivo.tSoltar); gpsVivo.tSoltar=null;
+  if(gpsVivo.id!=null){ try{ navigator.geolocation.clearWatch(gpsVivo.id); }catch(e){} gpsVivo.id=null; }
+  clearInterval(gpsVivo.perro); gpsVivo.perro=null;
+}
+function gpsTemplar(){
+  if(document.hidden){   // cámara u otra app: se suelta recién si no vuelve dentro de la gracia
+    if(gpsVivo.id!=null&&!gpsVivo.tSoltar)
+      gpsVivo.tSoltar=setTimeout(()=>{ gpsVivo.tSoltar=null; if(document.hidden) gpsEnfriar(); },GPS_GRACIA);
+    return;
+  }
+  if(!gpsQuiereCalor()){ gpsEnfriar(); return; }
+  const seguia=gpsVivo.id!=null;
+  gpsCalentar();
+  // de vuelta al primer plano Chrome a veces deja el watch sin entregar: si en 4 s no llega nada, se reabre
+  if(seguia&&Date.now()-gpsVivo.tFix>GPS_FRESCO){ const t=Date.now();
+    setTimeout(()=>{ if(gpsVivo.id!=null&&!document.hidden&&gpsVivo.tFix<t) gpsAbrirWatch(); },4000); }
+}
 document.addEventListener('visibilitychange',gpsTemplar);
 // último fix del GPS caliente si es reciente (o null)
 function gpsReciente(){ const p=gpsVivo.ultimo; return p&&Date.now()-p.timestamp<=GPS_FRESCO?p:null; }
@@ -18394,7 +18495,9 @@ function capturarPosicion(){
         forzar.disabled=false; forzar.textContent='Registrar igual (±'+Math.round(a)+' m)';
       } else { n.textContent='…'; n.style.color=''; }
       meta.textContent='Meta ±'+u+' m · '+s+' s'+(error?' · '+error:'');
-      aviso.textContent=s<25?'A cielo abierto suele bajar en 10–30 s. Quédate quieto con el teléfono despejado.'
+      aviso.textContent=mejor&&mejor.coords.accuracy>=GPS_APROX
+        ?'Un error de cientos de metros suele ser el permiso de ubicación «aproximada». En Android: Ajustes › Apps › Chrome › Permisos › Ubicación › activa «Usar ubicación precisa» (y en Ajustes › Ubicación, «Precisión de la ubicación de Google»).'
+        :s<25?'A cielo abierto suele bajar en 10–30 s. Quédate quieto con el teléfono despejado.'
         :'Bajo paredes, en quebradas o con nubes densas puede no bajar más. Puedes esperar, registrar igual o ubicarlo a mano.';
     };
     const abrir=()=>{ if(fin||ov) return;
