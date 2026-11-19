@@ -7590,7 +7590,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v194';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v195';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -12099,7 +12099,7 @@ async function mpAbrir(){ await mpMigrarGeotiffViejo(); mpPanel(); }
 // dispositivo (store IndexedDB 'cartageo') para verla sin conexión en terreno — esa es la razón
 // de ser de esta capa en una app de terreno. Prefijo `cg` (paralelo al `pel` de remociones).
 const CG_BASE = 'https://raw.githubusercontent.com/cvenegas-sernageomin/cartas-geologicas-sernageomin/main/';
-let cgOn=false, cgData=null, cgOverlay=null, cgOverlayObjUrl=null, cgActivoId=null,
+let cgMostrarTurno=0, cgOn=false, cgData=null, cgOverlay=null, cgOverlayObjUrl=null, cgActivoId=null,
     cgOpacidad=1.0, cgCtrl=null, cgColapsado=false, cgVer='', cgFuenteManifest='red', cgDescargadasIds=new Set(),
     cgCercaDeMi=false, cgGpsLatLon=null, cgGpsPidiendo=false;
 const cgEsc = s => String(s==null?'':s).replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
@@ -12202,6 +12202,34 @@ async function cgCargarManifest(forzar){
   }
 }
 
+// v195: cartas en alta resolución. Si la entrada del manifest trae `pmtiles` (pirámide de teselas
+// WebP de la misma carta, con la georreferencia heredada del overlay), la carta se dibuja por
+// teselas: el teléfono decodifica solo lo que está en pantalla, en vez de una imagen única de
+// ≤4200 px (≈16 m/px) que al zoom de terreno se veía pixelada. Descargada: el .pmtiles vive en el
+// mismo registro de 'cartageo' (pmBlob, junto al overlayBlob, que se conserva de respaldo y para la
+// light). En línea sin descargar: se lee por rangos HTTP (raw.githubusercontent responde 206 con CORS).
+function cgPmRemoto(url){
+  const leer=(a,b)=>fetch(url,{headers:{Range:'bytes='+a+'-'+(b-1)}}).then(r=>{
+    if(r.status!==206&&r.status!==200) throw new Error('HTTP '+r.status);
+    if(r.status===200) throw new Error('el servidor no acepta lecturas por rango');
+    return r.arrayBuffer(); });
+  const parte=(a,b,type)=>({arrayBuffer:()=>leer(a,b),blob:async()=>new Blob([await leer(a,b)],{type:type||''})});
+  return {slice:parte};
+}
+async function cgCapaPm(fuente,b){
+  const arc=await pmAbrir(fuente);
+  if(!PM_MIME[arc.H.tipo]) throw new Error('PMTiles de la carta no es raster');
+  const Capa=L.GridLayer.extend({createTile(c,done){
+    const img=document.createElement('img'); img.alt=''; img.setAttribute('role','presentation');
+    (async()=>{
+      let t=await pmTesela(arc,c.z,c.x,c.y);
+      if(t){ if(!(t instanceof Blob)) t=await t.blob(); await zonasPintarBlob(img,t); }
+    })().then(()=>done(null,img),e=>done(e,img));
+    return img;
+  }});
+  return new Capa({minNativeZoom:arc.H.minz,maxNativeZoom:arc.H.maxz,maxZoom:19,zIndex:6,opacity:cgOpacidad,
+    bounds:L.latLngBounds([b.s,b.w],[b.n,b.e])});
+}
 function cgQuitarOverlay(){
   if(cgOverlay){ try{mapaVista.removeLayer(cgOverlay);}catch(e){} cgOverlay=null; }
   if(cgOverlayObjUrl){ URL.revokeObjectURL(cgOverlayObjUrl); cgOverlayObjUrl=null; }
@@ -12216,20 +12244,40 @@ async function cgMostrar(id, fly){
     || (rec&&{id:rec.id,titulo:rec.titulo,bounds:rec.bounds,opacidad:rec.opacidad,rev:rec.rev,overlay:null,leyenda:null});
   if(!m||!mapaVista) return;
   cgQuitarOverlay();
+  const turno=++cgMostrarTurno;   // v195: abrir un .pmtiles es asíncrono; si entretanto se elige otra carta, esta se descarta
   // v142: la imagen guardada va SIEMPRE con los bounds con que se guardó (si el manifest corrigió la carta,
   // imagen vieja + bounds nuevos quedaría peor). Si hay una revisión nueva (m.rev) y hay red, se muestra la
   // versión en línea y se refresca la copia guardada en segundo plano.
   const vieja = rec && rec.overlayBlob && m.rev && rec.rev!==m.rev;
-  let src, b=m.bounds;
-  if(rec && rec.overlayBlob && !(vieja && navigator.onLine)){ src=URL.createObjectURL(rec.overlayBlob); cgOverlayObjUrl=src; b=rec.bounds||m.bounds; }
-  else if(navigator.onLine && m.overlay){ src=cgUrl(m.overlay); }
+  // v195: hay versión en alta resolución publicada que la copia guardada todavía no tiene
+  const sinAlta = rec && rec.overlayBlob && !rec.pmBlob && m.pmtiles;
+  const usarLocal = rec && rec.overlayBlob && !(vieja && navigator.onLine);
+  let src, b=m.bounds, pmFuente=null;
+  if(usarLocal){ b=rec.bounds||m.bounds;
+    if(rec.pmBlob) pmFuente=rec.pmBlob;
+    else if(sinAlta && navigator.onLine) pmFuente=cgPmRemoto(cgUrl(m.pmtiles));
+    if(!pmFuente){ src=URL.createObjectURL(rec.overlayBlob); cgOverlayObjUrl=src; } }
+  else if(navigator.onLine && (m.overlay||m.pmtiles)){ if(m.pmtiles) pmFuente=cgPmRemoto(cgUrl(m.pmtiles)); src=m.overlay?cgUrl(m.overlay):null; }
   else { toast('📥 Descarga esta carta antes de ir a terreno (sin conexión)'); return; }
   if(vieja && navigator.onLine){ toast('🔄 Esta carta fue corregida: actualizando la copia guardada…'); setTimeout(()=>cgDescargar(id), 800); }
   else if(vieja) toast('🔄 Hay una versión corregida de esta carta: actualízala cuando tengas conexión');
+  else if(sinAlta) toast(navigator.onLine?'🔍 Esta carta ya está en alta resolución: vuelve a descargarla para tenerla así sin conexión'
+                                         :'🔍 Hay una versión de esta carta en alta resolución: descárgala cuando tengas conexión');
   const bounds=[[b.s,b.w],[b.n,b.e]];
   if(m.opacidad!=null) cgOpacidad=m.opacidad;
-  cgOverlay=L.imageOverlay(src, bounds, {opacity:cgOpacidad, interactive:false});
-  cgOverlay.on('error', ()=>{ toast('⚠️ No se pudo cargar esta carta (¿sin conexión?)'); cgQuitarOverlay(); cgSyncPanel(); });
+  if(pmFuente){
+    let capa=null;
+    try{ capa=await cgCapaPm(pmFuente,b); }
+    catch(e){ console.warn('carta pmtiles (se usa la imagen única)',e);
+      if(!src && rec && rec.overlayBlob){ src=URL.createObjectURL(rec.overlayBlob); cgOverlayObjUrl=src; } }
+    if(turno!==cgMostrarTurno||!mapaVista){ if(src&&src.startsWith('blob:')&&src!==cgOverlayObjUrl) URL.revokeObjectURL(src); return; }
+    cgOverlay=capa;
+  }
+  if(!cgOverlay){
+    if(!src){ toast('⚠️ No se pudo cargar esta carta (¿sin conexión?)'); cgSyncPanel(); return; }
+    cgOverlay=L.imageOverlay(src, bounds, {opacity:cgOpacidad, interactive:false});
+    cgOverlay.on('error', ()=>{ toast('⚠️ No se pudo cargar esta carta (¿sin conexión?)'); cgQuitarOverlay(); cgSyncPanel(); });
+  }
   cgOverlay.addTo(mapaVista);
   cgActivoId=id;
   // elegida en el catálogo: el panel se cierra y la carta queda como una capa más del control de
@@ -12321,15 +12369,21 @@ async function cgDescargar(id){
   // Se separan los dos fallos posibles: bajar (red) y guardar (almacenamiento). Antes un solo
   // catch reportaba todo como "¿sin conexión?", así que quedarse sin espacio -- justo lo que
   // cgAvisoEspacio() intenta prevenir -- mandaba al usuario a revisar la señal en vez del disco.
-  let overlayBlob, leyendaBlob=null;
+  let overlayBlob, leyendaBlob=null, pmBlob=null;
   try{
     overlayBlob=await cgBajarBlob(m.overlay);
     if(m.leyenda){ try{ leyendaBlob=await cgBajarBlob(m.leyenda); }catch(e){ console.warn('leyenda no descargada',e); } }
+    // v195: alta resolución. Si falla, la carta queda igual con la imagen única (como antes).
+    if(m.pmtiles){
+      try{ const r=await fetch(cgUrl(m.pmtiles)); if(!r.ok) throw new Error('HTTP '+r.status);
+        const bl=await r.blob(); await pmAbrir(bl); pmBlob=bl; }
+      catch(e){ console.warn('pmtiles no descargado',e); toast('⚠️ La versión en alta resolución no se pudo bajar: se guarda la normal'); }
+    }
   }catch(e){ console.warn('cgDescargar (red)',e); toast('⚠️ No se pudo descargar «'+(m.titulo||id)+'» (¿sin conexión?)'); return; }
   try{
     const rec={id:m.id, titulo:m.titulo, region:m.region, fuente:m.fuente, anio:m.anio, escala:m.escala,
-      informe:m.informe, bounds:m.bounds, opacidad:m.opacidad, rev:m.rev||'', overlayBlob, leyendaBlob,
-      manifestVer:cgVer, fechaDescarga:new Date().toISOString(), tamB:overlayBlob.size+(leyendaBlob?leyendaBlob.size:0)};
+      informe:m.informe, bounds:m.bounds, opacidad:m.opacidad, rev:m.rev||'', overlayBlob, leyendaBlob, pmBlob,
+      manifestVer:cgVer, fechaDescarga:new Date().toISOString(), tamB:overlayBlob.size+(leyendaBlob?leyendaBlob.size:0)+(pmBlob?pmBlob.size:0)};
     await put('cartageo', rec);
     await cgRefrescarDescargadas();
     toast('✓ Descargada ('+cgFmtTam(rec.tamB)+') · también en Capas, arriba a la derecha');
@@ -12440,6 +12494,7 @@ function cgCrearControl(abiertasPrevias){
       return `<div style="display:flex;align-items:center;gap:4px;margin:2px 0">`
         +`<div class="cg-item" data-id="${cgEsc(m.id)}" tabindex="0" role="button"
             style="flex:1;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:.74rem;line-height:1.3">${cgEsc(m.titulo||m.id)}`
+        +(m.pmtiles?` <span title="Alta resolución: se ve nítida con zoom de terreno" style="font-size:.6rem;font-weight:700;color:#0b1f33;background:#9cc4ff;border-radius:4px;padding:0 3px;white-space:nowrap">HD</span>`:'')
         +(d!=null?` <span style="opacity:.75;font-size:.68rem;white-space:nowrap;${d===0?'color:#7ee0a1;font-weight:600':''}">· ${d===0?'📍 aquí':'📍'+cgFmtKm(d)}</span>`:'')
         +`</div>`
         +(desc
