@@ -942,10 +942,10 @@ const MODELO = {
           "nota": null
         },
         {
-          "nombre": "RELACION_LITOLOGIA_ESTRUCTURA",
+          "nombre": "PRESENCIA_ALT",
           "obligatorio": false,
-          "dominio": null,
-          "nota": null
+          "dominio": "PRESENCIA_ALT",
+          "nota": "¿Hay alteración en esta litología? Sí/No (revisión RJB/PP). Si es Sí se describe en TBL_ALTERACION."
         },
         {
           "nombre": "OBSERVACION",
@@ -958,18 +958,6 @@ const MODELO = {
           "obligatorio": false,
           "dominio": "UNIDAD_GEOLOGICA",
           "nota": null
-        },
-        {
-          "nombre": "ESPESOR_ESTRATO_MIN_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Numérico, centímetros. Espesor mínimo de los estratos de esta litología. No aplica a rocas intrusivas. La app deriva la escala de Ingram (1954) para la prosa: láminas / capas / bancos (coladas en lavas)."
-        },
-        {
-          "nombre": "ESPESOR_ESTRATO_MAX_CM",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Numérico, centímetros. Espesor máximo de los estratos de esta litología. No aplica a rocas intrusivas."
         },
         {
           "nombre": "ESPESOR_TOTAL_MIN_M",
@@ -1017,7 +1005,7 @@ const MODELO = {
           "nombre": "SUBTIPO_SEDIMENTARIO",
           "obligatorio": false,
           "dominio": "SUBTIPO_SEDIMENTARIO",
-          "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_CLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_CARBONATOS; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
+          "nota": "Solo rocas sedimentarias. Clasificación por composición (norma CDC 2016 Vol III): decide qué tabla hija se llena al exportar (Siliciclástico/Volcanosedimentario → SED_CLASTICA; Carbonato, Salino, Fosfato, Orgánico, Silíceo → SED_NO_CLASTICA; Mixto/Indeterminado → solo LITO_SEDIMENTARIA). Si queda vacío se deduce de NOMBRE_ROCA."
         },
         {
           "nombre": "TIPO_ALOQUIMICO",
@@ -1728,7 +1716,7 @@ const MODELO = {
           "nota": "Opcional: registro geológico del punto que documenta (TBL_ALTERACION). Se elige en «Registro asociado»; a lo más uno por adjunto (v167)."
         },
         {
-          "nombre": "ID_FOTOGRAFIA_ASOCIADA",
+          "nombre": "ID_FOTOGRAFIA",
           "obligatorio": false,
           "dominio": null,
           "nota": null
@@ -2176,18 +2164,6 @@ const MODELO = {
           "nota": null
         },
         {
-          "nombre": "RUMBO_CONTACTO",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Opcional: muchos contactos no se pueden medir. Se sincroniza con la medida estructural (TBL_DATOS_ESTRUCTURALES.ID_CONTACTO, TIPO_ESTRUCTURA='Estructura contacto'): si se escribe aqui y el contacto aun no tiene medida, la PWA la crea en el mismo punto; si ya la tiene, la actualiza. Lo medido en la ficha estructural se copia aqui."
-        },
-        {
-          "nombre": "MANTEO_CONTACTO",
-          "obligatorio": false,
-          "dominio": null,
-          "nota": "Opcional: muchos contactos no se pueden medir. Se sincroniza con la medida estructural (TBL_DATOS_ESTRUCTURALES.ID_CONTACTO, TIPO_ESTRUCTURA='Estructura contacto'): si se escribe aqui y el contacto aun no tiene medida, la PWA la crea en el mismo punto; si ya la tiene, la actualiza. Lo medido en la ficha estructural se copia aqui."
-        },
-        {
           "nombre": "DESCRIPCION_CONTACTO",
           "obligatorio": false,
           "dominio": null,
@@ -2487,6 +2463,12 @@ const MODELO = {
           "multiple": true,
           "max_seleccion": 3,
           "nota": "Minerales de alteración (hasta 3)."
+        },
+        {
+          "nombre": "OCURRENCIA_MXS_MENA",
+          "obligatorio": false,
+          "dominio": "OCURRENCIA_MXS_MENA",
+          "nota": "¿Hay mineralización o mena asociada a la alteración? Sí/No (revisión RJB/PP)."
         },
         {
           "nombre": "OBSERVACIONES_ALTERACION",
@@ -2910,6 +2892,11 @@ const MODELO = {
       "padre": "TBL_LITOLOGIA",
       "hijo": "LITO_COMPONENTES",
       "campo": "ID_LITOLOGIA"
+    },
+    {
+      "padre": "TBL_FOTOGRAFIAS",
+      "hijo": "TBL_ESQUEMA_DIBUJO",
+      "campo": "ID_FOTOGRAFIA"
     }
   ],
   "dominios": {
@@ -7287,6 +7274,22 @@ const MODELO = {
         "siderítica"
       ],
       "fuente": "Norma CDC 2016 Vol III, campo COMPOSICION MINERALOGICA (siliciclásticos arcillosos y carbonatos) · lista plana para LITO_COMPONENTES (v167)"
+    },
+    "PRESENCIA_ALT": {
+      "tipo": "simple",
+      "valores": [
+        "Sí",
+        "No"
+      ],
+      "fuente": "v196, revisión RJB/PP (2026-11-24); lista PROPUESTA, CONFIRMAR"
+    },
+    "OCURRENCIA_MXS_MENA": {
+      "tipo": "simple",
+      "valores": [
+        "Sí",
+        "No"
+      ],
+      "fuente": "v196, revisión RJB/PP (2026-11-24); lista PROPUESTA, CONFIRMAR"
     }
   },
   "avisos": [
@@ -7318,8 +7321,6 @@ const MODELO = {
         "TIPO_ROCA",
         "NOMBRE_ROCA",
         "UNIDAD_GEOLOGICA",
-        "ESPESOR_ESTRATO_MIN_CM",
-        "ESPESOR_ESTRATO_MAX_CM",
         "ESPESOR_TOTAL_MIN_M",
         "COLOR_FRESCO",
         "COLOR_METEORIZADO",
@@ -7327,7 +7328,7 @@ const MODELO = {
         "ESTRUCTURA_TIPO_ROCA",
         "DESCRIPCION_LITOLOGIA",
         "GRADO_CONFIANZA_LITO",
-        "RELACION_LITOLOGIA_ESTRUCTURA",
+        "PRESENCIA_ALT",
         "OBSERVACION"
       ]
     },
@@ -7370,7 +7371,7 @@ const MODELO = {
       "hija_de": "LITO_SEDIMENTARIA"
     },
     {
-      "tabla": "SED_CARBONATOS",
+      "tabla": "SED_NO_CLASTICA",
       "padre": false,
       "descripcion": "Nieta 1:1 (de LITO_SEDIMENTARIA). Carbonatos y demás rocas o depósitos no clásticos (fosfato, salino, orgánico, silíceo). Antes SED_NO_CLASTICA (v165).",
       "aplica_a": "Sedimentaria, SUBTIPO distinto de Siliciclastico/Volcanosedimentario/Mixto/Indeterminado",
@@ -7590,7 +7591,7 @@ const MODELO = {
 </script>
 <script>
 "use strict";
-const APP_VER = 'v195';   // se muestra en Proyectos; subir junto con el cache del SW
+const APP_VER = 'v196';   // se muestra en Proyectos; subir junto con el cache del SW
 { const pv=document.getElementById('portadaVer'); if(pv) pv.textContent=APP_VER; }   // la portada muestra la versión
 // ============================ Utilidades ============================
 const $ = s => document.querySelector(s);
@@ -7804,6 +7805,14 @@ function migrarRegistroV152(store,r){
 // no lo ve (manda el nombre nuevo).
 const LAT_V158='Coordenadas Geográficas Decimales_Lat', LON_V158='Coordenadas Geográficas Decimales_Long';
 const esStorePunto=s=>s==='punto'||s==='punto_gabinete';
+// v196 (revisión RJB/PP): en el esquema ID_FOTOGRAFIA_ASOCIADA pasó a ID_FOTOGRAFIA (FK a TBL_FOTOGRAFIAS). Se COPIA
+// sin borrar el campo viejo (la light lo sigue leyendo); solo si el nuevo está vacío.
+function migrarRegistroV196(store,r){
+  if(!r||store!=='esquema') return false;
+  const v=r.ID_FOTOGRAFIA_ASOCIADA;
+  if(v==null||v===''||(r.ID_FOTOGRAFIA!=null&&r.ID_FOTOGRAFIA!=='')) return false;
+  r.ID_FOTOGRAFIA=v; return true;
+}
 function migrarRegistroV159(store,r){
   if(!r||!esStorePunto(store)) return false;
   const antes=JSON.stringify([r.LAT_DECIMAL,r.LONG_DECIMAL,r.ESTE_UTM,r[LAT_V158],r[LON_V158]]);
@@ -7976,7 +7985,7 @@ function componentesPiroclasticosV171(li){
   }
   return out;
 }
-const DB='captura-terreno', VER=26;   // v26 (app v171): componentes piroclásticos (componentesPiroclasticosV171).   // v25 (app v167): v25 (app v167): LITO_COMPONENTES (aComponenteV167, componentesDeLitologiaV167).   // v24 (app v166): v24 (app v166): afloramiento en el punto (migrarAfloraV166).   // v23 (app v165): v23 (app v165): clastos sin redundancia (clastosDeLitologiaV165, renombrarClastoV165).   // v22 (app v163): v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
+const DB='captura-terreno', VER=27;   // v27 (app v196): esquema ID_FOTOGRAFIA_ASOCIADA -> ID_FOTOGRAFIA (migrarRegistroV196).   // v26 (app v171): componentes piroclásticos (componentesPiroclasticosV171).   // v25 (app v167): v25 (app v167): LITO_COMPONENTES (aComponenteV167, componentesDeLitologiaV167).   // v24 (app v166): v24 (app v166): afloramiento en el punto (migrarAfloraV166).   // v23 (app v165): v23 (app v165): clastos sin redundancia (clastosDeLitologiaV165, renombrarClastoV165).   // v22 (app v163): v22 (app v163): + store 'juego' (migrarJuegoV163).   // v21 (app v160): v21 (app v160): + store 'alteracion' (alteracionDeLitologiaV160).   // v20 (app v159): punto con LAT/LONG_DECIMAL + UTM (migrarRegistroV159).   // v19 (app v152): store 'componente' -> 'clasto' + 'fragmento' (componenteASuStore).   // v18 (app v152): + store 'componente' y migrarRegistroV152 (Depósito -> LITIFICACION, TIPO_FALLA CDC).   // v17: migra campos renombrados de contacto/línea/muestra (app v151, ver migrarRegistroV151); v13: + store 'cartageo'; v14: + store 'mapaprop' (mapas raster propios); v15: + store 'planoproy' (planos proyectados con su traza — capa del proyecto, no del modelo canónico); v16: + store 'poligono' (polígonos dibujados en el mapa, ídem). Ninguno es del modelo canónico. La light abre sin migrar una base más nueva desde light-26 (ver openDB).
 let db;
 function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
   let done=false; const finish=(fn,v)=>{if(!done){done=true;fn(v);}};
@@ -8184,6 +8193,13 @@ function openDB(nombre=DB,ver=VER){return new Promise((res,rej)=>{
         };
       });
     }
+    // Migración v27 (app v196): esquema ID_FOTOGRAFIA_ASOCIADA -> ID_FOTOGRAFIA -- ver migrarRegistroV196.
+    if(d.objectStoreNames.contains('esquema')){
+      const txM=r.transaction, os=txM.objectStore('esquema'), q=os.getAll();
+      q.onerror=ev=>{ev.preventDefault();console.warn('Migración v27: omitida',q.error);};
+      q.onsuccess=ev=>(ev.target.result||[]).forEach(reg=>{ if(migrarRegistroV196('esquema',reg)){
+        try{ os.put(reg); }catch(e){ console.warn('Migración v27: no se pudo migrar',reg.id,e); } } });
+    }
     // Migración v22 (app v163): descriptores de fractura de la medida -> ficha 'juego'. Ver migrarJuegoV163.
     {
       const txM=r.transaction;
@@ -8313,7 +8329,7 @@ function tx(store,mode='readonly'){return db.transaction(store,mode).objectStore
 // put/del rechazan tambien si la TRANSACCION aborta, no solo si falla el request: al quedarse
 // sin espacio (QuotaExceededError) Chrome puede abortar la transaccion entera y, sin este
 // segundo camino, la promesa quedaba colgada para siempre y la foto "se guardaba" en silencio.
-async function put(store,obj){await conDB();if(esStorePunto(store))migrarRegistroV159(store,obj);return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.put(obj);
+async function put(store,obj){await conDB();if(esStorePunto(store))migrarRegistroV159(store,obj);migrarRegistroV196(store,obj);return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.put(obj);
   r.onsuccess=()=>res(obj);r.onerror=()=>rej(r.error);os.transaction.onabort=()=>rej(os.transaction.error||r.error||new Error('transacción abortada'));});}
 async function del(store,id){await conDB();return new Promise((res,rej)=>{const os=tx(store,'readwrite'), r=os.delete(id);
   r.onsuccess=()=>res();r.onerror=()=>rej(r.error);os.transaction.onabort=()=>rej(os.transaction.error||r.error||new Error('transacción abortada'));});}
@@ -8601,6 +8617,7 @@ async function importBackup(file, destinoColeccion = null, opciones = {}) {
               migrarRegistroV151(destino, record);   // respaldo de antes de v151
               migrarRegistroV152(destino, record);   // respaldo de antes de v152
               migrarRegistroV159(destino, record);   // respaldo de antes de v159 (put() también lo hace)
+              migrarRegistroV196(destino, record);   // respaldo de antes de v196
               const alt = destino === 'litologia' ? alteracionDeLitologiaV160(record) : null;   // respaldo de antes de v160
               const jue = destino === 'estructural' ? migrarJuegoV163(record) : null;          // respaldo de antes de v163
               const cls = destino === 'litologia' ? clastosDeLitologiaV165(record).map(c => aComponenteV167('clasto', c)) : [];   // antes de v165
@@ -9649,7 +9666,7 @@ function etiquetaCampo(n){
     .replace(/_/g,' ');
 }
 const esPK = (store,n)=> n===pkDe(store);
-const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_ESTRUCTURA','ID_GEOMORFOLOGIA','ID_COMPONENTE','ID_ALTERACION','ID_LITOLOGIA','ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA_ASOCIADA'].includes(n);
+const esFK = n => ['ID_PUNTO_CONTROL','ID_PROYECTO','ID_ESTRUCTURA','ID_GEOMORFOLOGIA','ID_COMPONENTE','ID_ALTERACION','ID_LITOLOGIA','ID_LITOLOGIA_TECHO','ID_LITOLOGIA_BASE','ID_CONTACTO','ID_AFLORAMIENTO','ID_ESQUEMA','ID_FOTOGRAFIA','ID_FOTOGRAFIA'].includes(n);
 // Claves de negocio que el usuario SÍ nombra (visibles/editables); el resto de ids son técnicos y se ocultan.
 const NOMBRABLES = new Set(['ID_PROYECTO','ID_PUNTO_CONTROL','ID_MUESTRA']);
 // Fotos y esquemas (v167): sus vínculos a un registro geológico no se dibujan como campos sueltos;
@@ -9669,7 +9686,6 @@ function hideField(store,n){
   if(['ID_FOTOGRAFIA','ID_ESQUEMA'].includes(n)) return true;               // ids técnicos
   // pedido del usuario (2026-11-06): fuera del formulario de Lito. La columna sigue en el modelo y
   // en la exportación (vacía), y lo ya escrito se conserva y sigue entrando a la prosa.
-  if(store==='litologia' && n==='RELACION_LITOLOGIA_ESTRUCTURA') return true;
   return false;
 }
 
@@ -9824,7 +9840,7 @@ function esGravosa(v){
 
 // Qué tablas hijas de litología se llenan al EXPORTAR. v152: árbol por camino de elecciones -- la sedimentaria
 // llena LITO_SEDIMENTARIA y, según el subtipo, SED_CLASTICA (siliciclástica o volcanosedimentaria, roca o
-// depósito) o SED_CARBONATOS (ex SED_NO_CLASTICA, v165: carbonato, salino, fosfato, orgánico, silíceo); mixto e indeterminado solo la
+// depósito) o SED_NO_CLASTICA (v196, revisión RJB/PP; antes SED_CARBONATOS: carbonato, salino, fosfato, orgánico, silíceo); mixto e indeterminado solo la
 // madre. La volcánica llena LITO_VOLCANICA y VOL_LAVA o VOL_PIROCLASTICA. Sin SUBTIPO se deduce de NOMBRE_ROCA.
 // Declaraciones (no const) para que smoke.html las alcance desde el iframe.
 // Sin subtipo, un depósito (LITIFICACION = Depósito) cuenta como clástico salvo que su nombre sea de un
@@ -9846,7 +9862,7 @@ function familiaAplica(tabla, v){
   // v152: árbol por camino de elecciones (sedimentaria -> clástica / no clástica; volcánica -> lava / piroclástica)
   if(tabla==='LITO_SEDIMENTARIA') return sed;
   if(tabla==='SED_CLASTICA') return sed && sedimentariaClasticaExport(v);
-  if(tabla==='SED_CARBONATOS') return sed && !sedimentariaClasticaExport(v) && st!=='Mixto' && st!=='Composición indeterminada';
+  if(tabla==='SED_NO_CLASTICA') return sed && !sedimentariaClasticaExport(v) && st!=='Mixto' && st!=='Composición indeterminada';
   if(tabla==='LITO_VOLCANICA') return v['TIPO_ROCA']==='Volcánica';
   if(tabla==='VOL_LAVA') return v['TIPO_ROCA']==='Volcánica' && v['TIPO_VOLCANICA']==='Lava';
   if(tabla==='VOL_PIROCLASTICA') return esPiroclastica(v);
@@ -10136,8 +10152,6 @@ const CONDICIONALES = {
   // Espesor de estratos (v148): toda roca o depósito salvo intrusivos. Lavas y metamórficas sí
   // pueden estar interestratificadas (coladas entre sedimentitas; metareniscas con pizarras, S0
   // relicta). El espesor total (ESPESOR_TOTAL_MIN_M) aplica a todas: un dique también tiene espesor.
-  ESPESOR_ESTRATO_MIN_CM: {modo:'ocultar', regla: v => v['TIPO_ROCA']!=='Intrusiva'},
-  ESPESOR_ESTRATO_MAX_CM: {modo:'ocultar', regla: v => v['TIPO_ROCA']!=='Intrusiva'},
   // --- TBL_AFLORAMIENTO: sin reglas desde v147 (CLASE_AFLORAMIENTO y los campos que dependían de
   // ella salieron del modelo; los espesores pasaron a cada litología).
   // --- LINEA_CONTROL: el tipo y el subtipo los resuelve la cascada
@@ -10161,12 +10175,12 @@ const CONDICIONALES = {
 const ORDEN_FICHA={
   litologia:{inicio:['TIPO_ROCA','TIPO_VOLCANICA','LITIFICACION','SUBTIPO_SEDIMENTARIO','SUBTIPO_TECTONICA',
       'NOMBRE_ROCA','GRANULOMETRIA','UNIDAD_GEOLOGICA','COLOR_FRESCO','COLOR_METEORIZADO','TEXTURA','ESTRUCTURA_TIPO_ROCA',
-      'ESPESOR_ESTRATO_MIN_CM','ESPESOR_ESTRATO_MAX_CM','ESPESOR_TOTAL_MIN_M'],
+      'ESPESOR_TOTAL_MIN_M'],
     fin:['GRADO_CONFIANZA_LITO','DESCRIPCION_LITOLOGIA','OBSERVACION']},
   estructural:{inicio:['TIPO_ESTRUCTURA','TIPO_MEDIDA_ESTRUCTURAL','AZIMUT','MANTEO_BUZAMIENTO','TREND','PLUNGE','RAKE',
       'ID_LITOLOGIA','ID_CONTACTO'],
     fin:['GRADO_CONFIANZA_ESTRUCTURA','DESCRIPCION_ESTRUCTURA']},
-  contacto:{inicio:['TIPO_CONTACTO','SUBTIPO_CONTACTO','LITOLOGIA_TECHO','LITOLOGIA_BASE','RUMBO_CONTACTO','MANTEO_CONTACTO',
+  contacto:{inicio:['TIPO_CONTACTO','SUBTIPO_CONTACTO','LITOLOGIA_TECHO','LITOLOGIA_BASE',
       'EXPOSICION_CONTACTO','ID_LITOLOGIA'],
     fin:['GRADO_CONFIANZA_CONTACTO','DESCRIPCION_CONTACTO']},
   muestreo:{inicio:['ID_MUESTRA','TIPO_MUESTRA','PROPOSITO_ANALISIS','ID_LITOLOGIA','ORIENTACION_MUESTRA','PESO','VOLUMEN'],
@@ -10204,7 +10218,7 @@ function formulario(store, reg, ctx){
   if(fam){
     const lito=store==='litologia', padre=fam.lista[0].tabla;
     const TITULO=lito?{TBL_LITOLOGIA:'Datos generales', LITO_SEDIMENTARIA:'Roca o depósito sedimentario',
-      SED_CLASTICA:'Clastos y matriz (sedimentaria clástica y piroclástica)', SED_CARBONATOS:'Carbonatos y otras no clásticas (fosfato, salino…)',
+      SED_CLASTICA:'Clastos y matriz (sedimentaria clástica y piroclástica)', SED_NO_CLASTICA:'Carbonatos y otras no clásticas (fosfato, salino…)',
       LITO_VOLCANICA:'Volcánica', VOL_LAVA:'Lava', VOL_PIROCLASTICA:'Roca o depósito piroclástico',
       LITO_INTRUSIVA:'Roca intrusiva', LITO_METAMORFICA:'Mineralogía metamórfica', LITO_TECTONICA:'Roca tectónica',
       LITO_ANTROPICO:'Depósito antrópico'}
@@ -14809,6 +14823,9 @@ const CLINO_MS = 3000;         // duración del muestreo (3 s, aprobado)
 const D2R = Math.PI/180, R2D = 180/Math.PI;
 const PLANO_CAMPOS = {
   estructural: {rumbo:'AZIMUT', manteo:'MANTEO_BUZAMIENTO', trend:'TREND', plunge:'PLUNGE', conf:'GRADO_CONFIANZA_ESTRUCTURA'},
+  // v196: el contacto ya no tiene rumbo/manteo propios en el modelo (revisión RJB/PP): se miden como medida
+  // estructural. Esta entrada se conserva solo para dibujar (perfil, 3D, mapa) la copia interna que dejan la medida
+  // vinculada y los contactos anteriores; no hay campos que medir en la ficha (barraMedicion la omite).
   contacto:    {rumbo:'RUMBO_CONTACTO', manteo:'MANTEO_CONTACTO', conf:'GRADO_CONFIANZA_CONTACTO'},
 };
 // alpha absoluto por plataforma (Android: alpha absoluto; iOS: 360 - webkitCompassHeading)
@@ -14946,7 +14963,7 @@ async function medirEstructura(modo, onTick){   // modo: 'plano' | 'linea'
 }
 // barra de medición para bloques con plano (estructural, contacto)
 function barraMedicion(store, f){
-  const map=PLANO_CAMPOS[store]; if(!map)return null;
+  const map=PLANO_CAMPOS[store]; if(!map||store==='contacto')return null;   // v196: el contacto no tiene campos de rumbo/manteo
   const bar=el('div',{class:'medbar'});
   bar.append(el('span',{class:'muted',style:'font-weight:700'},'📡 Medir:'));
   const status=el('span',{class:'muted',style:'flex-basis:100%'});
@@ -16482,11 +16499,10 @@ function bloqueHijo(h,reg,i,litos,conts,fracs){
         if(ligado) reg._medidaDe=c._medidaDe; else delete reg._medidaDe;
         ['RUMBO_CONTACTO','MANTEO_CONTACTO'].forEach(n=>{const inp=f.node.querySelector('[name="'+n+'"]');
           if(inp) inp.value=reg[n]??'';});
-        notaMedida.textContent=ligado?'Rumbo/manteo sincronizados con la medida estructural del contacto.'
-                                     :'Al anotar rumbo y manteo se crea la medida estructural del contacto.';
+        notaMedida.textContent=ligado?'La orientación de este contacto es la de su medida estructural.'
+                                     :'Rumbo y manteo del contacto: agregue una medida estructural «Estructura contacto» y vincúlela aquí.';
       };
-      const anclaN=f.node.querySelector('[name="RUMBO_CONTACTO"]'); const fldN=anclaN&&anclaN.closest('.fld');
-      if(fldN) fldN.parentNode.insertBefore(notaMedida, fldN); else b.append(notaMedida);
+      b.append(notaMedida);   // v196: sin campos de rumbo/manteo en la ficha
       bloquesContacto.set(reg.id, b);
       b._vinculo(reg);
     }
@@ -16769,7 +16785,7 @@ async function abrirEsquema(reg, alCerrar){
       repintar(); sucio=true; await guardar(); pintarFila2();
     }
     // Las fotos del MISMO punto (store 'foto', hijas del punto igual que el esquema): antes había
-    // que volver a sacarla de la galería y escribir su ID a mano en ID_FOTOGRAFIA_ASOCIADA.
+    // que volver a sacarla de la galería y escribir su ID a mano en ID_FOTOGRAFIA.
     async function elegirFotoPunto(){
       const fotos=(await childrenOf('foto',reg._parent)).filter(f=>typeof f._img==='string'&&f._img.startsWith('data:image/'));
       if(!fotos.length){ toast('Este punto todavía no tiene fotos'); return; }
@@ -16777,13 +16793,13 @@ async function abrirEsquema(reg, alCerrar){
       const grilla=el('div',{style:'flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;align-content:start'});
       fotos.forEach((f,i)=>{
         const rot=(f.ID_FOTOGRAFIA||('Foto '+(i+1)))+(f.ORIENTACION_FOTO?' · '+f.ORIENTACION_FOTO+'°':'');
-        grilla.append(el('button',{style:'background:#1e262e;border:2px solid '+(f.ID_FOTOGRAFIA&&f.ID_FOTOGRAFIA===reg.ID_FOTOGRAFIA_ASOCIADA?'#12a4ff':'#3a4652')+';border-radius:8px;padding:4px;color:#e6eaee;font-size:12px;cursor:pointer',
+        grilla.append(el('button',{style:'background:#1e262e;border:2px solid '+(f.ID_FOTOGRAFIA&&f.ID_FOTOGRAFIA===reg.ID_FOTOGRAFIA?'#12a4ff':'#3a4652')+';border-radius:8px;padding:4px;color:#e6eaee;font-size:12px;cursor:pointer',
           onclick:async()=>{
             const im=new Image();
             const ok=await new Promise(r=>{im.onload=()=>r(true);im.onerror=()=>r(false);im.src=f._img;});
             if(!ok){ toast('No se pudo leer esa foto'); return; }
             sel.remove();
-            if(f.ID_FOTOGRAFIA) reg.ID_FOTOGRAFIA_ASOCIADA=f.ID_FOTOGRAFIA;
+            if(f.ID_FOTOGRAFIA) reg.ID_FOTOGRAFIA=f.ID_FOTOGRAFIA;
             await fijarFondo(f._img,im.naturalWidth,im.naturalHeight);
             toast('Fondo: '+(f.ID_FOTOGRAFIA||'foto del punto'));
           }},
@@ -16846,10 +16862,10 @@ function bloqueEsquema(reg){
   const mini=el('div',{class:'sk-mini'});
   const abrir=async()=>{ Object.assign(reg,f.getData()); await put('esquema',reg); await abrirEsquema(reg,pintarMini); };
   const pintarMini=()=>{ mini.innerHTML='';
-    // el lienzo puede haber fijado ID_FOTOGRAFIA_ASOCIADA ("📎 Del punto"): reflejarlo en el
+    // el lienzo puede haber fijado ID_FOTOGRAFIA ("📎 Del punto"): reflejarlo en el
     // formulario, o el próximo 'change' lo pisaría con el valor viejo del input
-    const inFoto=f.node.querySelector('[name="ID_FOTOGRAFIA_ASOCIADA"]');
-    if(inFoto && reg.ID_FOTOGRAFIA_ASOCIADA!=null && inFoto.value!==reg.ID_FOTOGRAFIA_ASOCIADA) inFoto.value=reg.ID_FOTOGRAFIA_ASOCIADA;
+    const inFoto=f.node.querySelector('[name="ID_FOTOGRAFIA"]');
+    if(inFoto && reg.ID_FOTOGRAFIA!=null && inFoto.value!==reg.ID_FOTOGRAFIA) inFoto.value=reg.ID_FOTOGRAFIA;
     mini.append(reg._img ? el('img',{src:reg._img,alt:'esquema',onclick:abrir})
                          : el('div',{class:'sk-vacio',onclick:abrir},'Sin dibujo todavia — toca para abrir el lienzo'));
   };
@@ -18743,7 +18759,7 @@ async function registrarPuntoRapido(img, r){
 // De cada ficha se guarda solo id, padre y sus FK: las fotos no quedan en memoria.
 const FK_DESTINO={ID_LITOLOGIA:'litologia',ID_LITOLOGIA_TECHO:'litologia',ID_LITOLOGIA_BASE:'litologia',ID_ESTRUCTURA:'estructural',
   ID_CONTACTO:'contacto',ID_GEOMORFOLOGIA:'geomorf',ID_COMPONENTE:'litocomp',ID_ALTERACION:'alteracion',ID_ESQUEMA:'esquema',
-  ID_FOTOGRAFIA_ASOCIADA:'foto',ID_MUESTRA:'muestreo'};
+  ID_FOTOGRAFIA:'foto',ID_MUESTRA:'muestreo'};
 const FK_NOMBRE={litologia:'una litología',estructural:'una medida estructural',contacto:'un contacto',geomorf:'una geomorfología',
   litocomp:'un componente',alteracion:'una alteración',esquema:'un esquema',foto:'una fotografía',muestreo:'una muestra'};
 async function verificarIntegridad(proyectoId){
@@ -20147,9 +20163,7 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
       frases.push(d); nDetalle++;
     }
     // espesores de ESTA litología (v147: antes eran del afloramiento)
-    const lava=l.TIPO_ROCA==='Volcánica'&&l.TIPO_VOLCANICA==='Lava';
-    const eEst=l.TIPO_ROCA==='Intrusiva'?'':espesorFrase(l.ESPESOR_ESTRATO_MIN_CM,l.ESPESOR_ESTRATO_MAX_CM,lava?'coladas':null);
-    if(eEst) frases.push('Se dispone '+eEst+'.');
+    // v196: ESPESOR_ESTRATO_MIN/MAX_CM salieron del modelo (revisión RJB/PP): solo el espesor total
     const eTot=espesorTotalFrase(l.ESPESOR_TOTAL_MIN_M); if(eTot) frases.push(eTot+'.');
     const dFeno=detalleSuelto(l.FENOCRISTALES_ESPECIE,l.FENOCRISTALES_DETALLE); if(dFeno) frases.push(dFeno);
     // Contenido fósil (2026-08-31): oración propia, NO vía detalleSuelto() -- ese ayudante solo
@@ -20165,7 +20179,6 @@ function prosaPunto(pt,datos,toponimo,anterior,umbral){
     // litología que nunca llegaron al escrito (auditoría de prosa vs. corpus, 2026-08-26). El
     // segundo es justamente el tipo de frase que después cuesta reconstruir en gabinete: cómo se
     // relaciona esa roca con la estructura que se midió al lado.
-    const rel=fraseLibre(l.RELACION_LITOLOGIA_ESTRUCTURA); if(rel) frases.push(rel);
     const obs=fraseLibre(l.OBSERVACION); if(obs) frases.push(obs);
   }
 
